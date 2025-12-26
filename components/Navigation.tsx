@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { saveApiKey, validateApiKey, clearApiKey, hasApiKey } from '@/lib/claude-api';
+import ProgressDashboard from './ProgressDashboard';
+import { TrendingUp } from 'lucide-react';
 
 const concepts = [
   { name: 'Home', path: '/' },
@@ -19,6 +21,7 @@ const concepts = [
 export default function Navigation() {
   const pathname = usePathname();
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [showProgressDashboard, setShowProgressDashboard] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -71,6 +74,13 @@ export default function Navigation() {
               })}
             </div>
             <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setShowProgressDashboard(true)}
+                className="flex items-center gap-2 px-3 py-1 text-sm bg-purple-600 text-white rounded hover:bg-purple-700"
+              >
+                <TrendingUp className="w-4 h-4" />
+                Progress
+              </button>
               {apiKeyExists ? (
                 <>
                   <span className="text-sm text-green-400">✓ API Key Set</span>
@@ -133,6 +143,9 @@ export default function Navigation() {
           </div>
         </div>
       )}
+
+      {/* Progress Dashboard */}
+      {showProgressDashboard && <ProgressDashboard onClose={() => setShowProgressDashboard(false)} />}
     </>
   );
 }
