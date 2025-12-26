@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useClaudeExplainer } from '@/hooks/useClaudeExplainer';
 import ExplanationPanel from '@/components/ExplanationPanel';
+import ExportMenu from '@/components/ExportMenu';
 import { motion } from 'framer-motion';
 
 type CAPProperty = 'C' | 'A' | 'P';
@@ -96,6 +97,7 @@ const scenarios = {
 };
 
 export default function CAPTheoremPage() {
+  const svgRef = useRef<SVGSVGElement>(null);
   const [selectedCombination, setSelectedCombination] = useState<CAPCombination>(null);
   const [selectedSystem, setSelectedSystem] = useState<System | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
@@ -252,16 +254,26 @@ export default function CAPTheoremPage() {
       {/* Main Visualization Area */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <div className="bg-slate-800 border-b border-slate-700 p-4">
-          <h1 className="text-2xl font-bold text-white">CAP Theorem Interactive Visualization</h1>
-          <p className="text-slate-400 text-sm mt-1">
-            Click on combinations or systems to explore trade-offs in distributed systems
-          </p>
+        <div className="bg-slate-800 border-b border-slate-700 p-4 flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-white">CAP Theorem Interactive Visualization</h1>
+            <p className="text-slate-400 text-sm mt-1">
+              Click on combinations or systems to explore trade-offs in distributed systems
+            </p>
+          </div>
+          <ExportMenu
+            svgRef={svgRef}
+            concept="CAP Theorem"
+            currentState={{
+              selectedCombination,
+              selectedSystem: selectedSystem?.name,
+            }}
+          />
         </div>
 
         {/* Canvas */}
         <div className="flex-1 relative bg-slate-900 flex items-center justify-center">
-          <svg className="w-full h-full">
+          <svg ref={svgRef} className="w-full h-full">
             {/* Triangle */}
             <motion.polygon
               points={`${triangleVertices.C.x},${triangleVertices.C.y} ${triangleVertices.A.x},${triangleVertices.A.y} ${triangleVertices.P.x},${triangleVertices.P.y}`}

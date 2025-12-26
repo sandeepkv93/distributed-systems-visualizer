@@ -1,16 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { VectorClocksAlgorithm } from '@/lib/algorithms/vectorClocks';
 import { useSimulation } from '@/hooks/useSimulation';
 import { useClaudeExplainer } from '@/hooks/useClaudeExplainer';
 import ControlPanel from '@/components/ControlPanel';
 import ExplanationPanel from '@/components/ExplanationPanel';
+import ExportMenu from '@/components/ExportMenu';
 import { vectorClockScenarios } from '@/visualizers/vector-clocks/scenarios';
 import { VectorClockProcess, VectorClockEvent, VectorClock } from '@/lib/types';
 import { motion } from 'framer-motion';
 
 export default function VectorClocksPage() {
+  const svgRef = useRef<SVGSVGElement>(null);
   const [vc] = useState(() => new VectorClocksAlgorithm(3));
   const [processes, setProcesses] = useState<VectorClockProcess[]>(vc.getProcesses());
   const [allEvents, setAllEvents] = useState<VectorClockEvent[]>([]);

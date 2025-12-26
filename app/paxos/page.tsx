@@ -1,16 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { PaxosAlgorithm } from '@/lib/algorithms/paxos';
 import { useSimulation } from '@/hooks/useSimulation';
 import { useClaudeExplainer } from '@/hooks/useClaudeExplainer';
 import ControlPanel from '@/components/ControlPanel';
 import ExplanationPanel from '@/components/ExplanationPanel';
+import ExportMenu from '@/components/ExportMenu';
 import { paxosScenarios } from '@/visualizers/paxos/scenarios';
 import { PaxosNode, PaxosMessage } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function PaxosPage() {
+  const svgRef = useRef<SVGSVGElement>(null);
   const [paxos] = useState(() => new PaxosAlgorithm(2, 5, 2));
   const [nodes, setNodes] = useState<PaxosNode[]>(paxos.getAllNodes());
   const [messages, setMessages] = useState<PaxosMessage[]>([]);
@@ -168,21 +170,43 @@ export default function PaxosPage() {
       {/* Main Visualization Area */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <div className="bg-slate-800 border-b border-slate-700 p-4">
-          <h1 className="text-2xl font-bold text-white">Paxos Consensus Algorithm</h1>
-          <p className="text-slate-400 text-sm mt-1">
-            Two-phase consensus with proposers, acceptors, and learners
-          </p>
-          {decidedValue && (
-            <div className="mt-2 inline-block bg-green-600 text-white px-3 py-1 rounded text-sm font-semibold">
-              ✓ Consensus Reached: {decidedValue}
-            </div>
-          )}
+        <div className="bg-slate-800 border-b border-slate-700 p-4 flex items-start justify-between">
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold text-white">Paxos Consensus Algorithm</h1>
+            <p className="text-slate-400 text-sm mt-1">
+              Two-phase consensus with proposers, acceptors, and learners
+            </p>
+            {decidedValue && (
+              <div className="mt-2 inline-block bg-green-600 text-white px-3 py-1 rounded text-sm font-semibold">
+                ✓ Consensus Reached: {decidedValue}
+              </div>
+            )}
+          </div>
+          <ExportMenu
+            svgRef={svgRef}
+            concept="Paxos Consensus"
+            currentState={{
+              proposers: paxos.getProposers().map((n) => ({
+                id: n.id,
+                status: n.status,
+                proposalNumber: n.proposalNumber,
+              })),
+              acceptors: paxos.getAcceptors().map((n) => ({
+                id: n.id,
+                status: n.status,
+                promisedProposal: n.promisedProposal,
+                acceptedProposal: n.acceptedProposal,
+                acceptedValue: n.acceptedValue,
+              })),
+              decidedValue,
+              scenario: selectedScenario,
+            }}
+          />
         </div>
 
         {/* Visualization Canvas */}
         <div className="flex-1 relative bg-slate-900 overflow-hidden">
-          <svg className="w-full h-full">
+          <svg ref={svgRef} className="w-full h-full">
             {/* Draw messages */}
             <AnimatePresence>
               {messages.map((message) => {

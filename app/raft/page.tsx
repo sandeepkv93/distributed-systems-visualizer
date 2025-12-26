@@ -1,16 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { RaftAlgorithm } from '@/lib/algorithms/raft';
 import { useSimulation } from '@/hooks/useSimulation';
 import { useClaudeExplainer } from '@/hooks/useClaudeExplainer';
 import ControlPanel from '@/components/ControlPanel';
 import ExplanationPanel from '@/components/ExplanationPanel';
+import ExportMenu from '@/components/ExportMenu';
 import { raftScenarios } from '@/visualizers/raft/scenarios';
 import { RaftNode as RaftNodeType, RaftMessage } from '@/lib/types';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function RaftPage() {
+  const svgRef = useRef<SVGSVGElement>(null);
   const [raft] = useState(() => new RaftAlgorithm(5));
   const [nodes, setNodes] = useState<RaftNodeType[]>(raft.getNodes());
   const [messages, setMessages] = useState<RaftMessage[]>([]);
@@ -122,16 +124,32 @@ export default function RaftPage() {
       {/* Main Visualization Area */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <div className="bg-slate-800 border-b border-slate-700 p-4">
-          <h1 className="text-2xl font-bold text-white">Raft Consensus Algorithm</h1>
-          <p className="text-slate-400 text-sm mt-1">
-            Leader election and log replication in distributed systems
-          </p>
+        <div className="bg-slate-800 border-b border-slate-700 p-4 flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-white">Raft Consensus Algorithm</h1>
+            <p className="text-slate-400 text-sm mt-1">
+              Leader election and log replication in distributed systems
+            </p>
+          </div>
+          <ExportMenu
+            svgRef={svgRef}
+            concept="Raft Consensus"
+            currentState={{
+              nodes: nodes.map((n) => ({
+                id: n.id,
+                state: n.state,
+                term: n.term,
+                logLength: n.log.length,
+                status: n.status,
+              })),
+              scenario: selectedScenario,
+            }}
+          />
         </div>
 
         {/* Visualization Canvas */}
         <div className="flex-1 relative bg-slate-900 overflow-hidden">
-          <svg className="w-full h-full">
+          <svg ref={svgRef} className="w-full h-full">
             {/* Draw messages */}
             <AnimatePresence>
               {messages.map((message) => {
