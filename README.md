@@ -10,7 +10,10 @@ An interactive learning platform for understanding distributed systems concepts 
 
 - **Interactive Visualizations**: Play, pause, and step through distributed systems algorithms in real-time
 - **AI-Powered Explanations**: Get instant explanations powered by Claude AI for any state or event
-- **Pre-built Scenarios**: Learn from carefully crafted edge cases and failure scenarios
+- **AI-Generated Quizzes**: Test your understanding with Claude-powered quizzes tailored to each concept
+- **Progress Tracking**: Track completed scenarios, quizzes, and unlock achievements
+- **Export & Share**: Export visualizations as PNG, SVG, or share via system dialog
+- **Pre-built Scenarios**: Learn from carefully crafted edge cases and failure scenarios (33 total!)
 - **Manual Controls**: Inject failures, trigger events, and experiment with different configurations
 - **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
 - **Static Export**: Deployable to GitHub Pages with zero backend dependencies
@@ -91,7 +94,29 @@ This generates a static export in the `out/` directory, ready for deployment to 
 1. Click "Set API Key" in the top-right corner
 2. Enter your Anthropic API key (get one at [https://console.anthropic.com](https://console.anthropic.com))
 3. Your key is stored locally in your browser and never sent to our servers
-4. Now you can ask Claude questions about the simulation!
+4. Now you can ask Claude questions about the simulation and take AI-generated quizzes!
+
+### Export & Share
+
+Export your visualizations in multiple formats:
+
+- **PNG Export**: High-quality 2x resolution images perfect for presentations
+- **SVG Export**: Scalable vector graphics for editing and scaling
+- **JSON Export**: Save the current state as JSON for analysis
+- **Share**: Use the system share dialog to share via email, messages, etc.
+- **Copy Link**: Copy the current page URL to clipboard
+- **Copy State**: Copy the current state data to clipboard
+
+Click the "Export" button in the header of Raft, Paxos, or CAP Theorem visualizers to access these options.
+
+### Progress Tracking
+
+Track your learning journey:
+
+- **View Progress**: Click the "Progress" button in the top navigation
+- **Achievements**: Unlock 9 achievements by completing scenarios, quizzes, and concepts
+- **Statistics**: See your total time spent, quiz scores, and completion percentages
+- **Export/Import**: Backup your progress or transfer it between devices
 
 ## 🏗️ Architecture
 
@@ -112,26 +137,44 @@ This generates a static export in the `out/` directory, ready for deployment to 
 distributed-systems-visualizer/
 ├── app/                      # Next.js pages
 │   ├── raft/                # Raft consensus page
-│   ├── paxos/               # Paxos page (coming soon)
-│   └── ...
+│   ├── paxos/               # Paxos consensus page
+│   ├── vector-clocks/       # Vector clocks page
+│   ├── consistent-hashing/  # Consistent hashing page
+│   ├── two-phase-commit/    # 2PC page
+│   ├── eventual-consistency/# Eventual consistency page
+│   ├── cap-theorem/         # CAP theorem page
+│   └── page.tsx             # Home page
 ├── components/              # Reusable React components
 │   ├── Navigation.tsx       # Top navigation bar
 │   ├── ControlPanel.tsx     # Playback controls
-│   └── ExplanationPanel.tsx # AI explanation display
+│   ├── ExplanationPanel.tsx # AI explanation display
+│   ├── ExportMenu.tsx       # Export/share menu
+│   ├── QuizComponent.tsx    # AI-powered quiz interface
+│   └── ProgressDashboard.tsx # Progress tracking dashboard
 ├── lib/                     # Core library code
 │   ├── algorithms/          # Algorithm implementations
 │   │   ├── raft.ts         # Raft consensus logic
-│   │   └── ...
+│   │   ├── paxos.ts        # Paxos consensus logic
+│   │   ├── vectorClocks.ts # Vector clocks logic
+│   │   ├── consistentHashing.ts # Consistent hashing logic
+│   │   ├── twoPhaseCommit.ts # 2PC logic
+│   │   └── eventualConsistency.ts # Eventual consistency logic
 │   ├── types.ts            # TypeScript type definitions
 │   ├── simulation-engine.ts # Generic simulation engine
-│   └── claude-api.ts       # Claude API integration
+│   ├── claude-api.ts       # Claude API integration
+│   ├── progress.ts         # Progress tracking & achievements
+│   └── export.ts           # Export utilities (PNG, SVG, JSON)
 ├── hooks/                   # Custom React hooks
 │   ├── useSimulation.ts    # Simulation state management
-│   └── useClaudeExplainer.ts # AI explanation hook
+│   ├── useClaudeExplainer.ts # AI explanation hook
+│   └── useProgress.ts      # Progress tracking hook
 ├── visualizers/             # Concept-specific visualizers
-│   ├── raft/
-│   │   └── scenarios.ts    # Pre-built Raft scenarios
-│   └── ...
+│   ├── raft/scenarios.ts   # Pre-built Raft scenarios
+│   ├── paxos/scenarios.ts  # Pre-built Paxos scenarios
+│   ├── vector-clocks/scenarios.ts # Vector clock scenarios
+│   ├── consistent-hashing/scenarios.ts # Consistent hashing scenarios
+│   ├── two-phase-commit/scenarios.ts # 2PC scenarios
+│   └── eventual-consistency/scenarios.ts # Eventual consistency scenarios
 └── public/                  # Static assets
 ```
 
