@@ -17,23 +17,29 @@ An interactive learning platform for understanding distributed systems concepts 
 
 ## 📚 Concepts Covered
 
-### ✅ Implemented
+### ✅ All Visualizers Implemented!
 
-1. **Raft Consensus** - Leader election and log replication with interactive scenarios:
-   - Basic leader election
-   - Leader failure and failover
-   - Network partitions (split brain)
-   - Log replication
-   - Follower recovery and catch-up
+1. **Raft Consensus** - Leader election, log replication, and failover scenarios
+   - 5 scenarios covering elections, failures, partitions, and replication
 
-### 🚧 Coming Soon
+2. **Paxos Consensus** - Two-phase distributed consensus protocol
+   - 5 scenarios including dueling proposers, acceptor failures, and Multi-Paxos
 
-2. **Paxos** - Classic consensus algorithm with proposers, acceptors, and learners
-3. **Two-Phase Commit** - Atomic transaction protocol for distributed databases
-4. **Eventual Consistency** - Data synchronization across replicas
-5. **Vector Clocks** - Causality tracking and concurrent event detection
-6. **Consistent Hashing** - Efficient data distribution with virtual nodes
-7. **CAP Theorem** - Understanding the trade-offs between Consistency, Availability, and Partition Tolerance
+3. **Vector Clocks** - Causality tracking and concurrent event detection
+   - 5 scenarios demonstrating happened-before relationships and concurrency
+
+4. **Consistent Hashing** - Data partitioning with minimal redistribution
+   - 6 scenarios showing virtual nodes, server scaling, and load distribution
+
+5. **Two-Phase Commit (2PC)** - Atomic distributed transaction protocol
+   - 6 scenarios covering successful commits, aborts, failures, and recovery
+
+6. **Eventual Consistency** - Asynchronous replication with tunable consistency
+   - 6 scenarios exploring ONE/QUORUM/ALL levels, conflicts, and anti-entropy
+
+7. **CAP Theorem** - Interactive exploration of distributed systems trade-offs
+   - Triangle visualization with real-world database systems (MongoDB, Cassandra, etc.)
+   - Educational content explaining CA, CP, and AP combinations
 
 ## 🚀 Getting Started
 
