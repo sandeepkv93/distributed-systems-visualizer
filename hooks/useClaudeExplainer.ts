@@ -53,15 +53,15 @@ export function useClaudeExplainer(concept: string) {
     [concept]
   );
 
-  // Generate quiz
+  // Generate quiz (not actively used - QuizComponent calls generateQuiz directly)
   const createQuiz = useCallback(
-    async (difficulty: 'easy' | 'medium' | 'hard', count: number = 5) => {
+    async (currentState?: any) => {
       setIsLoading(true);
       setError(null);
 
       try {
-        const questions = await generateQuiz(concept, difficulty, count);
-        return questions;
+        const result = await generateQuiz(concept, currentState);
+        return result.questions;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error';
         setError(errorMessage);

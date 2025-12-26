@@ -68,21 +68,26 @@ Please provide a clear, concise explanation that helps them understand what's ha
 // Generate quiz questions
 export async function generateQuiz(
   concept: string,
-  difficulty: 'easy' | 'medium' | 'hard',
-  count: number = 5
-): Promise<QuizQuestion[]> {
+  currentState?: any
+): Promise<{ questions: QuizQuestion[] }> {
   const client = createClient();
   if (!client) {
     throw new Error('Claude API key not found. Please set it in the settings.');
   }
 
-  const prompt = `You are an expert in distributed systems. Generate ${count} ${difficulty} level quiz questions about ${concept}.
+  const stateContext = currentState
+    ? `\n\nCurrent system state:\n${JSON.stringify(currentState, null, 2)}\n\nGenerate questions that are relevant to this specific state and scenario.`
+    : '';
+
+  const prompt = `You are an expert in distributed systems. Generate 5 quiz questions about ${concept}.
+${stateContext}
 
 For each question, provide:
 1. The question text
-2. 4 multiple choice options (if applicable)
-3. The correct answer
+2. 4 multiple choice options
+3. The correct answer index (0-3)
 4. A brief explanation
+5. Difficulty level (easy, medium, or hard)
 
 Format your response as a JSON array of quiz questions with this structure:
 [
@@ -91,16 +96,17 @@ Format your response as a JSON array of quiz questions with this structure:
     "type": "multiple-choice",
     "options": ["Option A", "Option B", "Option C", "Option D"],
     "correctAnswer": 0,
-    "explanation": "Explanation here"
+    "explanation": "Explanation here",
+    "difficulty": "medium"
   }
 ]
 
-Make sure questions are technically accurate and test understanding, not just memorization.`;
+Make sure questions are technically accurate and test understanding, not just memorization. Mix different difficulty levels.`;
 
   try {
     const message = await client.messages.create({
       model: DEFAULT_MODEL,
-      max_tokens: 2048,
+      max_tokens: 3000,
       messages: [
         {
           role: 'user',
@@ -115,19 +121,21 @@ Make sure questions are technically accurate and test understanding, not just me
       const jsonMatch = textContent.text.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
         const questions = JSON.parse(jsonMatch[0]);
-        return questions.map((q: any, index: number) => ({
-          id: `${concept}-${difficulty}-${index}`,
-          question: q.question,
-          type: q.type || 'multiple-choice',
-          options: q.options,
-          correctAnswer: q.correctAnswer,
-          explanation: q.explanation,
-          difficulty,
-        }));
+        return {
+          questions: questions.map((q: any, index: number) => ({
+            id: `${concept}-${index}`,
+            question: q.question,
+            type: q.type || 'multiple-choice',
+            options: q.options,
+            correctAnswer: q.correctAnswer,
+            explanation: q.explanation,
+            difficulty: q.difficulty || 'medium',
+          })),
+        };
       }
     }
 
-    return [];
+    return { questions: [] };
   } catch (error) {
     console.error('Error generating quiz:', error);
     throw new Error('Failed to generate quiz questions');

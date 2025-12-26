@@ -1,6 +1,6 @@
 'use client';
 
-import { Play, Pause, SkipForward, SkipBack, RotateCcw } from 'lucide-react';
+import { Play, Pause, SkipForward, SkipBack, RotateCcw, BookOpen } from 'lucide-react';
 import { Scenario } from '@/lib/types';
 
 interface ControlPanelProps {
@@ -17,6 +17,7 @@ interface ControlPanelProps {
   onSpeedChange: (speed: number) => void;
   onScenarioChange?: (scenarioId: string) => void;
   onAskClaude?: (question: string) => void;
+  onTakeQuiz?: () => void;
   apiKeyExists?: boolean;
 }
 
@@ -36,6 +37,7 @@ export default function ControlPanel({
   onSpeedChange,
   onScenarioChange,
   onAskClaude,
+  onTakeQuiz,
   apiKeyExists = false,
 }: ControlPanelProps) {
   return (
@@ -170,6 +172,20 @@ export default function ControlPanel({
               Set your API key to enable AI explanations
             </div>
           )}
+        </div>
+      )}
+
+      {/* Take Quiz */}
+      {onTakeQuiz && apiKeyExists && (
+        <div>
+          <button
+            onClick={onTakeQuiz}
+            className="w-full p-3 bg-purple-600 text-white rounded hover:bg-purple-700 flex items-center justify-center gap-2 font-medium transition-colors"
+          >
+            <BookOpen className="w-5 h-5" />
+            Take Quiz
+          </button>
+          <p className="text-xs text-slate-400 mt-1 text-center">Test your knowledge!</p>
         </div>
       )}
 
