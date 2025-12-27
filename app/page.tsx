@@ -194,28 +194,44 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Features */}
-        <div className="grid md:grid-cols-3 gap-6 mb-16">
-          <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
-            <div className="text-3xl mb-3">🎮</div>
-            <h3 className="text-lg font-semibold mb-2 text-white">Interactive Simulations</h3>
-            <p className="text-slate-400 text-sm">
-              Play, pause, and step through algorithms. Interact with nodes and inject failures.
-            </p>
-          </div>
-          <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
-            <div className="text-3xl mb-3">🤖</div>
-            <h3 className="text-lg font-semibold mb-2 text-white">AI Explanations</h3>
-            <p className="text-slate-400 text-sm">
-              Get instant explanations powered by Claude AI. Ask questions about what you see.
-            </p>
-          </div>
-          <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
-            <div className="text-3xl mb-3">📚</div>
-            <h3 className="text-lg font-semibold mb-2 text-white">Learn by Doing</h3>
-            <p className="text-slate-400 text-sm">
-              Pre-built scenarios, quizzes, and edge cases to test your understanding.
-            </p>
+        {/* How It Works */}
+        <div className="mb-16">
+          <div className="bg-slate-800/70 border border-slate-700 rounded-lg px-6 py-5">
+            <div className="grid md:grid-cols-3 gap-6">
+              <div className="flex items-start gap-3">
+                <div className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold">
+                  1
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-white mb-1">Pick a topic</h3>
+                  <p className="text-slate-400 text-sm">
+                    Choose a visualizer and load a scenario or start exploring manually.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold">
+                  2
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-white mb-1">Run the simulation</h3>
+                  <p className="text-slate-400 text-sm">
+                    Play, pause, step, and inject failures to see protocol behavior.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold">
+                  3
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-white mb-1">Ask and validate</h3>
+                  <p className="text-slate-400 text-sm">
+                    Use AI explanations and quizzes to confirm your understanding.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -245,44 +261,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Getting Started */}
-        <div className="mt-16 bg-slate-800 rounded-lg border border-slate-700 p-8">
-          <h2 className="text-2xl font-bold mb-4 text-white">Getting Started</h2>
-          <ol className="space-y-3 text-slate-300">
-            <li className="flex items-start">
-              <span className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
-                1
-              </span>
-              <span>
-                <strong>(Optional)</strong> Set your Claude API key in the top-right corner to
-                enable AI-powered explanations and quizzes.
-              </span>
-            </li>
-            <li className="flex items-start">
-              <span className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
-                2
-              </span>
-              <span>Choose a concept from the grid above to start learning.</span>
-            </li>
-            <li className="flex items-start">
-              <span className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
-                3
-              </span>
-              <span>
-                Use the control panel to play simulations, step through events, and explore
-                different scenarios.
-              </span>
-            </li>
-            <li className="flex items-start">
-              <span className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
-                4
-              </span>
-              <span>
-                Interact with nodes, inject failures, and see how the system responds in real-time.
-              </span>
-            </li>
-          </ol>
-        </div>
       </div>
     </div>
   );
