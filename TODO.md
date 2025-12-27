@@ -2,7 +2,6 @@
 
 Topics to add as visualizers:
 
-- Merkle trees for anti-entropy
 - CRDTs (G-Counter, OR-Set, RGA)
 - Consistent replication log (Kafka-style partitions/ISR)
 - Failure detectors (phi accrual, SWIM)

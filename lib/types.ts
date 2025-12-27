@@ -288,6 +288,36 @@ export interface ShardMessage extends Message {
   };
 }
 
+// Merkle Tree Anti-Entropy types
+export interface MerkleLeaf {
+  key: string;
+  value: string;
+  hash: string;
+}
+
+export interface MerkleNode {
+  hash: string;
+  left?: MerkleNode;
+  right?: MerkleNode;
+  range: [string, string];
+}
+
+export interface MerkleReplica {
+  id: string;
+  data: Map<string, string>;
+  root: MerkleNode | null;
+}
+
+export interface MerkleMessage extends Message {
+  type: 'CompareRoot' | 'CompareNode' | 'SyncLeaf';
+  payload: {
+    range: [string, string];
+    hash?: string;
+    key?: string;
+    value?: string;
+  };
+}
+
 // PBFT types
 export type PBFTPhase = 'pre-prepare' | 'prepare' | 'commit' | 'executed';
 

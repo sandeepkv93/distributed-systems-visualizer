@@ -20,6 +20,7 @@ const concepts = [
   { name: 'PBFT', path: '/pbft' },
   { name: 'Distributed Locking', path: '/distributed-locking' },
   { name: 'Sharding + Rebalancing', path: '/sharding-rebalancing' },
+  { name: 'Merkle Anti-Entropy', path: '/merkle-anti-entropy' },
   { name: 'Vector Clocks', path: '/vector-clocks' },
   { name: 'Consistent Hashing', path: '/consistent-hashing' },
   { name: 'CAP Theorem', path: '/cap-theorem' },

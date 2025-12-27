@@ -79,6 +79,13 @@ const concepts = [
     color: 'bg-cyan-700',
   },
   {
+    name: 'Merkle Anti-Entropy',
+    path: '/merkle-anti-entropy',
+    description:
+      'Compare Merkle trees to locate divergence and sync minimal data.',
+    color: 'bg-sky-600',
+  },
+  {
     name: 'Vector Clocks',
     path: '/vector-clocks',
     description:
