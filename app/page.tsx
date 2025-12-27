@@ -44,6 +44,13 @@ const concepts = [
     color: 'bg-cyan-600',
   },
   {
+    name: 'Lamport Clocks',
+    path: '/lamport-clocks',
+    description:
+      'See how logical clocks and acknowledgements enforce total order broadcast.',
+    color: 'bg-teal-600',
+  },
+  {
     name: 'Vector Clocks',
     path: '/vector-clocks',
     description:

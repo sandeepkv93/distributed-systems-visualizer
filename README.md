@@ -46,7 +46,10 @@ An interactive learning platform for understanding distributed systems concepts 
 8. **Chandy-Lamport Snapshot** - Consistent global snapshots with marker messages
    - Scenarios showing in-transit message capture and marker propagation
 
-9. **CAP Theorem** - Interactive exploration of distributed systems trade-offs
+9. **Lamport Clocks + Total Order Broadcast** - Logical clocks with a total delivery order
+   - Scenarios covering local events, broadcasts, and tie-breaking
+
+10. **CAP Theorem** - Interactive exploration of distributed systems trade-offs
    - Triangle visualization with real-world database systems (MongoDB, Cassandra, etc.)
    - Educational content explaining CA, CP, and AP combinations
 

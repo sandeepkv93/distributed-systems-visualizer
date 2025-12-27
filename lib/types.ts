@@ -190,6 +190,31 @@ export interface SnapshotMessage extends Message {
   };
 }
 
+// Lamport Clocks + Total Order Broadcast types
+export interface LamportHoldbackMessage {
+  id: string;
+  from: string;
+  timestamp: number;
+  value: any;
+  acks: string[];
+}
+
+export interface LamportNode extends BaseNode {
+  clock: number;
+  holdback: LamportHoldbackMessage[];
+  delivered: LamportHoldbackMessage[];
+}
+
+export interface LamportMessage extends Message {
+  type: 'Broadcast' | 'Ack';
+  payload: {
+    messageId: string;
+    value?: any;
+    timestamp?: number;
+    ackTimestamp?: number;
+  };
+}
+
 // Vector Clocks types
 export interface VectorClockEvent {
   id: string;

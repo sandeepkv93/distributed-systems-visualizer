@@ -15,6 +15,7 @@ const concepts = [
   { name: 'Eventual Consistency', path: '/eventual-consistency' },
   { name: 'Gossip & Anti-Entropy', path: '/gossip-anti-entropy' },
   { name: 'Chandy-Lamport Snapshot', path: '/chandy-lamport' },
+  { name: 'Lamport Clocks', path: '/lamport-clocks' },
   { name: 'Vector Clocks', path: '/vector-clocks' },
   { name: 'Consistent Hashing', path: '/consistent-hashing' },
   { name: 'CAP Theorem', path: '/cap-theorem' },
