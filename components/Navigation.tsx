@@ -18,6 +18,7 @@ const concepts = [
   { name: 'Lamport Clocks', path: '/lamport-clocks' },
   { name: 'Quorum Replication', path: '/quorum-replication' },
   { name: 'PBFT', path: '/pbft' },
+  { name: 'Distributed Locking', path: '/distributed-locking' },
   { name: 'Vector Clocks', path: '/vector-clocks' },
   { name: 'Consistent Hashing', path: '/consistent-hashing' },
   { name: 'CAP Theorem', path: '/cap-theorem' },

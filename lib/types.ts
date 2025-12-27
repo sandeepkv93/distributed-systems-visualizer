@@ -236,6 +236,28 @@ export interface QuorumMessage extends Message {
   };
 }
 
+// Distributed Lock + Lease types
+export interface LockLease {
+  ownerId: string | null;
+  expiresAt: number | null;
+}
+
+export interface LockNode extends BaseNode {
+  role: 'manager' | 'client';
+  holdingLock: boolean;
+  leaseExpiresAt: number | null;
+  lastHeartbeat: number | null;
+}
+
+export interface LockMessage extends Message {
+  type: 'Acquire' | 'Grant' | 'Heartbeat' | 'Release' | 'Deny' | 'Timeout';
+  payload: {
+    leaseExpiresAt?: number;
+    reason?: string;
+    queuePosition?: number;
+  };
+}
+
 // PBFT types
 export type PBFTPhase = 'pre-prepare' | 'prepare' | 'commit' | 'executed';
 

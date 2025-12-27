@@ -65,6 +65,13 @@ const concepts = [
     color: 'bg-rose-600',
   },
   {
+    name: 'Distributed Locking',
+    path: '/distributed-locking',
+    description:
+      'Lease-based locking with heartbeats and timeout recovery.',
+    color: 'bg-lime-600',
+  },
+  {
     name: 'Vector Clocks',
     path: '/vector-clocks',
     description:

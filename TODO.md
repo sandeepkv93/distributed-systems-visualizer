@@ -2,7 +2,6 @@
 
 Topics to add as visualizers:
 
-- Distributed locking and lease/heartbeat systems
 - Sharding + rebalancing (range vs hash)
 - Merkle trees for anti-entropy
 - CRDTs (G-Counter, OR-Set, RGA)

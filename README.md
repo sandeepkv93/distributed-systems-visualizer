@@ -55,7 +55,10 @@ An interactive learning platform for understanding distributed systems concepts 
 11. **PBFT Consensus** - Byzantine fault tolerance with view changes
    - Scenarios covering normal case and leader replacement
 
-12. **CAP Theorem** - Interactive exploration of distributed systems trade-offs
+12. **Distributed Locking + Leases** - Lock manager with heartbeats and timeouts
+   - Scenarios showing acquisition, renewal, expiry, and contention
+
+13. **CAP Theorem** - Interactive exploration of distributed systems trade-offs
    - Triangle visualization with real-world database systems (MongoDB, Cassandra, etc.)
    - Educational content explaining CA, CP, and AP combinations
 
