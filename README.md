@@ -1,6 +1,6 @@
 # Distributed Systems Visualizer
 
-An interactive learning platform for understanding distributed systems concepts through visual animations, step-by-step execution, and AI-powered explanations.
+Interactive visual simulations for learning distributed systems, with step controls, AI explanations, and in-page theory articles.
 
 ![Distributed Systems Visualizer](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square&logo=typescript)
@@ -8,86 +8,21 @@ An interactive learning platform for understanding distributed systems concepts 
 
 ## 🌟 Features
 
-- **Interactive Visualizations**: Play, pause, and step through distributed systems algorithms in real-time
-- **AI-Powered Explanations**: Get instant explanations powered by Claude AI for any state or event
-- **AI-Generated Quizzes**: Test your understanding with Claude-powered quizzes tailored to each concept
-- **Progress Tracking**: Track completed scenarios, quizzes, and unlock achievements
-- **Export & Share**: Export visualizations as PNG, SVG, or share via system dialog
-- **Pre-built Scenarios**: Learn from carefully crafted edge cases and failure scenarios (33 total!)
-- **Manual Controls**: Inject failures, trigger events, and experiment with different configurations
-- **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
-- **Static Export**: Deployable to GitHub Pages with zero backend dependencies
+- **Interactive Visualizations**: Play, pause, and step through algorithms
+- **Theory Drawer**: Read a detailed article inside each topic page
+- **AI Explanations + Quizzes**: Ask Claude questions and test understanding
+- **Scenarios + Manual Controls**: Pre-built cases plus knobs to inject events
+- **Export + Share**: PNG/SVG/JSON export and share shortcuts
+- **Progress Tracking**: Local progress, achievements, and stats
+- **Static Export**: Deploy to GitHub Pages with no backend
 
 ## 📚 Concepts Covered
 
-### ✅ All Visualizers Implemented!
-
-1. **Raft Consensus** - Leader election, log replication, and failover scenarios
-   - 5 scenarios covering elections, failures, partitions, and replication
-
-2. **Paxos Consensus** - Two-phase distributed consensus protocol
-   - 5 scenarios including dueling proposers, acceptor failures, and Multi-Paxos
-
-3. **Vector Clocks** - Causality tracking and concurrent event detection
-   - 5 scenarios demonstrating happened-before relationships and concurrency
-
-4. **Consistent Hashing** - Data partitioning with minimal redistribution
-   - 6 scenarios showing virtual nodes, server scaling, and load distribution
-
-5. **Two-Phase Commit (2PC)** - Atomic distributed transaction protocol
-   - 6 scenarios covering successful commits, aborts, failures, and recovery
-
-6. **Eventual Consistency** - Asynchronous replication with tunable consistency
-   - 6 scenarios exploring ONE/QUORUM/ALL levels, conflicts, and anti-entropy
-
-7. **Gossip & Anti-Entropy** - Epidemic-style state exchange for convergence
-   - Scenarios covering push, pull, and push-pull rounds
-
-8. **Chandy-Lamport Snapshot** - Consistent global snapshots with marker messages
-   - Scenarios showing in-transit message capture and marker propagation
-
-9. **Lamport Clocks + Total Order Broadcast** - Logical clocks with a total delivery order
-   - Scenarios covering local events, broadcasts, and tie-breaking
-
-10. **Quorum Replication + Read Repair** - Read/write quorums that heal stale replicas
-   - Scenarios showing successful writes, quorum failures, and repair
-
-11. **PBFT Consensus** - Byzantine fault tolerance with view changes
-   - Scenarios covering normal case and leader replacement
-
-12. **Distributed Locking + Leases** - Lock manager with heartbeats and timeouts
-   - Scenarios showing acquisition, renewal, expiry, and contention
-
-13. **Sharding + Rebalancing** - Range vs hash sharding under scale changes
-   - Scenarios showing node add/remove and data movement
-
-14. **Merkle Tree Anti-Entropy** - Hash-based divergence detection and repair
-   - Scenarios showing root comparison and leaf synchronization
-
-15. **CRDTs** - Conflict-free replicated data types (G-Counter, OR-Set, RGA)
-   - Scenarios showing merge convergence across replicas
-
-16. **Replication Log (Kafka-style)** - Partition replication with ISR and HW
-   - Scenarios showing ISR shrink and rejoin
-
-17. **Failure Detectors** - Phi accrual and SWIM-style probing
-   - Scenarios showing suspicion and confirmation
-
-18. **Distributed Transactions** - 3PC and saga compensation workflows
-   - Scenarios covering commit, abort, and compensation
-
-19. **Load Balancing + Backpressure** - Queue limits and request shedding
-   - Scenarios covering bursts, steady flow, and worker failures
-
-20. **Network Partitions + Split-Brain** - Partitioning and leader resolution
-   - Scenarios showing split-brain and healing
-
-21. **Consensus Variants** - Raft joint consensus, Multi-Paxos, EPaxos
-   - Scenarios showing reconfiguration, leader optimization, and fast path
-
-22. **CAP Theorem** - Interactive exploration of distributed systems trade-offs
-   - Triangle visualization with real-world database systems (MongoDB, Cassandra, etc.)
-   - Educational content explaining CA, CP, and AP combinations
+CAP Theorem, Lamport/Vector Clocks, Chandy-Lamport Snapshot, Eventual Consistency,
+CRDTs, Gossip, Merkle Anti-Entropy, Quorum Replication, Replication Log,
+Failure Detectors, Consistent Hashing, Sharding + Rebalancing, Load Balancing,
+Distributed Locking, 2PC, Distributed Transactions, Network Partitions,
+Paxos, Raft, Consensus Variants, PBFT.
 
 ## 🚀 Getting Started
 
@@ -126,13 +61,10 @@ This generates a static export in the `out/` directory, ready for deployment to 
 
 ## 🎯 Usage
 
-### Basic Workflow
-
-1. **Choose a Concept**: Select from the available distributed systems concepts on the home page
-2. **Select a Scenario** (Optional): Pick a pre-built scenario from the control panel to see specific behaviors
-3. **Control Playback**: Use play/pause/step controls to navigate through the simulation
-4. **Interact**: Click nodes to fail/recover them, trigger elections, or add client requests
-5. **Ask Questions**: Use the "Ask Claude" feature to get explanations about what's happening
+1. Pick a topic from the home page or Topics menu.
+2. Choose a scenario or use manual controls.
+3. Use "Read the theory" for the long-form article.
+4. Ask Claude for explanations or quizzes.
 
 ### Enabling AI Explanations
 
@@ -167,61 +99,12 @@ Track your learning journey:
 
 ### Tech Stack
 
-- **Framework**: Next.js 14+ with App Router
+- **Framework**: Next.js 16 (App Router)
 - **Language**: TypeScript (strict mode)
 - **Styling**: Tailwind CSS
 - **Animations**: Framer Motion
-- **Visualizations**: SVG with motion animations
-- **State Management**: React Hooks + Custom simulation engine
 - **AI Integration**: Anthropic Claude API (client-side)
 - **Icons**: Lucide React
-
-### Project Structure
-
-```
-distributed-systems-visualizer/
-├── app/                      # Next.js pages
-│   ├── raft/                # Raft consensus page
-│   ├── paxos/               # Paxos consensus page
-│   ├── vector-clocks/       # Vector clocks page
-│   ├── consistent-hashing/  # Consistent hashing page
-│   ├── two-phase-commit/    # 2PC page
-│   ├── eventual-consistency/# Eventual consistency page
-│   ├── cap-theorem/         # CAP theorem page
-│   └── page.tsx             # Home page
-├── components/              # Reusable React components
-│   ├── Navigation.tsx       # Top navigation bar
-│   ├── ControlPanel.tsx     # Playback controls
-│   ├── ExplanationPanel.tsx # AI explanation display
-│   ├── ExportMenu.tsx       # Export/share menu
-│   ├── QuizComponent.tsx    # AI-powered quiz interface
-│   └── ProgressDashboard.tsx # Progress tracking dashboard
-├── lib/                     # Core library code
-│   ├── algorithms/          # Algorithm implementations
-│   │   ├── raft.ts         # Raft consensus logic
-│   │   ├── paxos.ts        # Paxos consensus logic
-│   │   ├── vectorClocks.ts # Vector clocks logic
-│   │   ├── consistentHashing.ts # Consistent hashing logic
-│   │   ├── twoPhaseCommit.ts # 2PC logic
-│   │   └── eventualConsistency.ts # Eventual consistency logic
-│   ├── types.ts            # TypeScript type definitions
-│   ├── simulation-engine.ts # Generic simulation engine
-│   ├── claude-api.ts       # Claude API integration
-│   ├── progress.ts         # Progress tracking & achievements
-│   └── export.ts           # Export utilities (PNG, SVG, JSON)
-├── hooks/                   # Custom React hooks
-│   ├── useSimulation.ts    # Simulation state management
-│   ├── useClaudeExplainer.ts # AI explanation hook
-│   └── useProgress.ts      # Progress tracking hook
-├── visualizers/             # Concept-specific visualizers
-│   ├── raft/scenarios.ts   # Pre-built Raft scenarios
-│   ├── paxos/scenarios.ts  # Pre-built Paxos scenarios
-│   ├── vector-clocks/scenarios.ts # Vector clock scenarios
-│   ├── consistent-hashing/scenarios.ts # Consistent hashing scenarios
-│   ├── two-phase-commit/scenarios.ts # 2PC scenarios
-│   └── eventual-consistency/scenarios.ts # Eventual consistency scenarios
-└── public/                  # Static assets
-```
 
 ### Adding New Concepts
 
