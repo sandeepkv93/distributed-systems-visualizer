@@ -2,52 +2,12 @@ import Link from 'next/link';
 
 const concepts = [
   {
-    name: 'Raft Consensus',
-    path: '/raft',
+    name: 'CAP Theorem',
+    path: '/cap-theorem',
     description:
-      'Pick a leader, replicate logs, and survive failures. See how Raft keeps nodes consistent during elections and recovery.',
-    color: 'bg-blue-600',
-    emoji: '🧭',
-  },
-  {
-    name: 'Paxos',
-    path: '/paxos',
-    description:
-      'Follow proposers and acceptors through prepare/accept rounds to reach agreement despite competing proposals.',
-    color: 'bg-purple-600',
-    emoji: '🗳️',
-  },
-  {
-    name: 'Two-Phase Commit',
-    path: '/two-phase-commit',
-    description:
-      'Watch a coordinator drive prepare/commit across participants and see how failures force aborts.',
-    color: 'bg-green-600',
-    emoji: '🔗',
-  },
-  {
-    name: 'Eventual Consistency',
-    path: '/eventual-consistency',
-    description:
-      'Write with ONE/QUORUM/ALL and observe replication, conflict, and anti-entropy convergence.',
-    color: 'bg-yellow-600',
-    emoji: '🌐',
-  },
-  {
-    name: 'Gossip & Anti-Entropy',
-    path: '/gossip-anti-entropy',
-    description:
-      'Push, pull, and push-pull rounds spread updates across nodes without a central coordinator.',
-    color: 'bg-emerald-600',
-    emoji: '🫧',
-  },
-  {
-    name: 'Chandy-Lamport Snapshot',
-    path: '/chandy-lamport',
-    description:
-      'Trace marker messages to record local state and in-flight messages for a global snapshot.',
-    color: 'bg-cyan-600',
-    emoji: '📸',
+      'Explore trade-offs among Consistency, Availability, and Partition Tolerance with real systems.',
+    color: 'bg-pink-600',
+    emoji: '🔺',
   },
   {
     name: 'Lamport Clocks',
@@ -58,36 +18,44 @@ const concepts = [
     emoji: '⏱️',
   },
   {
-    name: 'Quorum Replication',
-    path: '/quorum-replication',
+    name: 'Vector Clocks',
+    path: '/vector-clocks',
     description:
-      'Tune W/R quorums and watch read-repair fix stale replicas after failures.',
-    color: 'bg-orange-600',
-    emoji: '⚖️',
+      'Track causality, detect concurrency, and compare event orderings with vector clocks.',
+    color: 'bg-red-600',
+    emoji: '🧭',
   },
   {
-    name: 'PBFT',
-    path: '/pbft',
+    name: 'Chandy-Lamport Snapshot',
+    path: '/chandy-lamport',
     description:
-      'Follow pre-prepare, prepare, and commit phases plus view changes under byzantine faults.',
-    color: 'bg-rose-600',
-    emoji: '🛡️',
+      'Trace marker messages to record local state and in-flight messages for a global snapshot.',
+    color: 'bg-cyan-600',
+    emoji: '📸',
   },
   {
-    name: 'Distributed Locking',
-    path: '/distributed-locking',
+    name: 'Eventual Consistency',
+    path: '/eventual-consistency',
     description:
-      'Acquire a lease, renew via heartbeats, and see timeouts trigger failover.',
-    color: 'bg-lime-600',
-    emoji: '🔒',
+      'Write with ONE/QUORUM/ALL and observe replication, conflict, and anti-entropy convergence.',
+    color: 'bg-yellow-600',
+    emoji: '🌐',
   },
   {
-    name: 'Sharding + Rebalancing',
-    path: '/sharding-rebalancing',
+    name: 'CRDTs',
+    path: '/crdts',
     description:
-      'Compare range vs hash sharding and watch shard movement as nodes join or leave.',
-    color: 'bg-cyan-700',
-    emoji: '🧩',
+      'Explore G-Counter, OR-Set, and RGA to see conflict-free merges across replicas.',
+    color: 'bg-emerald-700',
+    emoji: '🧮',
+  },
+  {
+    name: 'Gossip & Anti-Entropy',
+    path: '/gossip-anti-entropy',
+    description:
+      'Push, pull, and push-pull rounds spread updates across nodes without a central coordinator.',
+    color: 'bg-emerald-600',
+    emoji: '🫧',
   },
   {
     name: 'Merkle Anti-Entropy',
@@ -98,12 +66,12 @@ const concepts = [
     emoji: '🌳',
   },
   {
-    name: 'CRDTs',
-    path: '/crdts',
+    name: 'Quorum Replication',
+    path: '/quorum-replication',
     description:
-      'Explore G-Counter, OR-Set, and RGA to see conflict-free merges across replicas.',
-    color: 'bg-emerald-700',
-    emoji: '🧮',
+      'Tune W/R quorums and watch read-repair fix stale replicas after failures.',
+    color: 'bg-orange-600',
+    emoji: '⚖️',
   },
   {
     name: 'Replication Log',
@@ -122,12 +90,20 @@ const concepts = [
     emoji: '🚨',
   },
   {
-    name: 'Distributed Transactions',
-    path: '/distributed-transactions',
+    name: 'Consistent Hashing',
+    path: '/consistent-hashing',
     description:
-      'Compare 3PC commit flow with saga steps and compensations on failure.',
-    color: 'bg-purple-700',
-    emoji: '🧾',
+      'Distribute keys across a ring and see how virtual nodes minimize reshuffling.',
+    color: 'bg-indigo-600',
+    emoji: '🧿',
+  },
+  {
+    name: 'Sharding + Rebalancing',
+    path: '/sharding-rebalancing',
+    description:
+      'Compare range vs hash sharding and watch shard movement as nodes join or leave.',
+    color: 'bg-cyan-700',
+    emoji: '🧩',
   },
   {
     name: 'Load Balancing',
@@ -138,12 +114,52 @@ const concepts = [
     emoji: '🚦',
   },
   {
+    name: 'Distributed Locking',
+    path: '/distributed-locking',
+    description:
+      'Acquire a lease, renew via heartbeats, and see timeouts trigger failover.',
+    color: 'bg-lime-600',
+    emoji: '🔒',
+  },
+  {
+    name: 'Two-Phase Commit',
+    path: '/two-phase-commit',
+    description:
+      'Watch a coordinator drive prepare/commit across participants and see how failures force aborts.',
+    color: 'bg-green-600',
+    emoji: '🔗',
+  },
+  {
+    name: 'Distributed Transactions',
+    path: '/distributed-transactions',
+    description:
+      'Compare 3PC commit flow with saga steps and compensations on failure.',
+    color: 'bg-purple-700',
+    emoji: '🧾',
+  },
+  {
     name: 'Network Partitions',
     path: '/network-partitions',
     description:
       'Split the network, elect leaders per partition, then heal and resolve split-brain.',
     color: 'bg-red-700',
     emoji: '🕸️',
+  },
+  {
+    name: 'Paxos',
+    path: '/paxos',
+    description:
+      'Follow proposers and acceptors through prepare/accept rounds to reach agreement despite competing proposals.',
+    color: 'bg-purple-600',
+    emoji: '🗳️',
+  },
+  {
+    name: 'Raft Consensus',
+    path: '/raft',
+    description:
+      'Pick a leader, replicate logs, and survive failures. See how Raft keeps nodes consistent during elections and recovery.',
+    color: 'bg-blue-600',
+    emoji: '🧭',
   },
   {
     name: 'Consensus Variants',
@@ -154,28 +170,12 @@ const concepts = [
     emoji: '🧪',
   },
   {
-    name: 'Vector Clocks',
-    path: '/vector-clocks',
+    name: 'PBFT',
+    path: '/pbft',
     description:
-      'Track causality, detect concurrency, and compare event orderings with vector clocks.',
-    color: 'bg-red-600',
-    emoji: '🧭',
-  },
-  {
-    name: 'Consistent Hashing',
-    path: '/consistent-hashing',
-    description:
-      'Distribute keys across a ring and see how virtual nodes minimize reshuffling.',
-    color: 'bg-indigo-600',
-    emoji: '🧿',
-  },
-  {
-    name: 'CAP Theorem',
-    path: '/cap-theorem',
-    description:
-      'Explore trade-offs among Consistency, Availability, and Partition Tolerance with real systems.',
-    color: 'bg-pink-600',
-    emoji: '🔺',
+      'Follow pre-prepare, prepare, and commit phases plus view changes under byzantine faults.',
+    color: 'bg-rose-600',
+    emoji: '🛡️',
   },
 ];
 
