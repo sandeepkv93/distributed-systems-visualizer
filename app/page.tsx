@@ -114,6 +114,13 @@ const concepts = [
     color: 'bg-purple-700',
   },
   {
+    name: 'Load Balancing',
+    path: '/load-balancing',
+    description:
+      'Route requests across workers with queue limits and backpressure.',
+    color: 'bg-amber-700',
+  },
+  {
     name: 'Vector Clocks',
     path: '/vector-clocks',
     description:

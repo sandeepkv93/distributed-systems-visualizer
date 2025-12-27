@@ -76,7 +76,10 @@ An interactive learning platform for understanding distributed systems concepts 
 18. **Distributed Transactions** - 3PC and saga compensation workflows
    - Scenarios covering commit, abort, and compensation
 
-19. **CAP Theorem** - Interactive exploration of distributed systems trade-offs
+19. **Load Balancing + Backpressure** - Queue limits and request shedding
+   - Scenarios covering bursts, steady flow, and worker failures
+
+20. **CAP Theorem** - Interactive exploration of distributed systems trade-offs
    - Triangle visualization with real-world database systems (MongoDB, Cassandra, etc.)
    - Educational content explaining CA, CP, and AP combinations
 

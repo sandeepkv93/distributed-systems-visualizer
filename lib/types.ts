@@ -419,6 +419,29 @@ export interface TransactionMessage extends Message {
   };
 }
 
+// Load Balancing + Backpressure types
+export interface LoadWorker extends BaseNode {
+  queue: number;
+  capacity: number;
+  processing: number;
+  status: 'healthy' | 'overloaded' | 'failed';
+}
+
+export interface LoadRequest {
+  id: string;
+  latency: number;
+  assignedTo?: string;
+  status: 'queued' | 'processing' | 'done' | 'dropped';
+}
+
+export interface LoadMessage extends Message {
+  type: 'Request' | 'Dispatch' | 'Drop' | 'Complete';
+  payload: {
+    requestId: string;
+    workerId?: string;
+  };
+}
+
 // PBFT types
 export type PBFTPhase = 'pre-prepare' | 'prepare' | 'commit' | 'executed';
 

@@ -25,6 +25,7 @@ const concepts = [
   { name: 'Replication Log', path: '/replication-log' },
   { name: 'Failure Detectors', path: '/failure-detectors' },
   { name: 'Distributed Transactions', path: '/distributed-transactions' },
+  { name: 'Load Balancing', path: '/load-balancing' },
   { name: 'Vector Clocks', path: '/vector-clocks' },
   { name: 'Consistent Hashing', path: '/consistent-hashing' },
   { name: 'CAP Theorem', path: '/cap-theorem' },
