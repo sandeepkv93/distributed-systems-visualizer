@@ -343,6 +343,39 @@ export interface CRDTMessage extends Message {
   };
 }
 
+// Replication Log (Kafka-style) types
+export interface ReplicationLogEntry {
+  offset: number;
+  value: string;
+}
+
+export interface LogReplica {
+  id: string;
+  role: 'leader' | 'follower';
+  log: ReplicationLogEntry[];
+  highWatermark: number;
+  lag: number;
+  inSync: boolean;
+}
+
+export interface LogPartition {
+  id: string;
+  replicas: LogReplica[];
+  isr: string[];
+  leaderId: string;
+  nextOffset: number;
+}
+
+export interface LogMessage extends Message {
+  type: 'Produce' | 'Replicate' | 'Fetch' | 'Ack';
+  payload: {
+    partitionId: string;
+    offset?: number;
+    value?: string;
+    leaderId?: string;
+  };
+}
+
 // PBFT types
 export type PBFTPhase = 'pre-prepare' | 'prepare' | 'commit' | 'executed';
 

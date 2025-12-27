@@ -67,7 +67,10 @@ An interactive learning platform for understanding distributed systems concepts 
 15. **CRDTs** - Conflict-free replicated data types (G-Counter, OR-Set, RGA)
    - Scenarios showing merge convergence across replicas
 
-16. **CAP Theorem** - Interactive exploration of distributed systems trade-offs
+16. **Replication Log (Kafka-style)** - Partition replication with ISR and HW
+   - Scenarios showing ISR shrink and rejoin
+
+17. **CAP Theorem** - Interactive exploration of distributed systems trade-offs
    - Triangle visualization with real-world database systems (MongoDB, Cassandra, etc.)
    - Educational content explaining CA, CP, and AP combinations
 

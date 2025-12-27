@@ -93,6 +93,13 @@ const concepts = [
     color: 'bg-emerald-700',
   },
   {
+    name: 'Replication Log',
+    path: '/replication-log',
+    description:
+      'Kafka-style partition replication with ISR and high-watermarks.',
+    color: 'bg-slate-600',
+  },
+  {
     name: 'Vector Clocks',
     path: '/vector-clocks',
     description:
