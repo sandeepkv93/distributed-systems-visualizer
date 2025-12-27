@@ -37,10 +37,15 @@ export default function Navigation() {
   const pathname = usePathname();
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [showProgressDashboard, setShowProgressDashboard] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showDesktopMore, setShowDesktopMore] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [apiKeyExists, setApiKeyExists] = useState(hasApiKey());
+
+  const visibleConcepts = concepts.slice(0, 6);
+  const overflowConcepts = concepts.slice(6);
 
   const handleSaveApiKey = async () => {
     setIsValidating(true);
@@ -70,8 +75,8 @@ export default function Navigation() {
       <nav className="bg-slate-800 border-b border-slate-700">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-1 overflow-x-auto">
-              {concepts.map((concept) => {
+            <div className="hidden md:flex items-center gap-2">
+              {visibleConcepts.map((concept) => {
                 const isActive = pathname === concept.path;
                 return (
                   <Link
@@ -87,6 +92,47 @@ export default function Navigation() {
                   </Link>
                 );
               })}
+              {overflowConcepts.length > 0 && (
+                <div className="relative">
+                  <button
+                    onClick={() => setShowDesktopMore((open) => !open)}
+                    className="px-4 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+                  >
+                    More
+                  </button>
+                  {showDesktopMore && (
+                    <div className="absolute left-0 mt-2 w-56 bg-slate-800 border border-slate-700 rounded-lg shadow-lg z-50">
+                      <div className="py-2">
+                        {overflowConcepts.map((concept) => {
+                          const isActive = pathname === concept.path;
+                          return (
+                            <Link
+                              key={`more-${concept.path}`}
+                              href={concept.path}
+                              onClick={() => setShowDesktopMore(false)}
+                              className={`block px-4 py-2 text-sm transition-colors ${
+                                isActive
+                                  ? 'bg-blue-600 text-white'
+                                  : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+                              }`}
+                            >
+                              {concept.name}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="md:hidden">
+              <button
+                onClick={() => setShowMobileMenu((open) => !open)}
+                className="px-3 py-1 text-sm bg-slate-700 text-white rounded hover:bg-slate-600"
+              >
+                Menu
+              </button>
             </div>
             <div className="flex items-center space-x-2">
               <button
@@ -118,6 +164,29 @@ export default function Navigation() {
           </div>
         </div>
       </nav>
+      {showMobileMenu && (
+        <div className="md:hidden bg-slate-800 border-b border-slate-700">
+          <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap gap-2">
+            {concepts.map((concept) => {
+              const isActive = pathname === concept.path;
+              return (
+                <Link
+                  key={`mobile-${concept.path}`}
+                  href={concept.path}
+                  onClick={() => setShowMobileMenu(false)}
+                  className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-blue-600 text-white'
+                      : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+                  }`}
+                >
+                  {concept.name}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* API Key Modal */}
       {showApiKeyModal && (
