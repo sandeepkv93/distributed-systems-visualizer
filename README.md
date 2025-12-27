@@ -73,7 +73,10 @@ An interactive learning platform for understanding distributed systems concepts 
 17. **Failure Detectors** - Phi accrual and SWIM-style probing
    - Scenarios showing suspicion and confirmation
 
-18. **CAP Theorem** - Interactive exploration of distributed systems trade-offs
+18. **Distributed Transactions** - 3PC and saga compensation workflows
+   - Scenarios covering commit, abort, and compensation
+
+19. **CAP Theorem** - Interactive exploration of distributed systems trade-offs
    - Triangle visualization with real-world database systems (MongoDB, Cassandra, etc.)
    - Educational content explaining CA, CP, and AP combinations
 

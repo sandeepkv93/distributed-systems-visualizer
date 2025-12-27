@@ -393,6 +393,32 @@ export interface FailureDetectorMessage extends Message {
   };
 }
 
+// Distributed Transactions types
+export type TransactionPhase = 'init' | 'prepare' | 'pre-commit' | 'commit' | 'abort' | 'done';
+export type SagaStepStatus = 'pending' | 'completed' | 'compensated';
+
+export interface TransactionParticipant {
+  id: string;
+  status: 'healthy' | 'failed';
+  phase: TransactionPhase;
+  vote?: 'yes' | 'no';
+}
+
+export interface SagaStep {
+  id: string;
+  name: string;
+  status: SagaStepStatus;
+}
+
+export interface TransactionMessage extends Message {
+  type: 'Prepare' | 'PreCommit' | 'Commit' | 'Abort' | 'Vote' | 'Compensate';
+  payload: {
+    participantId: string;
+    vote?: 'yes' | 'no';
+    stepId?: string;
+  };
+}
+
 // PBFT types
 export type PBFTPhase = 'pre-prepare' | 'prepare' | 'commit' | 'executed';
 

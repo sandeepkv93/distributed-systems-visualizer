@@ -107,6 +107,13 @@ const concepts = [
     color: 'bg-orange-700',
   },
   {
+    name: 'Distributed Transactions',
+    path: '/distributed-transactions',
+    description:
+      'Compare 3PC atomic commit with saga compensation workflows.',
+    color: 'bg-purple-700',
+  },
+  {
     name: 'Vector Clocks',
     path: '/vector-clocks',
     description:
