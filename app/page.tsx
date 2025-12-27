@@ -72,6 +72,13 @@ const concepts = [
     color: 'bg-lime-600',
   },
   {
+    name: 'Sharding + Rebalancing',
+    path: '/sharding-rebalancing',
+    description:
+      'Compare range vs hash sharding and see how rebalancing moves data.',
+    color: 'bg-cyan-700',
+  },
+  {
     name: 'Vector Clocks',
     path: '/vector-clocks',
     description:

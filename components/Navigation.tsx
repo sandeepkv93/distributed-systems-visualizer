@@ -19,6 +19,7 @@ const concepts = [
   { name: 'Quorum Replication', path: '/quorum-replication' },
   { name: 'PBFT', path: '/pbft' },
   { name: 'Distributed Locking', path: '/distributed-locking' },
+  { name: 'Sharding + Rebalancing', path: '/sharding-rebalancing' },
   { name: 'Vector Clocks', path: '/vector-clocks' },
   { name: 'Consistent Hashing', path: '/consistent-hashing' },
   { name: 'CAP Theorem', path: '/cap-theorem' },

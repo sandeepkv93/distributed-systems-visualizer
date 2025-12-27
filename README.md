@@ -58,7 +58,10 @@ An interactive learning platform for understanding distributed systems concepts 
 12. **Distributed Locking + Leases** - Lock manager with heartbeats and timeouts
    - Scenarios showing acquisition, renewal, expiry, and contention
 
-13. **CAP Theorem** - Interactive exploration of distributed systems trade-offs
+13. **Sharding + Rebalancing** - Range vs hash sharding under scale changes
+   - Scenarios showing node add/remove and data movement
+
+14. **CAP Theorem** - Interactive exploration of distributed systems trade-offs
    - Triangle visualization with real-world database systems (MongoDB, Cassandra, etc.)
    - Educational content explaining CA, CP, and AP combinations
 

@@ -258,6 +258,36 @@ export interface LockMessage extends Message {
   };
 }
 
+// Sharding + Rebalancing types
+export type ShardingStrategy = 'range' | 'hash';
+
+export interface ShardRange {
+  start: number;
+  end: number;
+}
+
+export interface ShardNode extends BaseNode {
+  shards: ShardRange[];
+  keys: number[];
+  load: number;
+}
+
+export interface ShardMigration {
+  from: string;
+  to: string;
+  range: ShardRange;
+  keys: number[];
+}
+
+export interface ShardMessage extends Message {
+  type: 'MoveShard' | 'Rebalance';
+  payload: {
+    range: ShardRange;
+    keys: number[];
+    strategy: ShardingStrategy;
+  };
+}
+
 // PBFT types
 export type PBFTPhase = 'pre-prepare' | 'prepare' | 'commit' | 'executed';
 
