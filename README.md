@@ -64,7 +64,10 @@ An interactive learning platform for understanding distributed systems concepts 
 14. **Merkle Tree Anti-Entropy** - Hash-based divergence detection and repair
    - Scenarios showing root comparison and leaf synchronization
 
-15. **CAP Theorem** - Interactive exploration of distributed systems trade-offs
+15. **CRDTs** - Conflict-free replicated data types (G-Counter, OR-Set, RGA)
+   - Scenarios showing merge convergence across replicas
+
+16. **CAP Theorem** - Interactive exploration of distributed systems trade-offs
    - Triangle visualization with real-world database systems (MongoDB, Cassandra, etc.)
    - Educational content explaining CA, CP, and AP combinations
 

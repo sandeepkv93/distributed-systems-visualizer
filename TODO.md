@@ -2,7 +2,6 @@
 
 Topics to add as visualizers:
 
-- CRDTs (G-Counter, OR-Set, RGA)
 - Consistent replication log (Kafka-style partitions/ISR)
 - Failure detectors (phi accrual, SWIM)
 - Distributed transactions: 3PC, saga pattern

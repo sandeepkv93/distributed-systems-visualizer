@@ -86,6 +86,13 @@ const concepts = [
     color: 'bg-sky-600',
   },
   {
+    name: 'CRDTs',
+    path: '/crdts',
+    description:
+      'Explore G-Counter, OR-Set, and RGA convergence across replicas.',
+    color: 'bg-emerald-700',
+  },
+  {
     name: 'Vector Clocks',
     path: '/vector-clocks',
     description:

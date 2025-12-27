@@ -318,6 +318,31 @@ export interface MerkleMessage extends Message {
   };
 }
 
+// CRDT types
+export interface CRDTElement {
+  id: string;
+  value: string;
+  prevId: string;
+  tombstone: boolean;
+}
+
+export interface CRDTReplica {
+  id: string;
+  gCounter: Record<string, number>;
+  orSetAdds: Record<string, string[]>;
+  orSetRemoves: string[];
+  rga: Record<string, CRDTElement>;
+  localCounter: number;
+}
+
+export interface CRDTMessage extends Message {
+  type: 'Sync';
+  payload: {
+    fromId: string;
+    toId: string;
+  };
+}
+
 // PBFT types
 export type PBFTPhase = 'pre-prepare' | 'prepare' | 'commit' | 'executed';
 
