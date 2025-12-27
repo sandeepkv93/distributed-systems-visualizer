@@ -13,6 +13,7 @@ const concepts = [
   { name: 'Paxos', path: '/paxos' },
   { name: '2PC', path: '/two-phase-commit' },
   { name: 'Eventual Consistency', path: '/eventual-consistency' },
+  { name: 'Gossip & Anti-Entropy', path: '/gossip-anti-entropy' },
   { name: 'Vector Clocks', path: '/vector-clocks' },
   { name: 'Consistent Hashing', path: '/consistent-hashing' },
   { name: 'CAP Theorem', path: '/cap-theorem' },

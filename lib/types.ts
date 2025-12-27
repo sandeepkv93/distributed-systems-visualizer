@@ -141,6 +141,28 @@ export interface EventualConsistencyMessage extends Message {
   };
 }
 
+// Gossip / Anti-Entropy types
+export type GossipMode = 'push' | 'pull' | 'push-pull';
+
+export interface GossipValue {
+  value: any;
+  version: number;
+  origin: string;
+  timestamp: number;
+}
+
+export interface GossipNode extends BaseNode {
+  data: Map<string, GossipValue>;
+  version: number;
+}
+
+export interface GossipMessage extends Message {
+  type: 'Gossip';
+  payload: {
+    mode: GossipMode;
+  };
+}
+
 // Vector Clocks types
 export interface VectorClockEvent {
   id: string;

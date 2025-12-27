@@ -30,6 +30,13 @@ const concepts = [
     color: 'bg-yellow-600',
   },
   {
+    name: 'Gossip & Anti-Entropy',
+    path: '/gossip-anti-entropy',
+    description:
+      'See how nodes exchange state periodically to converge without a coordinator.',
+    color: 'bg-emerald-600',
+  },
+  {
     name: 'Vector Clocks',
     path: '/vector-clocks',
     description:
