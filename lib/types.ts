@@ -466,6 +466,43 @@ export interface PartitionMessage extends Message {
   };
 }
 
+// Consensus Variants types
+export type ConsensusVariant = 'raft-joint' | 'multi-paxos' | 'epaxos';
+export type ConsensusRole = 'leader' | 'follower' | 'proposer';
+
+export interface ConsensusEntry {
+  id: string;
+  value: string;
+  committed: boolean;
+}
+
+export interface EPaxosInstance {
+  id: string;
+  leaderId: string;
+  command: string;
+  path: 'fast' | 'slow';
+  committed: boolean;
+}
+
+export interface ConsensusNode extends BaseNode {
+  role: ConsensusRole;
+  term: number;
+  log: ConsensusEntry[];
+  configPhase: 'old' | 'joint' | 'new';
+  inNewConfig: boolean;
+  committedIndex: number;
+  instances: EPaxosInstance[];
+}
+
+export interface ConsensusMessage extends Message {
+  type: 'Append' | 'Ack' | 'Prepare' | 'Accept';
+  payload: {
+    entryId?: string;
+    value?: string;
+    instanceId?: string;
+  };
+}
+
 // PBFT types
 export type PBFTPhase = 'pre-prepare' | 'prepare' | 'commit' | 'executed';
 

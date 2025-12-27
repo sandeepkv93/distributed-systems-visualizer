@@ -27,6 +27,7 @@ const concepts = [
   { name: 'Distributed Transactions', path: '/distributed-transactions' },
   { name: 'Load Balancing', path: '/load-balancing' },
   { name: 'Network Partitions', path: '/network-partitions' },
+  { name: 'Consensus Variants', path: '/consensus-variants' },
   { name: 'Vector Clocks', path: '/vector-clocks' },
   { name: 'Consistent Hashing', path: '/consistent-hashing' },
   { name: 'CAP Theorem', path: '/cap-theorem' },

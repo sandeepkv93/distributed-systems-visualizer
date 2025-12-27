@@ -82,7 +82,10 @@ An interactive learning platform for understanding distributed systems concepts 
 20. **Network Partitions + Split-Brain** - Partitioning and leader resolution
    - Scenarios showing split-brain and healing
 
-21. **CAP Theorem** - Interactive exploration of distributed systems trade-offs
+21. **Consensus Variants** - Raft joint consensus, Multi-Paxos, EPaxos
+   - Scenarios showing reconfiguration, leader optimization, and fast path
+
+22. **CAP Theorem** - Interactive exploration of distributed systems trade-offs
    - Triangle visualization with real-world database systems (MongoDB, Cassandra, etc.)
    - Educational content explaining CA, CP, and AP combinations
 

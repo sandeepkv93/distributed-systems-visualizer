@@ -128,6 +128,13 @@ const concepts = [
     color: 'bg-red-700',
   },
   {
+    name: 'Consensus Variants',
+    path: '/consensus-variants',
+    description:
+      'Compare Raft joint consensus, Multi-Paxos, and EPaxos.',
+    color: 'bg-indigo-700',
+  },
+  {
     name: 'Vector Clocks',
     path: '/vector-clocks',
     description:
