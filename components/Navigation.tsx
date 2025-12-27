@@ -44,8 +44,7 @@ export default function Navigation() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [apiKeyExists, setApiKeyExists] = useState(hasApiKey());
 
-  const visibleConcepts = concepts.slice(0, 6);
-  const overflowConcepts = concepts.slice(6);
+  const topicConcepts = concepts.filter((concept) => concept.path !== '/');
 
   const handleSaveApiKey = async () => {
     setIsValidating(true);
@@ -76,62 +75,54 @@ export default function Navigation() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <div className="hidden md:flex items-center gap-2">
-              {visibleConcepts.map((concept) => {
-                const isActive = pathname === concept.path;
-                return (
-                  <Link
-                    key={concept.path}
-                    href={concept.path}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                      isActive
-                        ? 'bg-blue-600 text-white'
-                        : 'text-slate-300 hover:bg-slate-700 hover:text-white'
-                    }`}
-                  >
-                    {concept.name}
-                  </Link>
-                );
-              })}
-              {overflowConcepts.length > 0 && (
-                <div className="relative">
-                  <button
-                    onClick={() => setShowDesktopMore((open) => !open)}
-                    className="px-4 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
-                  >
-                    More
-                  </button>
-                  {showDesktopMore && (
-                    <div className="absolute left-0 mt-2 w-56 bg-slate-800 border border-slate-700 rounded-lg shadow-lg z-50">
-                      <div className="py-2">
-                        {overflowConcepts.map((concept) => {
-                          const isActive = pathname === concept.path;
-                          return (
-                            <Link
-                              key={`more-${concept.path}`}
-                              href={concept.path}
-                              onClick={() => setShowDesktopMore(false)}
-                              className={`block px-4 py-2 text-sm transition-colors ${
-                                isActive
-                                  ? 'bg-blue-600 text-white'
-                                  : 'text-slate-300 hover:bg-slate-700 hover:text-white'
-                              }`}
-                            >
-                              {concept.name}
-                            </Link>
-                          );
-                        })}
-                      </div>
+              <Link
+                href="/"
+                className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                  pathname === '/'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+                }`}
+              >
+                Home
+              </Link>
+              <div className="relative">
+                <button
+                  onClick={() => setShowDesktopMore((open) => !open)}
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+                >
+                  Topics
+                </button>
+                {showDesktopMore && (
+                  <div className="absolute left-0 mt-2 w-60 bg-slate-800 border border-slate-700 rounded-lg shadow-lg z-50">
+                    <div className="py-2 max-h-80 overflow-y-auto">
+                      {topicConcepts.map((concept) => {
+                        const isActive = pathname === concept.path;
+                        return (
+                          <Link
+                            key={`topic-${concept.path}`}
+                            href={concept.path}
+                            onClick={() => setShowDesktopMore(false)}
+                            className={`block px-4 py-2 text-sm transition-colors ${
+                              isActive
+                                ? 'bg-blue-600 text-white'
+                                : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+                            }`}
+                          >
+                            {concept.name}
+                          </Link>
+                        );
+                      })}
                     </div>
-                  )}
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
             </div>
             <div className="md:hidden">
               <button
                 onClick={() => setShowMobileMenu((open) => !open)}
                 className="px-3 py-1 text-sm bg-slate-700 text-white rounded hover:bg-slate-600"
               >
-                Menu
+                Topics
               </button>
             </div>
             <div className="flex items-center space-x-2">
