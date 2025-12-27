@@ -18,11 +18,115 @@ Interactive visual simulations for learning distributed systems, with step contr
 
 ## 📚 Concepts Covered
 
-CAP Theorem, Lamport/Vector Clocks, Chandy-Lamport Snapshot, Eventual Consistency,
-CRDTs, Gossip, Merkle Anti-Entropy, Quorum Replication, Replication Log,
-Failure Detectors, Consistent Hashing, Sharding + Rebalancing, Load Balancing,
-Distributed Locking, 2PC, Distributed Transactions, Network Partitions,
-Paxos, Raft, Consensus Variants, PBFT.
+### CAP Theorem
+Learning Resources:
+- [Brewer keynote (PODC 2000)](https://www.cs.berkeley.edu/~brewer/cs262b-2004/PODC-keynote.pdf)
+- [Brewer's Conjecture paper](https://www.comp.nus.edu.sg/~gilbert/pubs/BrewersConjecture-SIGACT.pdf)
+
+### Lamport Clocks
+Learning Resources:
+- [Time, Clocks, and the Ordering of Events](https://lamport.azurewebsites.net/pubs/time-clocks.pdf)
+- [Causality and logical clocks (lecture)](https://www.cs.cornell.edu/courses/cs5414/2017sp/lectures/lec10-causality.pdf)
+
+### Vector Clocks
+Learning Resources:
+- [Fidge, timestamps in message-passing systems](https://www.cs.colostate.edu/~cs457/yr2018sp/more_material/Fidge_Timestamps.pdf)
+- [Mattern, virtual time and global states](https://www.cs.colostate.edu/~cs457/yr2018sp/more_material/Mattern_VirtualTime.pdf)
+
+### Chandy-Lamport Snapshot
+Learning Resources:
+- [Distributed snapshots (original paper)](https://lamport.azurewebsites.net/pubs/chandy.pdf)
+- [Chandy-Lamport notes](https://www.cs.cornell.edu/courses/cs5414/2014sp/reading/chandy-lamport.pdf)
+
+### Eventual Consistency
+Learning Resources:
+- [Dynamo: Amazon's key-value store](https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf)
+- [Eventually Consistent (Vogels)](https://www.allthingsdistributed.com/2008/12/eventually_consistent.html)
+
+### CRDTs
+Learning Resources:
+- [Conflict-free Replicated Data Types](https://hal.inria.fr/inria-00555588/document)
+- [Comprehensive CRDT study](https://hal.inria.fr/inria-00609399/document)
+
+### Gossip & Anti-Entropy
+Learning Resources:
+- [Epidemic algorithms for replication](https://www.cs.cornell.edu/home/rvr/papers/epidemic.pdf)
+- [SWIM membership protocol](https://www.cs.cornell.edu/projects/Quicksilver/public_pdfs/SWIM.pdf)
+
+### Merkle Anti-Entropy
+Learning Resources:
+- [Merkle tree original paper](https://www.merkle.com/papers/merkle-tree.pdf)
+- [Cassandra repair and anti-entropy](https://cassandra.apache.org/doc/latest/cassandra/operating/repair.html)
+
+### Quorum Replication
+Learning Resources:
+- [Quorum systems survey](https://www.cs.cornell.edu/home/vinod/papers/quorum.pdf)
+- [Chain Replication](https://www.cs.cornell.edu/home/rvr/papers/OSDI04.pdf)
+
+### Replication Log
+Learning Resources:
+- [Kafka: log processing paper](https://notes.stephenholiday.com/Kafka.pdf)
+- [The Log, LinkedIn Engineering](https://engineering.linkedin.com/distributed-systems/log-what-every-software-engineer-should-know-about-real-time-data)
+
+### Failure Detectors
+Learning Resources:
+- [Unreliable failure detectors (Chandra-Toueg)](https://www.cs.cornell.edu/home/rvr/papers/ChandraToueg.pdf)
+- [Phi accrual failure detector](https://www.jaist.ac.jp/~shima/reading/AccrualFailureDetector.pdf)
+
+### Consistent Hashing
+Learning Resources:
+- [Consistent hashing and random trees](https://www.cs.princeton.edu/courses/archive/fall09/cos518/papers/chash.pdf)
+- [Jump consistent hash](https://arxiv.org/abs/1406.2294)
+
+### Sharding + Rebalancing
+Learning Resources:
+- [MongoDB sharding docs](https://www.mongodb.com/docs/manual/sharding/)
+- [FoundationDB data distribution](https://apple.github.io/foundationdb/data-distribution.html)
+
+### Load Balancing
+Learning Resources:
+- [Power of two choices](https://www.eecs.harvard.edu/~michaelm/postscripts/twchoices.pdf)
+- [Maglev load balancer](https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/44824.pdf)
+
+### Distributed Locking
+Learning Resources:
+- [Chubby lock service](https://research.google/pubs/pub27897/)
+- [ZooKeeper](https://www.usenix.org/legacy/event/usenix10/tech/full_papers/Hunt.pdf)
+
+### Two-Phase Commit (2PC)
+Learning Resources:
+- [Two-phase commit notes](https://www.cs.cornell.edu/courses/cs5414/2014sp/reading/2pc.pdf)
+- [Consensus on transaction commit](https://lamport.azurewebsites.net/pubs/txncommit.pdf)
+
+### Distributed Transactions
+Learning Resources:
+- [Sagas](https://www.cs.cornell.edu/andru/cs711/2002fa/reading/sagas.pdf)
+- [Life Beyond Distributed Transactions](https://www-db.cs.wisc.edu/cidr/cidr2007/papers/cidr07p15.pdf)
+
+### Network Partitions
+Learning Resources:
+- [FLP impossibility](https://groups.csail.mit.edu/tds/papers/Lynch/jacm85.pdf)
+- [Partial synchrony (DLS)](https://groups.csail.mit.edu/tds/papers/Lynch/jacm88.pdf)
+
+### Paxos
+Learning Resources:
+- [Paxos Made Simple](https://lamport.azurewebsites.net/pubs/paxos-simple.pdf)
+- [The Part-Time Parliament](https://lamport.azurewebsites.net/pubs/lamport-paxos.pdf)
+
+### Raft Consensus
+Learning Resources:
+- [Raft paper](https://raft.github.io/raft.pdf)
+- [Raft project site](https://raft.github.io/)
+
+### Consensus Variants
+Learning Resources:
+- [Paxos Made Live](https://static.googleusercontent.com/media/research.google.com/en//archive/paxos_made_live.pdf)
+- [EPaxos](https://www.cs.cmu.edu/~dga/papers/epaxos-sosp2013.pdf)
+
+### PBFT
+Learning Resources:
+- [Practical Byzantine Fault Tolerance](https://pmg.csail.mit.edu/papers/osdi99.pdf)
+- [Zyzzyva](https://www.usenix.org/legacy/event/osdi07/tech/full_papers/kotla/kotla.pdf)
 
 ## 🚀 Getting Started
 
@@ -121,12 +225,6 @@ Node states are color-coded:
 - 🟠 Amber: Processing/Candidate
 - 🔵 Blue: Leader
 - 🟣 Purple: Special states
-
-## 📖 Learning Resources
-
-- [Raft Paper](https://raft.github.io/raft.pdf) - In Search of an Understandable Consensus Algorithm
-- [Paxos Made Simple](https://lamport.azurewebsites.net/pubs/paxos-simple.pdf) - Leslie Lamport
-- [Designing Data-Intensive Applications](https://dataintensive.net/) - Martin Kleppmann
 
 ## 🤝 Contributing
 
