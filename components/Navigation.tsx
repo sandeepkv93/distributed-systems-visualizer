@@ -17,6 +17,7 @@ const concepts = [
   { name: 'Chandy-Lamport Snapshot', path: '/chandy-lamport' },
   { name: 'Lamport Clocks', path: '/lamport-clocks' },
   { name: 'Quorum Replication', path: '/quorum-replication' },
+  { name: 'PBFT', path: '/pbft' },
   { name: 'Vector Clocks', path: '/vector-clocks' },
   { name: 'Consistent Hashing', path: '/consistent-hashing' },
   { name: 'CAP Theorem', path: '/cap-theorem' },

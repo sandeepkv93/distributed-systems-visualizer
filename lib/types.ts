@@ -236,6 +236,37 @@ export interface QuorumMessage extends Message {
   };
 }
 
+// PBFT types
+export type PBFTPhase = 'pre-prepare' | 'prepare' | 'commit' | 'executed';
+
+export interface PBFTLogEntry {
+  requestId: string;
+  view: number;
+  seq: number;
+  value: any;
+  phase: PBFTPhase;
+  prepares: string[];
+  commits: string[];
+}
+
+export interface PBFTNode extends BaseNode {
+  view: number;
+  role: 'primary' | 'replica';
+  log: Map<string, PBFTLogEntry>;
+  executed: PBFTLogEntry[];
+}
+
+export interface PBFTMessage extends Message {
+  type: 'ClientRequest' | 'PrePrepare' | 'Prepare' | 'Commit' | 'ViewChange';
+  payload: {
+    requestId: string;
+    view: number;
+    seq?: number;
+    value?: any;
+    newView?: number;
+  };
+}
+
 // Vector Clocks types
 export interface VectorClockEvent {
   id: string;

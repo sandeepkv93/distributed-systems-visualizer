@@ -58,6 +58,13 @@ const concepts = [
     color: 'bg-orange-600',
   },
   {
+    name: 'PBFT',
+    path: '/pbft',
+    description:
+      'Byzantine fault tolerance with pre-prepare, prepare, commit, and view changes.',
+    color: 'bg-rose-600',
+  },
+  {
     name: 'Vector Clocks',
     path: '/vector-clocks',
     description:
