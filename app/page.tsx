@@ -37,6 +37,13 @@ const concepts = [
     color: 'bg-emerald-600',
   },
   {
+    name: 'Chandy-Lamport Snapshot',
+    path: '/chandy-lamport',
+    description:
+      'Capture a consistent global state using marker messages and channel recording.',
+    color: 'bg-cyan-600',
+  },
+  {
     name: 'Vector Clocks',
     path: '/vector-clocks',
     description:

@@ -40,7 +40,13 @@ An interactive learning platform for understanding distributed systems concepts 
 6. **Eventual Consistency** - Asynchronous replication with tunable consistency
    - 6 scenarios exploring ONE/QUORUM/ALL levels, conflicts, and anti-entropy
 
-7. **CAP Theorem** - Interactive exploration of distributed systems trade-offs
+7. **Gossip & Anti-Entropy** - Epidemic-style state exchange for convergence
+   - Scenarios covering push, pull, and push-pull rounds
+
+8. **Chandy-Lamport Snapshot** - Consistent global snapshots with marker messages
+   - Scenarios showing in-transit message capture and marker propagation
+
+9. **CAP Theorem** - Interactive exploration of distributed systems trade-offs
    - Triangle visualization with real-world database systems (MongoDB, Cassandra, etc.)
    - Educational content explaining CA, CP, and AP combinations
 

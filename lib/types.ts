@@ -163,6 +163,33 @@ export interface GossipMessage extends Message {
   };
 }
 
+// Chandy-Lamport Snapshot types
+export interface SnapshotChannelRecord {
+  from: string;
+  value: any;
+}
+
+export interface SnapshotState {
+  id: string;
+  localState: number;
+  channels: Record<string, SnapshotChannelRecord[]>;
+  recordingFrom: string[];
+  complete: boolean;
+}
+
+export interface SnapshotNode extends BaseNode {
+  localState: number;
+  snapshot?: SnapshotState;
+}
+
+export interface SnapshotMessage extends Message {
+  type: 'App' | 'Marker';
+  payload: {
+    value?: any;
+    snapshotId?: string;
+  };
+}
+
 // Vector Clocks types
 export interface VectorClockEvent {
   id: string;
