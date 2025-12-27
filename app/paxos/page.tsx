@@ -6,6 +6,8 @@ import { useSimulation } from '@/hooks/useSimulation';
 import { useClaudeExplainer } from '@/hooks/useClaudeExplainer';
 import ControlPanel from '@/components/ControlPanel';
 import ExplanationPanel from '@/components/ExplanationPanel';
+import TopicArticleDrawer from '@/components/TopicArticleDrawer';
+import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import { paxosScenarios } from '@/visualizers/paxos/scenarios';
 import { PaxosNode, PaxosMessage } from '@/lib/types';
@@ -18,6 +20,7 @@ export default function PaxosPage() {
   const [messages, setMessages] = useState<PaxosMessage[]>([]);
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showExplanation, setShowExplanation] = useState(false);
+  const [showArticle, setShowArticle] = useState(false);
   const [decidedValue, setDecidedValue] = useState<any>(null);
 
   const simulation = useSimulation([]);
@@ -176,6 +179,14 @@ export default function PaxosPage() {
             <p className="text-slate-400 text-sm mt-1">
               Two-phase consensus with proposers, acceptors, and learners
             </p>
+            <div className="mt-3">
+              <button
+                onClick={() => setShowArticle(true)}
+                className="px-3 py-1 text-sm bg-slate-700 text-white rounded hover:bg-slate-600"
+              >
+                Read the theory
+              </button>
+            </div>
             {decidedValue && (
               <div className="mt-2 inline-block bg-green-600 text-white px-3 py-1 rounded text-sm font-semibold">
                 ✓ Consensus Reached: {decidedValue}
@@ -203,6 +214,7 @@ export default function PaxosPage() {
             }}
           />
         </div>
+
 
         {/* Visualization Canvas */}
         <div className="flex-1 relative bg-slate-900 overflow-hidden">
@@ -400,6 +412,23 @@ export default function PaxosPage() {
           }}
         />
       )}
+
+      <TopicArticleDrawer
+        open={showArticle}
+        title={topicArticles.paxos.title}
+        onClose={() => setShowArticle(false)}
+      >
+        {topicArticles.paxos.sections.map((section) => (
+          <div key={section.heading} className="mb-5">
+            <h3 className="text-base font-semibold text-white mb-2">{section.heading}</h3>
+            {section.body.map((para) => (
+              <p key={para} className="text-sm text-slate-300 mb-2">
+                {para}
+              </p>
+            ))}
+          </div>
+        ))}
+      </TopicArticleDrawer>
     </div>
   );
 }

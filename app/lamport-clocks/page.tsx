@@ -6,6 +6,8 @@ import { useSimulation } from '@/hooks/useSimulation';
 import { useClaudeExplainer } from '@/hooks/useClaudeExplainer';
 import ControlPanel from '@/components/ControlPanel';
 import ExplanationPanel from '@/components/ExplanationPanel';
+import TopicArticleDrawer from '@/components/TopicArticleDrawer';
+import { topicArticles } from '@/data/topic-articles';
 import { lamportClocksScenarios } from '@/visualizers/lamport-clocks/scenarios';
 import { LamportNode, LamportMessage } from '@/lib/types';
 import { motion } from 'framer-motion';
@@ -16,6 +18,7 @@ export default function LamportClocksPage() {
   const [messages, setMessages] = useState<LamportMessage[]>(lamport.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showExplanation, setShowExplanation] = useState(false);
+  const [showArticle, setShowArticle] = useState(false);
 
   const simulation = useSimulation([]);
   const claude = useClaudeExplainer('Lamport Clocks + Total Order Broadcast');
@@ -123,6 +126,14 @@ export default function LamportClocksPage() {
           <p className="text-slate-400 text-sm mt-1">
             Logical clocks and acknowledgements enforce a global delivery order
           </p>
+          <div className="mt-3">
+            <button
+              onClick={() => setShowArticle(true)}
+              className="px-3 py-1 text-sm bg-slate-700 text-white rounded hover:bg-slate-600"
+            >
+              Read the theory
+            </button>
+          </div>
           <div className="flex gap-6 mt-2 text-sm">
             <span className="text-slate-300">
               Nodes: <span className="font-semibold text-white">{stats.totalNodes}</span>
@@ -309,6 +320,23 @@ export default function LamportClocksPage() {
           }}
         />
       )}
+
+      <TopicArticleDrawer
+        open={showArticle}
+        title={topicArticles['lamport-clocks'].title}
+        onClose={() => setShowArticle(false)}
+      >
+        {topicArticles['lamport-clocks'].sections.map((section) => (
+          <div key={section.heading} className="mb-5">
+            <h3 className="text-base font-semibold text-white mb-2">{section.heading}</h3>
+            {section.body.map((para) => (
+              <p key={para} className="text-sm text-slate-300 mb-2">
+                {para}
+              </p>
+            ))}
+          </div>
+        ))}
+      </TopicArticleDrawer>
     </div>
   );
 }

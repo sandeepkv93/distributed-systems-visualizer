@@ -6,6 +6,8 @@ import { useSimulation } from '@/hooks/useSimulation';
 import { useClaudeExplainer } from '@/hooks/useClaudeExplainer';
 import ControlPanel from '@/components/ControlPanel';
 import ExplanationPanel from '@/components/ExplanationPanel';
+import TopicArticleDrawer from '@/components/TopicArticleDrawer';
+import { topicArticles } from '@/data/topic-articles';
 import { failureDetectorScenarios } from '@/visualizers/failure-detectors/scenarios';
 import { FailureDetectorMessage, FailureDetectorNode } from '@/lib/types';
 import { motion } from 'framer-motion';
@@ -16,6 +18,7 @@ export default function FailureDetectorsPage() {
   const [messages, setMessages] = useState<FailureDetectorMessage[]>(fd.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showExplanation, setShowExplanation] = useState(false);
+  const [showArticle, setShowArticle] = useState(false);
 
   const simulation = useSimulation([]);
   const claude = useClaudeExplainer('Failure Detectors');
@@ -193,7 +196,15 @@ export default function FailureDetectorsPage() {
           <p className="text-slate-400 text-sm mt-1">
             Phi accrual and SWIM-style probes signal suspicion and failure
           </p>
-          <div className="flex gap-6 mt-2 text-sm">
+          <div className="mt-3">
+            <button
+              onClick={() => setShowArticle(true)}
+              className="px-3 py-1 text-sm bg-slate-700 text-white rounded hover:bg-slate-600"
+            >
+              Read the theory
+            </button>
+          </div>
+          <div className="flex gap-6 mt-3 text-sm">
             <span className="text-slate-300">
               Alive: <span className="font-semibold text-green-400">{stats.alive}</span>
             </span>
@@ -328,6 +339,23 @@ export default function FailureDetectorsPage() {
           }}
         />
       )}
+
+      <TopicArticleDrawer
+        open={showArticle}
+        title={topicArticles['failure-detectors'].title}
+        onClose={() => setShowArticle(false)}
+      >
+        {topicArticles['failure-detectors'].sections.map((section) => (
+          <div key={section.heading} className="mb-5">
+            <h3 className="text-base font-semibold text-white mb-2">{section.heading}</h3>
+            {section.body.map((para) => (
+              <p key={para} className="text-sm text-slate-300 mb-2">
+                {para}
+              </p>
+            ))}
+          </div>
+        ))}
+      </TopicArticleDrawer>
     </div>
   );
 }

@@ -6,6 +6,8 @@ import { useSimulation } from '@/hooks/useSimulation';
 import { useClaudeExplainer } from '@/hooks/useClaudeExplainer';
 import ControlPanel from '@/components/ControlPanel';
 import ExplanationPanel from '@/components/ExplanationPanel';
+import TopicArticleDrawer from '@/components/TopicArticleDrawer';
+import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import { vectorClockScenarios } from '@/visualizers/vector-clocks/scenarios';
 import { VectorClockProcess, VectorClockEvent, VectorClock } from '@/lib/types';
@@ -20,6 +22,7 @@ export default function VectorClocksPage() {
   const [showExplanation, setShowExplanation] = useState(false);
   const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set());
   const [lastSendEvent, setLastSendEvent] = useState<VectorClockEvent | null>(null);
+  const [showArticle, setShowArticle] = useState(false);
 
   const simulation = useSimulation([]);
   const claude = useClaudeExplainer('Vector Clocks');
@@ -204,6 +207,14 @@ export default function VectorClocksPage() {
           <p className="text-slate-400 text-sm mt-1">
             Tracking causality and detecting concurrent events in distributed systems
           </p>
+          <div className="mt-3">
+            <button
+              onClick={() => setShowArticle(true)}
+              className="px-3 py-1 text-sm bg-slate-700 text-white rounded hover:bg-slate-600"
+            >
+              Read the theory
+            </button>
+          </div>
           <div className="flex gap-4 mt-2 text-sm">
             <span className="text-slate-300">
               Total Events: <span className="font-semibold text-white">{stats.totalEvents}</span>
@@ -214,6 +225,7 @@ export default function VectorClocksPage() {
             </span>
           </div>
         </div>
+
 
         {/* Visualization Canvas */}
         <div className="flex-1 relative bg-slate-900 overflow-auto p-6">
@@ -412,6 +424,23 @@ export default function VectorClocksPage() {
           }}
         />
       )}
+
+      <TopicArticleDrawer
+        open={showArticle}
+        title={topicArticles['vector-clocks'].title}
+        onClose={() => setShowArticle(false)}
+      >
+        {topicArticles['vector-clocks'].sections.map((section) => (
+          <div key={section.heading} className="mb-5">
+            <h3 className="text-base font-semibold text-white mb-2">{section.heading}</h3>
+            {section.body.map((para) => (
+              <p key={para} className="text-sm text-slate-300 mb-2">
+                {para}
+              </p>
+            ))}
+          </div>
+        ))}
+      </TopicArticleDrawer>
     </div>
   );
 }

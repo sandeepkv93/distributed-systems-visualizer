@@ -6,6 +6,8 @@ import { useSimulation } from '@/hooks/useSimulation';
 import { useClaudeExplainer } from '@/hooks/useClaudeExplainer';
 import ControlPanel from '@/components/ControlPanel';
 import ExplanationPanel from '@/components/ExplanationPanel';
+import TopicArticleDrawer from '@/components/TopicArticleDrawer';
+import { topicArticles } from '@/data/topic-articles';
 import { distributedLockingScenarios } from '@/visualizers/distributed-locking/scenarios';
 import { LockMessage, LockNode } from '@/lib/types';
 import { motion } from 'framer-motion';
@@ -16,6 +18,7 @@ export default function DistributedLockingPage() {
   const [messages, setMessages] = useState<LockMessage[]>(lock.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showExplanation, setShowExplanation] = useState(false);
+  const [showArticle, setShowArticle] = useState(false);
 
   const simulation = useSimulation([]);
   const claude = useClaudeExplainer('Distributed Locking + Leases');
@@ -188,6 +191,14 @@ export default function DistributedLockingPage() {
           <p className="text-slate-400 text-sm mt-1">
             Lease-based locking with heartbeats to maintain ownership
           </p>
+          <div className="mt-3">
+            <button
+              onClick={() => setShowArticle(true)}
+              className="px-3 py-1 text-sm bg-slate-700 text-white rounded hover:bg-slate-600"
+            >
+              Read the theory
+            </button>
+          </div>
           <div className="flex gap-6 mt-2 text-sm">
             <span className="text-slate-300">
               Nodes: <span className="font-semibold text-white">{stats.totalNodes}</span>
@@ -402,6 +413,23 @@ export default function DistributedLockingPage() {
           }}
         />
       )}
+
+      <TopicArticleDrawer
+        open={showArticle}
+        title={topicArticles['distributed-locking'].title}
+        onClose={() => setShowArticle(false)}
+      >
+        {topicArticles['distributed-locking'].sections.map((section) => (
+          <div key={section.heading} className="mb-5">
+            <h3 className="text-base font-semibold text-white mb-2">{section.heading}</h3>
+            {section.body.map((para) => (
+              <p key={para} className="text-sm text-slate-300 mb-2">
+                {para}
+              </p>
+            ))}
+          </div>
+        ))}
+      </TopicArticleDrawer>
     </div>
   );
 }

@@ -3,6 +3,8 @@
 import { useState, useRef } from 'react';
 import { useClaudeExplainer } from '@/hooks/useClaudeExplainer';
 import ExplanationPanel from '@/components/ExplanationPanel';
+import TopicArticleDrawer from '@/components/TopicArticleDrawer';
+import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import { motion } from 'framer-motion';
 
@@ -101,6 +103,7 @@ export default function CAPTheoremPage() {
   const [selectedCombination, setSelectedCombination] = useState<CAPCombination>(null);
   const [selectedSystem, setSelectedSystem] = useState<System | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
+  const [showArticle, setShowArticle] = useState(false);
 
   const claude = useClaudeExplainer('CAP Theorem');
 
@@ -249,9 +252,10 @@ export default function CAPTheoremPage() {
             />
           </div>
         </div>
-      </div>
+        </div>
 
-      {/* Main Visualization Area */}
+
+        {/* Main Visualization Area */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <div className="bg-slate-800 border-b border-slate-700 p-4 flex items-start justify-between">
@@ -260,6 +264,14 @@ export default function CAPTheoremPage() {
             <p className="text-slate-400 text-sm mt-1">
               Click on combinations or systems to explore trade-offs in distributed systems
             </p>
+            <div className="mt-3">
+              <button
+                onClick={() => setShowArticle(true)}
+                className="px-3 py-1 text-sm bg-slate-700 text-white rounded hover:bg-slate-600"
+              >
+                Read the theory
+              </button>
+            </div>
           </div>
           <ExportMenu
             svgRef={svgRef}
@@ -471,6 +483,23 @@ export default function CAPTheoremPage() {
           }}
         />
       )}
+
+      <TopicArticleDrawer
+        open={showArticle}
+        title={topicArticles['cap-theorem'].title}
+        onClose={() => setShowArticle(false)}
+      >
+        {topicArticles['cap-theorem'].sections.map((section) => (
+          <div key={section.heading} className="mb-5">
+            <h3 className="text-base font-semibold text-white mb-2">{section.heading}</h3>
+            {section.body.map((para) => (
+              <p key={para} className="text-sm text-slate-300 mb-2">
+                {para}
+              </p>
+            ))}
+          </div>
+        ))}
+      </TopicArticleDrawer>
     </div>
   );
 }

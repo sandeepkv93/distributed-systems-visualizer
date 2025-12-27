@@ -6,6 +6,8 @@ import { useSimulation } from '@/hooks/useSimulation';
 import { useClaudeExplainer } from '@/hooks/useClaudeExplainer';
 import ControlPanel from '@/components/ControlPanel';
 import ExplanationPanel from '@/components/ExplanationPanel';
+import TopicArticleDrawer from '@/components/TopicArticleDrawer';
+import { topicArticles } from '@/data/topic-articles';
 import { gossipAntiEntropyScenarios } from '@/visualizers/gossip-anti-entropy/scenarios';
 import { GossipNode, GossipMessage, GossipMode } from '@/lib/types';
 import { motion } from 'framer-motion';
@@ -16,6 +18,7 @@ export default function GossipAntiEntropyPage() {
   const [messages, setMessages] = useState<GossipMessage[]>(gossip.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showExplanation, setShowExplanation] = useState(false);
+  const [showArticle, setShowArticle] = useState(false);
   const [fanout, setFanout] = useState(1);
 
   const simulation = useSimulation([]);
@@ -182,6 +185,14 @@ export default function GossipAntiEntropyPage() {
           <p className="text-slate-400 text-sm mt-1">
             Periodic peer exchanges that converge state without a central coordinator
           </p>
+          <div className="mt-3">
+            <button
+              onClick={() => setShowArticle(true)}
+              className="px-3 py-1 text-sm bg-slate-700 text-white rounded hover:bg-slate-600"
+            >
+              Read the theory
+            </button>
+          </div>
           <div className="flex gap-6 mt-2 text-sm">
             <span className="text-slate-300">
               Nodes: <span className="font-semibold text-white">{stats.totalNodes}</span>
@@ -419,6 +430,23 @@ export default function GossipAntiEntropyPage() {
           }}
         />
       )}
+
+      <TopicArticleDrawer
+        open={showArticle}
+        title={topicArticles['gossip-anti-entropy'].title}
+        onClose={() => setShowArticle(false)}
+      >
+        {topicArticles['gossip-anti-entropy'].sections.map((section) => (
+          <div key={section.heading} className="mb-5">
+            <h3 className="text-base font-semibold text-white mb-2">{section.heading}</h3>
+            {section.body.map((para) => (
+              <p key={para} className="text-sm text-slate-300 mb-2">
+                {para}
+              </p>
+            ))}
+          </div>
+        ))}
+      </TopicArticleDrawer>
     </div>
   );
 }

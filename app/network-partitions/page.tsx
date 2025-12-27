@@ -6,6 +6,8 @@ import { useSimulation } from '@/hooks/useSimulation';
 import { useClaudeExplainer } from '@/hooks/useClaudeExplainer';
 import ControlPanel from '@/components/ControlPanel';
 import ExplanationPanel from '@/components/ExplanationPanel';
+import TopicArticleDrawer from '@/components/TopicArticleDrawer';
+import { topicArticles } from '@/data/topic-articles';
 import { networkPartitionsScenarios } from '@/visualizers/network-partitions/scenarios';
 import { PartitionLink, PartitionMessage, PartitionNode } from '@/lib/types';
 import { motion } from 'framer-motion';
@@ -17,6 +19,7 @@ export default function NetworkPartitionsPage() {
   const [messages, setMessages] = useState<PartitionMessage[]>(np.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showExplanation, setShowExplanation] = useState(false);
+  const [showArticle, setShowArticle] = useState(false);
 
   const simulation = useSimulation([]);
   const claude = useClaudeExplainer('Network Partitions');
@@ -134,7 +137,15 @@ export default function NetworkPartitionsPage() {
           <p className="text-slate-400 text-sm mt-1">
             Partitioned clusters and leader elections across splits
           </p>
-          <div className="flex gap-6 mt-2 text-sm">
+          <div className="mt-3">
+            <button
+              onClick={() => setShowArticle(true)}
+              className="px-3 py-1 text-sm bg-slate-700 text-white rounded hover:bg-slate-600"
+            >
+              Read the theory
+            </button>
+          </div>
+          <div className="flex gap-6 mt-3 text-sm">
             <span className="text-slate-300">
               Leaders: <span className="font-semibold text-white">{stats.leaders}</span>
             </span>
@@ -220,6 +231,23 @@ export default function NetworkPartitionsPage() {
           }}
         />
       )}
+
+      <TopicArticleDrawer
+        open={showArticle}
+        title={topicArticles['network-partitions'].title}
+        onClose={() => setShowArticle(false)}
+      >
+        {topicArticles['network-partitions'].sections.map((section) => (
+          <div key={section.heading} className="mb-5">
+            <h3 className="text-base font-semibold text-white mb-2">{section.heading}</h3>
+            {section.body.map((para) => (
+              <p key={para} className="text-sm text-slate-300 mb-2">
+                {para}
+              </p>
+            ))}
+          </div>
+        ))}
+      </TopicArticleDrawer>
     </div>
   );
 }
