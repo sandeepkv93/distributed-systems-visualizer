@@ -49,7 +49,10 @@ An interactive learning platform for understanding distributed systems concepts 
 9. **Lamport Clocks + Total Order Broadcast** - Logical clocks with a total delivery order
    - Scenarios covering local events, broadcasts, and tie-breaking
 
-10. **CAP Theorem** - Interactive exploration of distributed systems trade-offs
+10. **Quorum Replication + Read Repair** - Read/write quorums that heal stale replicas
+   - Scenarios showing successful writes, quorum failures, and repair
+
+11. **CAP Theorem** - Interactive exploration of distributed systems trade-offs
    - Triangle visualization with real-world database systems (MongoDB, Cassandra, etc.)
    - Educational content explaining CA, CP, and AP combinations
 

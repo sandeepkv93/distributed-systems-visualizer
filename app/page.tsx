@@ -51,6 +51,13 @@ const concepts = [
     color: 'bg-teal-600',
   },
   {
+    name: 'Quorum Replication',
+    path: '/quorum-replication',
+    description:
+      'Quorum reads/writes with automatic read repair for stale replicas.',
+    color: 'bg-orange-600',
+  },
+  {
     name: 'Vector Clocks',
     path: '/vector-clocks',
     description:

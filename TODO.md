@@ -3,7 +3,6 @@
 Topics to add as visualizers:
 
 - Byzantine Fault Tolerance (PBFT) and leader changes
-- Quorum-based replication and read/write repair
 - Distributed locking and lease/heartbeat systems
 - Sharding + rebalancing (range vs hash)
 - Merkle trees for anti-entropy

@@ -215,6 +215,27 @@ export interface LamportMessage extends Message {
   };
 }
 
+// Quorum Replication + Read Repair types
+export interface QuorumValue {
+  value: any;
+  version: number;
+  timestamp: number;
+}
+
+export interface QuorumNode extends BaseNode {
+  data: Map<string, QuorumValue>;
+  version: number;
+}
+
+export interface QuorumMessage extends Message {
+  type: 'Write' | 'Read' | 'Repair';
+  payload: {
+    key: string;
+    value?: any;
+    version?: number;
+  };
+}
+
 // Vector Clocks types
 export interface VectorClockEvent {
   id: string;

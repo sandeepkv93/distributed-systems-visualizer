@@ -1,0 +1,405 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { QuorumReplicationAlgorithm } from '@/lib/algorithms/quorumReplication';
+import { useSimulation } from '@/hooks/useSimulation';
+import { useClaudeExplainer } from '@/hooks/useClaudeExplainer';
+import ControlPanel from '@/components/ControlPanel';
+import ExplanationPanel from '@/components/ExplanationPanel';
+import { quorumReplicationScenarios } from '@/visualizers/quorum-replication/scenarios';
+import { QuorumNode, QuorumMessage } from '@/lib/types';
+import { motion } from 'framer-motion';
+
+export default function QuorumReplicationPage() {
+  const [quorum] = useState(() => new QuorumReplicationAlgorithm(5, 3));
+  const [nodes, setNodes] = useState<QuorumNode[]>(quorum.getNodes());
+  const [messages, setMessages] = useState<QuorumMessage[]>(quorum.getMessages());
+  const [selectedScenario, setSelectedScenario] = useState<string>('');
+  const [showExplanation, setShowExplanation] = useState(false);
+  const [quorumWrite, setQuorumWrite] = useState(2);
+  const [quorumRead, setQuorumRead] = useState(2);
+
+  const simulation = useSimulation([]);
+  const claude = useClaudeExplainer('Quorum Replication + Read Repair');
+
+  const updateVisualization = useCallback(() => {
+    setNodes([...quorum.getNodes()]);
+    setMessages([...quorum.getMessages()]);
+
+    const inFlight = quorum.getMessages().filter((m) => m.status === 'in-flight');
+    if (inFlight.length > 0) {
+      setTimeout(() => {
+        inFlight.forEach((msg) => quorum.deliverMessage(msg.id));
+        updateVisualization();
+      }, 500);
+    }
+  }, [quorum]);
+
+  useEffect(() => {
+    simulation.onEvent('write', (event) => {
+      quorum.write(event.data.key, event.data.value, event.data.nodeId, event.data.quorumWrite || quorumWrite);
+      updateVisualization();
+    });
+
+    simulation.onEvent('read', (event) => {
+      quorum.read(event.data.key, event.data.nodeId, event.data.quorumRead || quorumRead);
+      updateVisualization();
+    });
+
+    simulation.onEvent('fail_node', (event) => {
+      quorum.failNode(event.data.nodeId);
+      updateVisualization();
+    });
+
+    simulation.onEvent('recover_node', (event) => {
+      quorum.recoverNode(event.data.nodeId);
+      updateVisualization();
+    });
+  }, [quorum, simulation, updateVisualization, quorumRead, quorumWrite]);
+
+  const handleScenarioChange = (scenarioId: string) => {
+    setSelectedScenario(scenarioId);
+    const scenario = quorumReplicationScenarios.find((s) => s.id === scenarioId);
+    if (scenario) {
+      quorum.reset();
+      simulation.setEvents(scenario.events);
+      updateVisualization();
+    }
+  };
+
+  const handleAskClaude = async (question: string) => {
+    setShowExplanation(true);
+    const stats = quorum.getStats();
+    const currentState = {
+      nodes: nodes.map((n) => ({
+        id: n.id,
+        status: n.status,
+        keys: Array.from(n.data.keys()),
+        version: n.version,
+      })),
+      stats,
+      quorums: { quorumWrite, quorumRead },
+      scenario: selectedScenario,
+    };
+    await claude.explain(currentState, question);
+  };
+
+  const writeRandom = () => {
+    const healthyNodes = nodes.filter((n) => n.status === 'healthy');
+    if (healthyNodes.length === 0) return;
+    const coordinator = healthyNodes[Math.floor(Math.random() * healthyNodes.length)];
+    const key = `item:${Math.floor(Math.random() * 5) + 1}`;
+    const value = Math.floor(Math.random() * 100);
+    quorum.write(key, value, coordinator.id, quorumWrite);
+    updateVisualization();
+  };
+
+  const readRandom = () => {
+    const healthyNodes = nodes.filter((n) => n.status === 'healthy');
+    if (healthyNodes.length === 0) return;
+    const coordinator = healthyNodes[Math.floor(Math.random() * healthyNodes.length)];
+    const key = `item:${Math.floor(Math.random() * 5) + 1}`;
+    quorum.read(key, coordinator.id, quorumRead);
+    updateVisualization();
+  };
+
+  const failNode = (nodeId: string) => {
+    quorum.failNode(nodeId);
+    updateVisualization();
+  };
+
+  const recoverNode = (nodeId: string) => {
+    quorum.recoverNode(nodeId);
+    updateVisualization();
+  };
+
+  const getNodeColor = (node: QuorumNode): string => {
+    if (node.status === 'failed') return '#EF4444';
+    if (node.data.size === 0) return '#6B7280';
+    return '#10B981';
+  };
+
+  const getMessageColor = (message: QuorumMessage): string => {
+    switch (message.type) {
+      case 'Write':
+        return '#3B82F6';
+      case 'Read':
+        return '#F59E0B';
+      case 'Repair':
+        return '#8B5CF6';
+      default:
+        return '#6B7280';
+    }
+  };
+
+  const stats = quorum.getStats();
+
+  return (
+    <div className="flex h-screen bg-slate-900">
+      <ControlPanel
+        isPlaying={simulation.state.isPlaying}
+        speed={simulation.state.speed}
+        progress={simulation.getProgress()}
+        scenarios={quorumReplicationScenarios}
+        selectedScenario={selectedScenario}
+        onPlay={simulation.play}
+        onPause={simulation.pause}
+        onStepForward={simulation.stepForward}
+        onStepBackward={simulation.stepBackward}
+        onReset={() => {
+          simulation.reset();
+          quorum.reset();
+          updateVisualization();
+        }}
+        onSpeedChange={simulation.setSpeed}
+        onScenarioChange={handleScenarioChange}
+        onAskClaude={handleAskClaude}
+        apiKeyExists={claude.apiKeyExists}
+      />
+
+      <div className="flex-1 flex flex-col">
+        <div className="bg-slate-800 border-b border-slate-700 p-4">
+          <h1 className="text-2xl font-bold text-white">Quorum Replication + Read Repair</h1>
+          <p className="text-slate-400 text-sm mt-1">
+            Quorum reads and writes with repair of stale replicas
+          </p>
+          <div className="flex gap-6 mt-2 text-sm">
+            <span className="text-slate-300">
+              Nodes: <span className="font-semibold text-white">{stats.totalNodes}</span>
+            </span>
+            <span className="text-slate-300">
+              Healthy: <span className="font-semibold text-green-400">{stats.healthyNodes}</span>
+            </span>
+            <span className="text-slate-300">
+              Keys: <span className="font-semibold text-white">{stats.totalKeys}</span>
+            </span>
+            <span className="text-slate-300">
+              RF: <span className="font-semibold text-white">{stats.replicationFactor}</span>
+            </span>
+          </div>
+        </div>
+
+        <div className="flex-1 relative bg-slate-900 overflow-hidden">
+          <svg className="w-full h-full">
+            {nodes.map((node, index) => (
+              <motion.g
+                key={node.id}
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: index * 0.08 }}
+              >
+                <circle
+                  cx={node.position.x}
+                  cy={node.position.y}
+                  r="45"
+                  fill={getNodeColor(node)}
+                  stroke="#1F2937"
+                  strokeWidth="3"
+                  className="cursor-pointer"
+                  onClick={() => (node.status === 'failed' ? recoverNode(node.id) : failNode(node.id))}
+                />
+                <text
+                  x={node.position.x}
+                  y={node.position.y - 10}
+                  textAnchor="middle"
+                  fill="#FFF"
+                  fontSize="14"
+                  fontWeight="bold"
+                >
+                  {node.id}
+                </text>
+                <text
+                  x={node.position.x}
+                  y={node.position.y + 5}
+                  textAnchor="middle"
+                  fill="#FFF"
+                  fontSize="10"
+                >
+                  v{node.version}
+                </text>
+                <text
+                  x={node.position.x}
+                  y={node.position.y + 20}
+                  textAnchor="middle"
+                  fill="#CBD5E1"
+                  fontSize="9"
+                >
+                  {node.data.size} keys
+                </text>
+                {node.status === 'failed' && (
+                  <text
+                    x={node.position.x}
+                    y={node.position.y + 35}
+                    textAnchor="middle"
+                    fill="#FFF"
+                    fontSize="11"
+                    fontWeight="bold"
+                  >
+                    FAILED
+                  </text>
+                )}
+              </motion.g>
+            ))}
+
+            {messages
+              .filter((m) => m.status === 'in-flight')
+              .map((message) => {
+                const fromNode = nodes.find((n) => n.id === message.from);
+                const toNode = nodes.find((n) => n.id === message.to);
+
+                if (!fromNode || !toNode) return null;
+
+                const midX = (fromNode.position.x + toNode.position.x) / 2;
+                const midY = (fromNode.position.y + toNode.position.y) / 2;
+
+                return (
+                  <g key={message.id}>
+                    <motion.line
+                      x1={fromNode.position.x}
+                      y1={fromNode.position.y}
+                      x2={toNode.position.x}
+                      y2={toNode.position.y}
+                      stroke={getMessageColor(message)}
+                      strokeWidth="2"
+                      strokeDasharray="6,6"
+                      initial={{ pathLength: 0, opacity: 0 }}
+                      animate={{ pathLength: 1, opacity: 1 }}
+                      transition={{ duration: 0.4 }}
+                    />
+                    <motion.circle
+                      cx={midX}
+                      cy={midY}
+                      r="6"
+                      fill={getMessageColor(message)}
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  </g>
+                );
+              })}
+          </svg>
+
+          <div className="absolute bottom-4 left-4 bg-slate-800 rounded-lg p-4 border border-slate-700 space-y-3 max-w-xs">
+            <h3 className="text-sm font-semibold text-white">Manual Controls</h3>
+            <div>
+              <label className="text-xs text-slate-400 block mb-1">Write Quorum (W)</label>
+              <div className="flex gap-2">
+                {[1, 2, 3].map((value) => (
+                  <button
+                    key={`w-${value}`}
+                    onClick={() => setQuorumWrite(value)}
+                    className={`flex-1 px-2 py-1 text-xs rounded ${
+                      quorumWrite === value
+                        ? 'bg-slate-200 text-slate-900'
+                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    }`}
+                  >
+                    {value}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-slate-400 block mb-1">Read Quorum (R)</label>
+              <div className="flex gap-2">
+                {[1, 2, 3].map((value) => (
+                  <button
+                    key={`r-${value}`}
+                    onClick={() => setQuorumRead(value)}
+                    className={`flex-1 px-2 py-1 text-xs rounded ${
+                      quorumRead === value
+                        ? 'bg-slate-200 text-slate-900'
+                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    }`}
+                  >
+                    {value}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="border-t border-slate-700 pt-2 space-y-2">
+              <button
+                onClick={writeRandom}
+                className="w-full px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+              >
+                Write Random Key
+              </button>
+              <button
+                onClick={readRandom}
+                className="w-full px-3 py-2 bg-amber-600 text-white text-sm rounded hover:bg-amber-700"
+              >
+                Read Random Key
+              </button>
+            </div>
+            <p className="text-xs text-slate-400">Click nodes to fail/recover.</p>
+          </div>
+
+          <div className="absolute top-4 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-sm max-h-96 overflow-y-auto">
+            <h3 className="text-sm font-semibold text-white mb-2">Replica Data</h3>
+            <div className="space-y-2">
+              {nodes.map((node) => (
+                <div key={node.id} className="text-xs">
+                  <div className="font-semibold text-white mb-1">
+                    {node.id} ({node.status})
+                  </div>
+                  <div className="pl-2 space-y-1">
+                    {Array.from(node.data.entries()).map(([key, dataValue]) => (
+                      <div key={`${node.id}-${key}`} className="text-slate-300">
+                        {key}: <span className="text-green-400">{JSON.stringify(dataValue.value)}</span>{' '}
+                        <span className="text-slate-400">v{dataValue.version}</span>
+                      </div>
+                    ))}
+                    {node.data.size === 0 && <div className="text-slate-500">No data</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="absolute bottom-4 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700">
+            <h3 className="text-sm font-semibold text-white mb-2">Legend</h3>
+            <div className="space-y-1 text-xs">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-green-600" />
+                <span className="text-slate-400">Replica with data</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-slate-500" />
+                <span className="text-slate-400">Empty replica</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-red-600" />
+                <span className="text-slate-400">Failed replica</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-blue-600" />
+                <span className="text-slate-400">Write</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-amber-600" />
+                <span className="text-slate-400">Read</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-purple-600" />
+                <span className="text-slate-400">Repair</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {showExplanation && (
+        <ExplanationPanel
+          explanation={claude.explanation}
+          isLoading={claude.isLoading}
+          error={claude.error}
+          onClose={() => {
+            setShowExplanation(false);
+            claude.clearExplanation();
+          }}
+        />
+      )}
+    </div>
+  );
+}
