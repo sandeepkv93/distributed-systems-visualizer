@@ -382,7 +382,7 @@ export type FDStatus = 'alive' | 'suspect' | 'failed';
 export interface FailureDetectorNode extends BaseNode {
   lastHeartbeat: number;
   phi: number;
-  status: FDStatus;
+  fdStatus: FDStatus;
 }
 
 export interface FailureDetectorMessage extends Message {
@@ -424,7 +424,7 @@ export interface LoadWorker extends BaseNode {
   queue: number;
   capacity: number;
   processing: number;
-  status: 'healthy' | 'overloaded' | 'failed';
+  loadStatus: 'healthy' | 'overloaded' | 'failed';
 }
 
 export interface LoadRequest {

@@ -98,7 +98,7 @@ export default function FailureDetectorsPage() {
     setShowExplanation(true);
     const stats = fd.getStats();
     const currentState = {
-      nodes: nodes.map((n) => ({ id: n.id, status: n.status, phi: n.phi.toFixed(2) })),
+      nodes: nodes.map((n) => ({ id: n.id, status: n.fdStatus, phi: n.phi.toFixed(2) })),
       stats,
       scenario: selectedScenario,
     };
@@ -106,7 +106,7 @@ export default function FailureDetectorsPage() {
   };
 
   const heartbeatRandom = () => {
-    const alive = nodes.filter((n) => n.status !== 'failed');
+    const alive = nodes.filter((n) => n.fdStatus !== 'failed');
     if (alive.length === 0) return;
     fd.sendHeartbeat(alive[Math.floor(Math.random() * alive.length)].id);
     updateVisualization();
@@ -131,7 +131,7 @@ export default function FailureDetectorsPage() {
   const toggleFail = (nodeId: string) => {
     const node = nodes.find((n) => n.id === nodeId);
     if (!node) return;
-    if (node.status === 'failed') {
+    if (node.fdStatus === 'failed') {
       fd.recover(nodeId);
     } else {
       fd.markFailed(nodeId);
@@ -140,8 +140,8 @@ export default function FailureDetectorsPage() {
   };
 
   const getNodeColor = (node: FailureDetectorNode): string => {
-    if (node.status === 'failed') return '#EF4444';
-    if (node.status === 'suspect') return '#F59E0B';
+    if (node.fdStatus === 'failed') return '#EF4444';
+    if (node.fdStatus === 'suspect') return '#F59E0B';
     return '#10B981';
   };
 
@@ -244,7 +244,7 @@ export default function FailureDetectorsPage() {
                 >
                   phi {node.phi.toFixed(1)}
                 </text>
-                {node.status === 'failed' && (
+                {node.fdStatus === 'failed' && (
                   <text
                     x={node.position.x}
                     y={node.position.y + 20}

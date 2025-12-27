@@ -79,7 +79,7 @@ export default function LoadBalancingPage() {
     setShowExplanation(true);
     const stats = lb.getStats();
     const currentState = {
-      workers: workers.map((w) => ({ id: w.id, queue: w.queue, processing: w.processing, status: w.status })),
+      workers: workers.map((w) => ({ id: w.id, queue: w.queue, processing: w.processing, status: w.loadStatus })),
       stats,
       scenario: selectedScenario,
     };
@@ -106,7 +106,7 @@ export default function LoadBalancingPage() {
   const toggleWorker = (workerId: string) => {
     const worker = workers.find((w) => w.id === workerId);
     if (!worker) return;
-    if (worker.status === 'failed') {
+    if (worker.loadStatus === 'failed') {
       lb.recoverWorker(workerId);
     } else {
       lb.failWorker(workerId);
@@ -115,8 +115,8 @@ export default function LoadBalancingPage() {
   };
 
   const getWorkerColor = (worker: LoadWorker): string => {
-    if (worker.status === 'failed') return '#EF4444';
-    if (worker.status === 'overloaded') return '#F59E0B';
+    if (worker.loadStatus === 'failed') return '#EF4444';
+    if (worker.loadStatus === 'overloaded') return '#F59E0B';
     return '#10B981';
   };
 

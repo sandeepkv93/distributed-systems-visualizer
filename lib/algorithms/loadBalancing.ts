@@ -32,6 +32,7 @@ export class LoadBalancingAlgorithm {
         capacity: 3,
         processing: 0,
         status: 'healthy',
+        loadStatus: 'healthy',
       });
     }
   }
@@ -55,7 +56,7 @@ export class LoadBalancingAlgorithm {
   }
 
   private dispatchRequest(request: LoadRequest): void {
-    const healthyWorkers = this.workers.filter((w) => w.status !== 'failed');
+    const healthyWorkers = this.workers.filter((w) => w.loadStatus !== 'failed');
     if (healthyWorkers.length === 0) {
       request.status = 'dropped';
       return;
@@ -110,7 +111,8 @@ export class LoadBalancingAlgorithm {
           request.status = 'processing';
         }
       } else {
-        worker.status = 'overloaded';
+        worker.loadStatus = 'overloaded';
+        worker.status = 'processing';
       }
     } else if (message.type === 'Drop') {
       // no-op
@@ -149,7 +151,10 @@ export class LoadBalancingAlgorithm {
 
     this.workers.forEach((worker) => {
       if (worker.processing < worker.capacity && worker.queue < this.maxQueue) {
-        worker.status = 'healthy';
+        worker.loadStatus = 'healthy';
+        if (worker.status !== 'failed') {
+          worker.status = 'healthy';
+        }
       }
     });
   }
@@ -157,6 +162,7 @@ export class LoadBalancingAlgorithm {
   failWorker(workerId: string): void {
     const worker = this.workers.find((w) => w.id === workerId);
     if (worker) {
+      worker.loadStatus = 'failed';
       worker.status = 'failed';
       this.addEvent('fail', `${workerId} failed`, { workerId });
     }
@@ -165,6 +171,7 @@ export class LoadBalancingAlgorithm {
   recoverWorker(workerId: string): void {
     const worker = this.workers.find((w) => w.id === workerId);
     if (worker) {
+      worker.loadStatus = 'healthy';
       worker.status = 'healthy';
       this.addEvent('recover', `${workerId} recovered`, { workerId });
     }
@@ -205,6 +212,7 @@ export class LoadBalancingAlgorithm {
     this.workers.forEach((worker) => {
       worker.queue = 0;
       worker.processing = 0;
+      worker.loadStatus = 'healthy';
       worker.status = 'healthy';
     });
   }

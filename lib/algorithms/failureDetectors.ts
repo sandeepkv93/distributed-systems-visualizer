@@ -27,9 +27,10 @@ export class FailureDetectorsAlgorithm {
           x: centerX + radius * Math.cos(angle),
           y: centerY + radius * Math.sin(angle),
         },
-        status: 'alive',
+        status: 'healthy',
         lastHeartbeat: Date.now(),
         phi: 0,
+        fdStatus: 'alive',
       });
     }
   }
@@ -91,7 +92,8 @@ export class FailureDetectorsAlgorithm {
     if (message.type === 'Heartbeat') {
       toNode.lastHeartbeat = Date.now();
       toNode.phi = 0;
-      toNode.status = 'alive';
+      toNode.fdStatus = 'alive';
+      toNode.status = 'healthy';
       this.addEvent('heartbeat_recv', `${toNode.id} received heartbeat`, { toNode: toNode.id });
     } else if (message.type === 'Probe') {
       const ack: FailureDetectorMessage = {
@@ -111,12 +113,15 @@ export class FailureDetectorsAlgorithm {
       this.addEvent('ack_recv', `${message.to} received ack`, { from: message.from });
       const observer = this.nodes.find((n) => n.id === message.to);
       if (observer) {
-        observer.status = 'alive';
+        observer.fdStatus = 'alive';
+        observer.status = 'healthy';
       }
     } else if (message.type === 'Suspect') {
-      toNode.status = 'suspect';
+      toNode.fdStatus = 'suspect';
+      toNode.status = 'processing';
       this.addEvent('suspect', `${toNode.id} suspected`, { nodeId: toNode.id });
     } else if (message.type === 'Confirm') {
+      toNode.fdStatus = 'failed';
       toNode.status = 'failed';
       this.addEvent('confirm', `${toNode.id} confirmed failed`, { nodeId: toNode.id });
     }
@@ -127,13 +132,20 @@ export class FailureDetectorsAlgorithm {
   tick(): void {
     const now = Date.now();
     this.nodes.forEach((node) => {
-      if (node.status === 'failed') return;
+      if (node.fdStatus === 'failed') return;
       const elapsed = now - node.lastHeartbeat;
       node.phi = elapsed / HEARTBEAT_INTERVAL;
       if (node.phi >= PHI_THRESHOLD) {
+        node.fdStatus = 'failed';
         node.status = 'failed';
       } else if (node.phi >= PHI_THRESHOLD / 2) {
-        node.status = 'suspect';
+        node.fdStatus = 'suspect';
+        node.status = 'processing';
+      } else {
+        node.fdStatus = 'alive';
+        if (node.status !== 'failed') {
+          node.status = 'healthy';
+        }
       }
     });
   }
@@ -141,6 +153,7 @@ export class FailureDetectorsAlgorithm {
   markFailed(nodeId: string): void {
     const node = this.nodes.find((n) => n.id === nodeId);
     if (node) {
+      node.fdStatus = 'failed';
       node.status = 'failed';
       this.addEvent('manual_fail', `${nodeId} failed`, { nodeId });
     }
@@ -149,7 +162,8 @@ export class FailureDetectorsAlgorithm {
   recover(nodeId: string): void {
     const node = this.nodes.find((n) => n.id === nodeId);
     if (node) {
-      node.status = 'alive';
+      node.fdStatus = 'alive';
+      node.status = 'healthy';
       node.lastHeartbeat = Date.now();
       node.phi = 0;
       this.addEvent('recover', `${nodeId} recovered`, { nodeId });
@@ -170,9 +184,9 @@ export class FailureDetectorsAlgorithm {
     suspect: number;
     failed: number;
   } {
-    const alive = this.nodes.filter((n) => n.status === 'alive').length;
-    const suspect = this.nodes.filter((n) => n.status === 'suspect').length;
-    const failed = this.nodes.filter((n) => n.status === 'failed').length;
+    const alive = this.nodes.filter((n) => n.fdStatus === 'alive').length;
+    const suspect = this.nodes.filter((n) => n.fdStatus === 'suspect').length;
+    const failed = this.nodes.filter((n) => n.fdStatus === 'failed').length;
     return {
       totalNodes: this.nodes.length,
       alive,
@@ -183,7 +197,8 @@ export class FailureDetectorsAlgorithm {
 
   reset(): void {
     this.nodes.forEach((node) => {
-      node.status = 'alive';
+      node.fdStatus = 'alive';
+      node.status = 'healthy';
       node.lastHeartbeat = Date.now();
       node.phi = 0;
     });
