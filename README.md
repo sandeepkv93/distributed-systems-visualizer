@@ -79,7 +79,10 @@ An interactive learning platform for understanding distributed systems concepts 
 19. **Load Balancing + Backpressure** - Queue limits and request shedding
    - Scenarios covering bursts, steady flow, and worker failures
 
-20. **CAP Theorem** - Interactive exploration of distributed systems trade-offs
+20. **Network Partitions + Split-Brain** - Partitioning and leader resolution
+   - Scenarios showing split-brain and healing
+
+21. **CAP Theorem** - Interactive exploration of distributed systems trade-offs
    - Triangle visualization with real-world database systems (MongoDB, Cassandra, etc.)
    - Educational content explaining CA, CP, and AP combinations
 

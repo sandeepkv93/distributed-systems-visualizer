@@ -442,6 +442,30 @@ export interface LoadMessage extends Message {
   };
 }
 
+// Network Partition / Split-Brain types
+export type PartitionRole = 'leader' | 'follower' | 'candidate';
+
+export interface PartitionNode extends BaseNode {
+  role: PartitionRole;
+  term: number;
+  partitionId: string;
+  votes: number;
+}
+
+export interface PartitionLink {
+  from: string;
+  to: string;
+  status: 'up' | 'down';
+}
+
+export interface PartitionMessage extends Message {
+  type: 'VoteRequest' | 'Vote' | 'Heartbeat' | 'Reject';
+  payload: {
+    term: number;
+    partitionId: string;
+  };
+}
+
 // PBFT types
 export type PBFTPhase = 'pre-prepare' | 'prepare' | 'commit' | 'executed';
 

@@ -26,6 +26,7 @@ const concepts = [
   { name: 'Failure Detectors', path: '/failure-detectors' },
   { name: 'Distributed Transactions', path: '/distributed-transactions' },
   { name: 'Load Balancing', path: '/load-balancing' },
+  { name: 'Network Partitions', path: '/network-partitions' },
   { name: 'Vector Clocks', path: '/vector-clocks' },
   { name: 'Consistent Hashing', path: '/consistent-hashing' },
   { name: 'CAP Theorem', path: '/cap-theorem' },

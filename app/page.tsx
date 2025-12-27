@@ -121,6 +121,13 @@ const concepts = [
     color: 'bg-amber-700',
   },
   {
+    name: 'Network Partitions',
+    path: '/network-partitions',
+    description:
+      'Explore split-brain elections and healing across partitions.',
+    color: 'bg-red-700',
+  },
+  {
     name: 'Vector Clocks',
     path: '/vector-clocks',
     description:
