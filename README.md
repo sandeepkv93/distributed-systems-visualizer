@@ -70,7 +70,10 @@ An interactive learning platform for understanding distributed systems concepts 
 16. **Replication Log (Kafka-style)** - Partition replication with ISR and HW
    - Scenarios showing ISR shrink and rejoin
 
-17. **CAP Theorem** - Interactive exploration of distributed systems trade-offs
+17. **Failure Detectors** - Phi accrual and SWIM-style probing
+   - Scenarios showing suspicion and confirmation
+
+18. **CAP Theorem** - Interactive exploration of distributed systems trade-offs
    - Triangle visualization with real-world database systems (MongoDB, Cassandra, etc.)
    - Educational content explaining CA, CP, and AP combinations
 

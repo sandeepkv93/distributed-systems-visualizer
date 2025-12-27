@@ -23,6 +23,7 @@ const concepts = [
   { name: 'Merkle Anti-Entropy', path: '/merkle-anti-entropy' },
   { name: 'CRDTs', path: '/crdts' },
   { name: 'Replication Log', path: '/replication-log' },
+  { name: 'Failure Detectors', path: '/failure-detectors' },
   { name: 'Vector Clocks', path: '/vector-clocks' },
   { name: 'Consistent Hashing', path: '/consistent-hashing' },
   { name: 'CAP Theorem', path: '/cap-theorem' },

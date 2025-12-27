@@ -376,6 +376,23 @@ export interface LogMessage extends Message {
   };
 }
 
+// Failure Detector types
+export type FDStatus = 'alive' | 'suspect' | 'failed';
+
+export interface FailureDetectorNode extends BaseNode {
+  lastHeartbeat: number;
+  phi: number;
+  status: FDStatus;
+}
+
+export interface FailureDetectorMessage extends Message {
+  type: 'Heartbeat' | 'Probe' | 'Ack' | 'Suspect' | 'Confirm';
+  payload: {
+    targetId: string;
+    phi?: number;
+  };
+}
+
 // PBFT types
 export type PBFTPhase = 'pre-prepare' | 'prepare' | 'commit' | 'executed';
 

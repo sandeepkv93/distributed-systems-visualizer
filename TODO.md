@@ -2,7 +2,6 @@
 
 Topics to add as visualizers:
 
-- Failure detectors (phi accrual, SWIM)
 - Distributed transactions: 3PC, saga pattern
 - Load balancing and backpressure in microservices
 - Network partitions and split-brain mitigation (ZooKeeper/etcd)

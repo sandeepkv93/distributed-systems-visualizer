@@ -100,6 +100,13 @@ const concepts = [
     color: 'bg-slate-600',
   },
   {
+    name: 'Failure Detectors',
+    path: '/failure-detectors',
+    description:
+      'Phi accrual and SWIM probes for suspicion and failure detection.',
+    color: 'bg-orange-700',
+  },
+  {
     name: 'Vector Clocks',
     path: '/vector-clocks',
     description:
