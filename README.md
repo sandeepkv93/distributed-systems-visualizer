@@ -21,22 +21,22 @@ Interactive visual simulations for learning distributed systems, with step contr
 ### CAP Theorem
 Learning Resources:
 - [Brewer keynote (PODC 2000)](https://www.cs.berkeley.edu/~brewer/cs262b-2004/PODC-keynote.pdf)
-- [Brewer's Conjecture paper](https://www.comp.nus.edu.sg/~gilbert/pubs/BrewersConjecture-SIGACT.pdf)
+- [Brewer's Conjecture overview](https://en.wikipedia.org/wiki/CAP_theorem)
 
 ### Lamport Clocks
 Learning Resources:
 - [Time, Clocks, and the Ordering of Events](https://lamport.azurewebsites.net/pubs/time-clocks.pdf)
-- [Causality and logical clocks (lecture)](https://www.cs.cornell.edu/courses/cs5414/2017sp/lectures/lec10-causality.pdf)
+- [Causality and logical clocks (overview)](https://en.wikipedia.org/wiki/Happened-before)
 
 ### Vector Clocks
 Learning Resources:
-- [Fidge, timestamps in message-passing systems](https://www.cs.colostate.edu/~cs457/yr2018sp/more_material/Fidge_Timestamps.pdf)
-- [Mattern, virtual time and global states](https://www.cs.colostate.edu/~cs457/yr2018sp/more_material/Mattern_VirtualTime.pdf)
+- [Vector clocks (overview)](https://en.wikipedia.org/wiki/Vector_clock)
+- [Vector clocks explained](https://sookocheff.com/post/time/vector-clocks/)
 
 ### Chandy-Lamport Snapshot
 Learning Resources:
 - [Distributed snapshots (original paper)](https://lamport.azurewebsites.net/pubs/chandy.pdf)
-- [Chandy-Lamport notes](https://www.cs.cornell.edu/courses/cs5414/2014sp/reading/chandy-lamport.pdf)
+- [Chandy-Lamport walkthrough](https://decomposition.al/blog/2019/04/26/an-example-run-of-the-chandy-lamport-snapshot-algorithm/)
 
 ### Eventual Consistency
 Learning Resources:
@@ -50,28 +50,28 @@ Learning Resources:
 
 ### Gossip & Anti-Entropy
 Learning Resources:
-- [Epidemic algorithms for replication](https://www.cs.cornell.edu/home/rvr/papers/epidemic.pdf)
+- [Epidemic algorithms for replication (overview)](https://en.wikipedia.org/wiki/Gossip_protocol)
 - [SWIM membership protocol](https://www.cs.cornell.edu/projects/Quicksilver/public_pdfs/SWIM.pdf)
 
 ### Merkle Anti-Entropy
 Learning Resources:
-- [Merkle tree original paper](https://www.merkle.com/papers/merkle-tree.pdf)
-- [Cassandra repair and anti-entropy](https://cassandra.apache.org/doc/latest/cassandra/operating/repair.html)
+- [Merkle tree overview](https://en.wikipedia.org/wiki/Merkle_tree)
+- [Cassandra repair and anti-entropy](https://cassandra.apache.org/doc/stable/cassandra/managing/operating/repair.html)
 
 ### Quorum Replication
 Learning Resources:
-- [Quorum systems survey](https://www.cs.cornell.edu/home/vinod/papers/quorum.pdf)
+- [Quorum systems overview](https://en.wikipedia.org/wiki/Quorum_%28distributed_computing%29)
 - [Chain Replication](https://www.cs.cornell.edu/home/rvr/papers/OSDI04.pdf)
 
 ### Replication Log
 Learning Resources:
 - [Kafka: log processing paper](https://notes.stephenholiday.com/Kafka.pdf)
-- [The Log, LinkedIn Engineering](https://engineering.linkedin.com/distributed-systems/log-what-every-software-engineer-should-know-about-real-time-data)
+- [The Log (Jay Kreps)](https://jaykreps.com/2013/06/17/the-log-what-every-software-engineer-should-know-about-real-time-datas-unifying/)
 
 ### Failure Detectors
 Learning Resources:
-- [Unreliable failure detectors (Chandra-Toueg)](https://www.cs.cornell.edu/home/rvr/papers/ChandraToueg.pdf)
-- [Phi accrual failure detector](https://www.jaist.ac.jp/~shima/reading/AccrualFailureDetector.pdf)
+- [Unreliable failure detectors (references)](https://www.cs.cornell.edu/info/people/sam/FDpapers.html)
+- [Phi accrual failure detector (implementation notes)](https://pekko.apache.org/docs/pekko/current/typed/failure-detector.html)
 
 ### Consistent Hashing
 Learning Resources:
@@ -81,11 +81,11 @@ Learning Resources:
 ### Sharding + Rebalancing
 Learning Resources:
 - [MongoDB sharding docs](https://www.mongodb.com/docs/manual/sharding/)
-- [FoundationDB data distribution](https://apple.github.io/foundationdb/data-distribution.html)
+- [FoundationDB data distribution](https://apple.github.io/foundationdb/architecture.html)
 
 ### Load Balancing
 Learning Resources:
-- [Power of two choices](https://www.eecs.harvard.edu/~michaelm/postscripts/twchoices.pdf)
+- [Power of two choices (chapter)](https://www.eecs.harvard.edu/~michaelm/postscripts/handbook2001.pdf)
 - [Maglev load balancer](https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/44824.pdf)
 
 ### Distributed Locking
@@ -95,13 +95,13 @@ Learning Resources:
 
 ### Two-Phase Commit (2PC)
 Learning Resources:
-- [Two-phase commit notes](https://www.cs.cornell.edu/courses/cs5414/2014sp/reading/2pc.pdf)
-- [Consensus on transaction commit](https://lamport.azurewebsites.net/pubs/txncommit.pdf)
+- [Two-phase commit notes](https://en.wikipedia.org/wiki/Two-phase_commit_protocol)
+- [Consensus on transaction commit](https://lamport.azurewebsites.net/pubs/pubs.html#paxos-commit)
 
 ### Distributed Transactions
 Learning Resources:
 - [Sagas](https://www.cs.cornell.edu/andru/cs711/2002fa/reading/sagas.pdf)
-- [Life Beyond Distributed Transactions](https://www-db.cs.wisc.edu/cidr/cidr2007/papers/cidr07p15.pdf)
+- [Life Beyond Distributed Transactions](https://www.cidrdb.org/cidr2007/papers/cidr07p15.pdf)
 
 ### Network Partitions
 Learning Resources:
@@ -125,8 +125,8 @@ Learning Resources:
 
 ### PBFT
 Learning Resources:
-- [Practical Byzantine Fault Tolerance](https://pmg.csail.mit.edu/papers/osdi99.pdf)
-- [Zyzzyva](https://www.usenix.org/legacy/event/osdi07/tech/full_papers/kotla/kotla.pdf)
+- [Practical Byzantine Fault Tolerance](https://www.usenix.org/conference/osdi-99/practical-byzantine-fault-tolerance)
+- [HotStuff (modern BFT)](https://arxiv.org/abs/1803.05069)
 
 ## 🚀 Getting Started
 
@@ -139,7 +139,7 @@ Learning Resources:
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/distributed-systems-visualizer.git
+git clone https://github.com/sandeepkv93/distributed-systems-visualizer.git
 cd distributed-systems-visualizer
 ```
 
