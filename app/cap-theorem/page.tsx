@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { useClaudeExplainer } from '@/hooks/useClaudeExplainer';
-import ExplanationPanel from '@/components/ExplanationPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
@@ -102,10 +100,7 @@ export default function CAPTheoremPage() {
   const svgRef = useRef<SVGSVGElement>(null);
   const [selectedCombination, setSelectedCombination] = useState<CAPCombination>(null);
   const [selectedSystem, setSelectedSystem] = useState<System | null>(null);
-  const [showExplanation, setShowExplanation] = useState(false);
   const [showArticle, setShowArticle] = useState(false);
-
-  const claude = useClaudeExplainer('CAP Theorem');
 
   // Triangle vertices
   const triangleVertices = {
@@ -138,16 +133,6 @@ export default function CAPTheoremPage() {
   const handleSystemClick = (system: System) => {
     setSelectedSystem(selectedSystem?.name === system.name ? null : system);
     setSelectedCombination(system.category);
-  };
-
-  const handleAskClaude = async (question: string) => {
-    setShowExplanation(true);
-    const currentState = {
-      selectedCombination,
-      selectedSystem: selectedSystem?.name,
-      theorem: 'CAP Theorem states you can only have 2 of 3: Consistency, Availability, Partition Tolerance',
-    };
-    await claude.explain(currentState, question);
   };
 
   return (
@@ -237,20 +222,6 @@ export default function CAPTheoremPage() {
             </motion.div>
           )}
 
-          <div className="border-t border-slate-600 pt-4">
-            <h3 className="font-semibold text-white mb-2">Ask Claude</h3>
-            <input
-              type="text"
-              placeholder="Ask about CAP theorem..."
-              className="w-full px-3 py-2 bg-slate-700 text-white text-sm rounded border border-slate-600 focus:outline-none focus:border-blue-500"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-                  handleAskClaude(e.currentTarget.value);
-                  e.currentTarget.value = '';
-                }
-              }}
-            />
-          </div>
         </div>
         </div>
 
@@ -470,19 +441,6 @@ export default function CAPTheoremPage() {
           </div>
         </div>
       </div>
-
-      {/* Explanation Panel */}
-      {showExplanation && (
-        <ExplanationPanel
-          explanation={claude.explanation}
-          isLoading={claude.isLoading}
-          error={claude.error}
-          onClose={() => {
-            setShowExplanation(false);
-            claude.clearExplanation();
-          }}
-        />
-      )}
 
       <TopicArticleDrawer
         open={showArticle}

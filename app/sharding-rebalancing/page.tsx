@@ -3,9 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ShardingRebalancingAlgorithm } from '@/lib/algorithms/shardingRebalancing';
 import { useSimulation } from '@/hooks/useSimulation';
-import { useClaudeExplainer } from '@/hooks/useClaudeExplainer';
 import ControlPanel from '@/components/ControlPanel';
-import ExplanationPanel from '@/components/ExplanationPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import { shardingRebalancingScenarios } from '@/visualizers/sharding-rebalancing/scenarios';
@@ -17,12 +15,10 @@ export default function ShardingRebalancingPage() {
   const [nodes, setNodes] = useState<ShardNode[]>(sharding.getNodes());
   const [messages, setMessages] = useState<ShardMessage[]>(sharding.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
-  const [showExplanation, setShowExplanation] = useState(false);
   const [showArticle, setShowArticle] = useState(false);
   const [strategy, setStrategy] = useState<ShardingStrategy>('range');
 
   const simulation = useSimulation([]);
-  const claude = useClaudeExplainer('Sharding + Rebalancing');
 
   const updateVisualization = useCallback(() => {
     setNodes([...sharding.getNodes()]);
@@ -69,22 +65,6 @@ export default function ShardingRebalancingPage() {
       simulation.setEvents(scenario.events);
       updateVisualization();
     }
-  };
-
-  const handleAskClaude = async (question: string) => {
-    setShowExplanation(true);
-    const stats = sharding.getStats();
-    const currentState = {
-      nodes: nodes.map((n) => ({
-        id: n.id,
-        shards: n.shards,
-        load: n.load,
-      })),
-      stats,
-      strategy,
-      scenario: selectedScenario,
-    };
-    await claude.explain(currentState, question);
   };
 
   const toggleStrategy = () => {
@@ -143,8 +123,6 @@ export default function ShardingRebalancingPage() {
         }}
         onSpeedChange={simulation.setSpeed}
         onScenarioChange={handleScenarioChange}
-        onAskClaude={handleAskClaude}
-        apiKeyExists={claude.apiKeyExists}
       />
 
       <div className="flex-1 flex flex-col">
@@ -329,18 +307,6 @@ export default function ShardingRebalancingPage() {
           </div>
         </div>
       </div>
-
-      {showExplanation && (
-        <ExplanationPanel
-          explanation={claude.explanation}
-          isLoading={claude.isLoading}
-          error={claude.error}
-          onClose={() => {
-            setShowExplanation(false);
-            claude.clearExplanation();
-          }}
-        />
-      )}
 
       <TopicArticleDrawer
         open={showArticle}

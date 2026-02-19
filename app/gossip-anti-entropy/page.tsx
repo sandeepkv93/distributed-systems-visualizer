@@ -3,9 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { GossipAntiEntropyAlgorithm } from '@/lib/algorithms/gossipAntiEntropy';
 import { useSimulation } from '@/hooks/useSimulation';
-import { useClaudeExplainer } from '@/hooks/useClaudeExplainer';
 import ControlPanel from '@/components/ControlPanel';
-import ExplanationPanel from '@/components/ExplanationPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import { gossipAntiEntropyScenarios } from '@/visualizers/gossip-anti-entropy/scenarios';
@@ -17,12 +15,10 @@ export default function GossipAntiEntropyPage() {
   const [nodes, setNodes] = useState<GossipNode[]>(gossip.getNodes());
   const [messages, setMessages] = useState<GossipMessage[]>(gossip.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
-  const [showExplanation, setShowExplanation] = useState(false);
   const [showArticle, setShowArticle] = useState(false);
   const [fanout, setFanout] = useState(1);
 
   const simulation = useSimulation([]);
-  const claude = useClaudeExplainer('Gossip & Anti-Entropy');
 
   const updateVisualization = useCallback(() => {
     setNodes([...gossip.getNodes()]);
@@ -71,22 +67,6 @@ export default function GossipAntiEntropyPage() {
       simulation.setEvents(scenario.events);
       updateVisualization();
     }
-  };
-
-  const handleAskClaude = async (question: string) => {
-    setShowExplanation(true);
-    const stats = gossip.getStats();
-    const currentState = {
-      nodes: nodes.map((n) => ({
-        id: n.id,
-        status: n.status,
-        keys: Array.from(n.data.keys()),
-        version: n.version,
-      })),
-      stats,
-      scenario: selectedScenario,
-    };
-    await claude.explain(currentState, question);
   };
 
   const setRandomValue = () => {
@@ -175,8 +155,6 @@ export default function GossipAntiEntropyPage() {
         }}
         onSpeedChange={simulation.setSpeed}
         onScenarioChange={handleScenarioChange}
-        onAskClaude={handleAskClaude}
-        apiKeyExists={claude.apiKeyExists}
       />
 
       <div className="flex-1 flex flex-col">
@@ -418,18 +396,6 @@ export default function GossipAntiEntropyPage() {
           </div>
         </div>
       </div>
-
-      {showExplanation && (
-        <ExplanationPanel
-          explanation={claude.explanation}
-          isLoading={claude.isLoading}
-          error={claude.error}
-          onClose={() => {
-            setShowExplanation(false);
-            claude.clearExplanation();
-          }}
-        />
-      )}
 
       <TopicArticleDrawer
         open={showArticle}

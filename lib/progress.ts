@@ -133,24 +133,6 @@ const achievements = [
     condition: (progress: UserProgress) => progress.scenariosCompleted.length >= 33,
   },
   {
-    id: 'quiz_novice',
-    name: 'Quiz Novice',
-    description: 'Pass your first quiz',
-    condition: (progress: UserProgress) => {
-      const scores = Object.values(progress.quizScores);
-      return scores.some((score) => score >= 70);
-    },
-  },
-  {
-    id: 'quiz_expert',
-    name: 'Quiz Expert',
-    description: 'Score 100% on any quiz',
-    condition: (progress: UserProgress) => {
-      const scores = Object.values(progress.quizScores);
-      return scores.some((score) => score === 100);
-    },
-  },
-  {
     id: 'concept_explorer',
     name: 'Concept Explorer',
     description: 'Complete 3 different concepts',

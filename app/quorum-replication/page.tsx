@@ -3,9 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { QuorumReplicationAlgorithm } from '@/lib/algorithms/quorumReplication';
 import { useSimulation } from '@/hooks/useSimulation';
-import { useClaudeExplainer } from '@/hooks/useClaudeExplainer';
 import ControlPanel from '@/components/ControlPanel';
-import ExplanationPanel from '@/components/ExplanationPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import { quorumReplicationScenarios } from '@/visualizers/quorum-replication/scenarios';
@@ -17,13 +15,11 @@ export default function QuorumReplicationPage() {
   const [nodes, setNodes] = useState<QuorumNode[]>(quorum.getNodes());
   const [messages, setMessages] = useState<QuorumMessage[]>(quorum.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
-  const [showExplanation, setShowExplanation] = useState(false);
   const [showArticle, setShowArticle] = useState(false);
   const [quorumWrite, setQuorumWrite] = useState(2);
   const [quorumRead, setQuorumRead] = useState(2);
 
   const simulation = useSimulation([]);
-  const claude = useClaudeExplainer('Quorum Replication + Read Repair');
 
   const updateVisualization = useCallback(() => {
     setNodes([...quorum.getNodes()]);
@@ -68,23 +64,6 @@ export default function QuorumReplicationPage() {
       simulation.setEvents(scenario.events);
       updateVisualization();
     }
-  };
-
-  const handleAskClaude = async (question: string) => {
-    setShowExplanation(true);
-    const stats = quorum.getStats();
-    const currentState = {
-      nodes: nodes.map((n) => ({
-        id: n.id,
-        status: n.status,
-        keys: Array.from(n.data.keys()),
-        version: n.version,
-      })),
-      stats,
-      quorums: { quorumWrite, quorumRead },
-      scenario: selectedScenario,
-    };
-    await claude.explain(currentState, question);
   };
 
   const writeRandom = () => {
@@ -156,8 +135,6 @@ export default function QuorumReplicationPage() {
         }}
         onSpeedChange={simulation.setSpeed}
         onScenarioChange={handleScenarioChange}
-        onAskClaude={handleAskClaude}
-        apiKeyExists={claude.apiKeyExists}
       />
 
       <div className="flex-1 flex flex-col">
@@ -399,18 +376,6 @@ export default function QuorumReplicationPage() {
           </div>
         </div>
       </div>
-
-      {showExplanation && (
-        <ExplanationPanel
-          explanation={claude.explanation}
-          isLoading={claude.isLoading}
-          error={claude.error}
-          onClose={() => {
-            setShowExplanation(false);
-            claude.clearExplanation();
-          }}
-        />
-      )}
 
       <TopicArticleDrawer
         open={showArticle}

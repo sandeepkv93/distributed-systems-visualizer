@@ -3,9 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ConsensusVariantsAlgorithm } from '@/lib/algorithms/consensusVariants';
 import { useSimulation } from '@/hooks/useSimulation';
-import { useClaudeExplainer } from '@/hooks/useClaudeExplainer';
 import ControlPanel from '@/components/ControlPanel';
-import ExplanationPanel from '@/components/ExplanationPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import { consensusVariantsScenarios } from '@/visualizers/consensus-variants/scenarios';
@@ -24,11 +22,9 @@ export default function ConsensusVariantsPage() {
   const [nodes, setNodes] = useState<ConsensusNode[]>(variants.getNodes('raft-joint'));
   const [messages, setMessages] = useState<ConsensusMessage[]>(variants.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
-  const [showExplanation, setShowExplanation] = useState(false);
   const [showArticle, setShowArticle] = useState(false);
 
   const simulation = useSimulation([]);
-  const claude = useClaudeExplainer('Consensus Variants');
 
   const updateVisualization = useCallback(() => {
     setNodes([...variants.getNodes(variant)]);
@@ -86,25 +82,6 @@ export default function ConsensusVariantsPage() {
     }
   };
 
-  const handleAskClaude = async (question: string) => {
-    setShowExplanation(true);
-    const stats = variants.getStats(variant);
-    const currentState = {
-      variant,
-      nodes: nodes.map((n) => ({
-        id: n.id,
-        role: n.role,
-        term: n.term,
-        log: n.log.length,
-        configPhase: n.configPhase,
-        instances: n.instances,
-      })),
-      stats,
-      scenario: selectedScenario,
-    };
-    await claude.explain(currentState, question);
-  };
-
   const electLeader = () => {
     variants.electLeader(variant, nodes[0].id);
     updateVisualization();
@@ -157,8 +134,6 @@ export default function ConsensusVariantsPage() {
         }}
         onSpeedChange={simulation.setSpeed}
         onScenarioChange={handleScenarioChange}
-        onAskClaude={handleAskClaude}
-        apiKeyExists={claude.apiKeyExists}
       />
 
       <div className="flex-1 flex flex-col">
@@ -302,18 +277,6 @@ export default function ConsensusVariantsPage() {
           </div>
         </div>
       </div>
-
-      {showExplanation && (
-        <ExplanationPanel
-          explanation={claude.explanation}
-          isLoading={claude.isLoading}
-          error={claude.error}
-          onClose={() => {
-            setShowExplanation(false);
-            claude.clearExplanation();
-          }}
-        />
-      )}
 
       <TopicArticleDrawer
         open={showArticle}

@@ -1,6 +1,6 @@
 'use client';
 
-import { Play, Pause, SkipForward, SkipBack, RotateCcw, BookOpen } from 'lucide-react';
+import { Play, Pause, SkipForward, SkipBack, RotateCcw } from 'lucide-react';
 import { Scenario } from '@/lib/types';
 
 interface ControlPanelProps {
@@ -16,9 +16,6 @@ interface ControlPanelProps {
   onReset: () => void;
   onSpeedChange: (speed: number) => void;
   onScenarioChange?: (scenarioId: string) => void;
-  onAskClaude?: (question: string) => void;
-  onTakeQuiz?: () => void;
-  apiKeyExists?: boolean;
 }
 
 const SPEED_OPTIONS = [0.5, 1, 2, 5];
@@ -36,9 +33,6 @@ export default function ControlPanel({
   onReset,
   onSpeedChange,
   onScenarioChange,
-  onAskClaude,
-  onTakeQuiz,
-  apiKeyExists = false,
 }: ControlPanelProps) {
   return (
     <div className="bg-slate-800 border-r border-slate-700 p-4 space-y-6 w-80 flex flex-col h-full">
@@ -144,50 +138,6 @@ export default function ControlPanel({
           />
         </div>
       </div>
-
-      {/* Ask Claude */}
-      {onAskClaude && (
-        <div className="flex-1 flex flex-col">
-          <label className="block text-sm font-medium text-slate-300 mb-2">Ask Claude</label>
-          {apiKeyExists ? (
-            <div className="flex-1 flex flex-col">
-              <input
-                type="text"
-                placeholder="Why did this happen?"
-                className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:outline-none focus:border-blue-500"
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    const input = e.target as HTMLInputElement;
-                    if (input.value.trim()) {
-                      onAskClaude(input.value);
-                      input.value = '';
-                    }
-                  }
-                }}
-              />
-              <p className="text-xs text-slate-400 mt-1">Press Enter to ask</p>
-            </div>
-          ) : (
-            <div className="bg-slate-700 rounded p-3 text-sm text-slate-400">
-              Set your API key to enable AI explanations
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Take Quiz */}
-      {onTakeQuiz && apiKeyExists && (
-        <div>
-          <button
-            onClick={onTakeQuiz}
-            className="w-full p-3 bg-purple-600 text-white rounded hover:bg-purple-700 flex items-center justify-center gap-2 font-medium transition-colors"
-          >
-            <BookOpen className="w-5 h-5" />
-            Take Quiz
-          </button>
-          <p className="text-xs text-slate-400 mt-1 text-center">Test your knowledge!</p>
-        </div>
-      )}
 
       {/* Legend */}
       <div>

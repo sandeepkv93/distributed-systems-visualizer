@@ -3,9 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { EventualConsistencyAlgorithm } from '@/lib/algorithms/eventualConsistency';
 import { useSimulation } from '@/hooks/useSimulation';
-import { useClaudeExplainer } from '@/hooks/useClaudeExplainer';
 import ControlPanel from '@/components/ControlPanel';
-import ExplanationPanel from '@/components/ExplanationPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import { eventualConsistencyScenarios } from '@/visualizers/eventual-consistency/scenarios';
@@ -17,11 +15,9 @@ export default function EventualConsistencyPage() {
   const [nodes, setNodes] = useState<EventualConsistencyNode[]>(ec.getNodes());
   const [messages, setMessages] = useState<EventualConsistencyMessage[]>(ec.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
-  const [showExplanation, setShowExplanation] = useState(false);
   const [showArticle, setShowArticle] = useState(false);
 
   const simulation = useSimulation([]);
-  const claude = useClaudeExplainer('Eventual Consistency');
 
   // Update visualization
   const updateVisualization = useCallback(() => {
@@ -122,21 +118,6 @@ export default function EventualConsistencyPage() {
     }
   };
 
-  // Ask Claude
-  const handleAskClaude = async (question: string) => {
-    setShowExplanation(true);
-    const stats = ec.getStats();
-    const currentState = {
-      totalNodes: stats.totalNodes,
-      healthyNodes: stats.healthyNodes,
-      totalKeys: stats.totalKeys,
-      inconsistentKeys: stats.inconsistentKeys,
-      replicationFactor: stats.replicationFactor,
-      scenario: selectedScenario,
-    };
-    await claude.explain(currentState, question);
-  };
-
   // Manual controls
   const writeKey = (key: string, value: any, consistencyLevel: 'ONE' | 'QUORUM' | 'ALL' = 'QUORUM') => {
     const healthyNodes = nodes.filter((n) => n.status === 'healthy');
@@ -202,8 +183,6 @@ export default function EventualConsistencyPage() {
         }}
         onSpeedChange={simulation.setSpeed}
         onScenarioChange={handleScenarioChange}
-        onAskClaude={handleAskClaude}
-        apiKeyExists={claude.apiKeyExists}
       />
 
       {/* Main Visualization Area */}
@@ -441,19 +420,6 @@ export default function EventualConsistencyPage() {
           </div>
         </div>
       </div>
-
-      {/* Explanation Panel */}
-      {showExplanation && (
-        <ExplanationPanel
-          explanation={claude.explanation}
-          isLoading={claude.isLoading}
-          error={claude.error}
-          onClose={() => {
-            setShowExplanation(false);
-            claude.clearExplanation();
-          }}
-        />
-      )}
 
       <TopicArticleDrawer
         open={showArticle}

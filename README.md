@@ -1,6 +1,6 @@
 # Distributed Systems Visualizer
 
-Interactive visual simulations for learning distributed systems, with step controls, AI explanations, and in-page theory articles.
+Interactive visual simulations for learning distributed systems, with step controls and in-page theory articles.
 
 ![Distributed Systems Visualizer](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square&logo=typescript)
@@ -10,7 +10,6 @@ Interactive visual simulations for learning distributed systems, with step contr
 
 - **Interactive Visualizations**: Play, pause, and step through algorithms
 - **Theory Drawer**: Read a detailed article inside each topic page
-- **AI Explanations + Quizzes**: Ask Claude questions and test understanding
 - **Scenarios + Manual Controls**: Pre-built cases plus knobs to inject events
 - **Export + Share**: PNG/SVG/JSON export and share shortcuts
 - **Progress Tracking**: Local progress, achievements, and stats
@@ -168,14 +167,6 @@ This generates a static export in the `out/` directory, ready for deployment to 
 1. Pick a topic from the home page or Topics menu.
 2. Choose a scenario or use manual controls.
 3. Use "Read the theory" for the long-form article.
-4. Ask Claude for explanations or quizzes.
-
-### Enabling AI Explanations
-
-1. Click "Set API Key" in the top-right corner
-2. Enter your Anthropic API key (get one at [https://console.anthropic.com](https://console.anthropic.com))
-3. Your key is stored locally in your browser and never sent to our servers
-4. Now you can ask Claude questions about the simulation and take AI-generated quizzes!
 
 ### Export & Share
 
@@ -195,8 +186,8 @@ Click the "Export" button in the header of Raft, Paxos, or CAP Theorem visualize
 Track your learning journey:
 
 - **View Progress**: Click the "Progress" button in the top navigation
-- **Achievements**: Unlock 9 achievements by completing scenarios, quizzes, and concepts
-- **Statistics**: See your total time spent, quiz scores, and completion percentages
+- **Achievements**: Unlock milestones by completing scenarios and concepts
+- **Statistics**: See your total time spent and completion percentages
 - **Export/Import**: Backup your progress or transfer it between devices
 
 ## 🏗️ Architecture
@@ -207,7 +198,6 @@ Track your learning journey:
 - **Language**: TypeScript (strict mode)
 - **Styling**: Tailwind CSS
 - **Animations**: Framer Motion
-- **AI Integration**: Anthropic Claude API (client-side)
 - **Icons**: Lucide React
 
 ### Adding New Concepts

@@ -3,9 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { PaxosAlgorithm } from '@/lib/algorithms/paxos';
 import { useSimulation } from '@/hooks/useSimulation';
-import { useClaudeExplainer } from '@/hooks/useClaudeExplainer';
 import ControlPanel from '@/components/ControlPanel';
-import ExplanationPanel from '@/components/ExplanationPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
@@ -19,12 +17,10 @@ export default function PaxosPage() {
   const [nodes, setNodes] = useState<PaxosNode[]>(paxos.getAllNodes());
   const [messages, setMessages] = useState<PaxosMessage[]>([]);
   const [selectedScenario, setSelectedScenario] = useState<string>('');
-  const [showExplanation, setShowExplanation] = useState(false);
   const [showArticle, setShowArticle] = useState(false);
   const [decidedValue, setDecidedValue] = useState<any>(null);
 
   const simulation = useSimulation([]);
-  const claude = useClaudeExplainer('Paxos Consensus');
 
   // Update visualization
   const updateVisualization = useCallback(() => {
@@ -108,28 +104,6 @@ export default function PaxosPage() {
     updateVisualization();
   };
 
-  // Ask Claude
-  const handleAskClaude = async (question: string) => {
-    setShowExplanation(true);
-    const currentState = {
-      proposers: paxos.getProposers().map((n) => ({
-        id: n.id,
-        status: n.status,
-        proposalNumber: n.proposalNumber,
-      })),
-      acceptors: paxos.getAcceptors().map((n) => ({
-        id: n.id,
-        status: n.status,
-        promisedProposal: n.promisedProposal,
-        acceptedProposal: n.acceptedProposal,
-        acceptedValue: n.acceptedValue,
-      })),
-      decidedValue,
-      scenario: selectedScenario,
-    };
-    await claude.explain(currentState, question);
-  };
-
   // Get node color based on role and status
   const getNodeColor = (node: PaxosNode): string => {
     if (node.status === 'failed') return '#EF4444'; // red
@@ -166,8 +140,6 @@ export default function PaxosPage() {
         }}
         onSpeedChange={simulation.setSpeed}
         onScenarioChange={handleScenarioChange}
-        onAskClaude={handleAskClaude}
-        apiKeyExists={claude.apiKeyExists}
       />
 
       {/* Main Visualization Area */}
@@ -399,19 +371,6 @@ export default function PaxosPage() {
           </div>
         </div>
       </div>
-
-      {/* Explanation Panel */}
-      {showExplanation && (
-        <ExplanationPanel
-          explanation={claude.explanation}
-          isLoading={claude.isLoading}
-          error={claude.error}
-          onClose={() => {
-            setShowExplanation(false);
-            claude.clearExplanation();
-          }}
-        />
-      )}
 
       <TopicArticleDrawer
         open={showArticle}

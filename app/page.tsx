@@ -190,7 +190,7 @@ export default function Home() {
           </h1>
           <p className="text-xl text-slate-300 max-w-3xl mx-auto">
             Learn distributed systems concepts through interactive visualizations, step-by-step
-            execution, and AI-powered explanations.
+            execution, and scenario-driven exploration.
           </p>
         </div>
 
@@ -227,7 +227,7 @@ export default function Home() {
                 <div>
                   <h3 className="text-sm font-semibold text-white mb-1">Ask and validate</h3>
                   <p className="text-slate-400 text-sm">
-                    Use AI explanations and quizzes to confirm your understanding.
+                    Compare scenarios, inject failures, and validate your understanding.
                   </p>
                 </div>
               </div>

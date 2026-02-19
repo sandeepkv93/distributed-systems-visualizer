@@ -3,9 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { NetworkPartitionsAlgorithm } from '@/lib/algorithms/networkPartitions';
 import { useSimulation } from '@/hooks/useSimulation';
-import { useClaudeExplainer } from '@/hooks/useClaudeExplainer';
 import ControlPanel from '@/components/ControlPanel';
-import ExplanationPanel from '@/components/ExplanationPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import { networkPartitionsScenarios } from '@/visualizers/network-partitions/scenarios';
@@ -18,11 +16,9 @@ export default function NetworkPartitionsPage() {
   const [links, setLinks] = useState<PartitionLink[]>(np.getLinks());
   const [messages, setMessages] = useState<PartitionMessage[]>(np.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
-  const [showExplanation, setShowExplanation] = useState(false);
   const [showArticle, setShowArticle] = useState(false);
 
   const simulation = useSimulation([]);
-  const claude = useClaudeExplainer('Network Partitions');
 
   const updateVisualization = useCallback(() => {
     setNodes([...np.getNodes()]);
@@ -63,17 +59,6 @@ export default function NetworkPartitionsPage() {
       simulation.setEvents(scenario.events);
       updateVisualization();
     }
-  };
-
-  const handleAskClaude = async (question: string) => {
-    setShowExplanation(true);
-    const stats = np.getStats();
-    const currentState = {
-      nodes: nodes.map((n) => ({ id: n.id, role: n.role, term: n.term, partition: n.partitionId })),
-      stats,
-      scenario: selectedScenario,
-    };
-    await claude.explain(currentState, question);
   };
 
   const split = () => {
@@ -127,8 +112,6 @@ export default function NetworkPartitionsPage() {
         }}
         onSpeedChange={simulation.setSpeed}
         onScenarioChange={handleScenarioChange}
-        onAskClaude={handleAskClaude}
-        apiKeyExists={claude.apiKeyExists}
       />
 
       <div className="flex-1 flex flex-col">
@@ -219,18 +202,6 @@ export default function NetworkPartitionsPage() {
           </div>
         </div>
       </div>
-
-      {showExplanation && (
-        <ExplanationPanel
-          explanation={claude.explanation}
-          isLoading={claude.isLoading}
-          error={claude.error}
-          onClose={() => {
-            setShowExplanation(false);
-            claude.clearExplanation();
-          }}
-        />
-      )}
 
       <TopicArticleDrawer
         open={showArticle}

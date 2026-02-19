@@ -3,9 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { CRDTAlgorithm } from '@/lib/algorithms/crdts';
 import { useSimulation } from '@/hooks/useSimulation';
-import { useClaudeExplainer } from '@/hooks/useClaudeExplainer';
 import ControlPanel from '@/components/ControlPanel';
-import ExplanationPanel from '@/components/ExplanationPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import { crdtScenarios } from '@/visualizers/crdts/scenarios';
@@ -17,11 +15,9 @@ export default function CRDTsPage() {
   const [replicas, setReplicas] = useState<CRDTReplica[]>(crdt.getReplicas());
   const [messages, setMessages] = useState<CRDTMessage[]>(crdt.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
-  const [showExplanation, setShowExplanation] = useState(false);
   const [showArticle, setShowArticle] = useState(false);
 
   const simulation = useSimulation([]);
-  const claude = useClaudeExplainer('CRDTs');
 
   const updateVisualization = useCallback(() => {
     setReplicas([...crdt.getReplicas()]);
@@ -86,22 +82,6 @@ export default function CRDTsPage() {
     }
   };
 
-  const handleAskClaude = async (question: string) => {
-    setShowExplanation(true);
-    const stats = crdt.getStats();
-    const currentState = {
-      replicas: replicas.map((r) => ({
-        id: r.id,
-        gCounter: r.gCounter,
-        orSet: crdt.getORSetValues(r),
-        rga: crdt.getRgaSequence(r).map((e) => e.value),
-      })),
-      stats,
-      scenario: selectedScenario,
-    };
-    await claude.explain(currentState, question);
-  };
-
   const incrementRandom = () => {
     const replica = replicas[Math.floor(Math.random() * replicas.length)];
     crdt.increment(replica.id);
@@ -164,8 +144,6 @@ export default function CRDTsPage() {
         }}
         onSpeedChange={simulation.setSpeed}
         onScenarioChange={handleScenarioChange}
-        onAskClaude={handleAskClaude}
-        apiKeyExists={claude.apiKeyExists}
       />
 
       <div className="flex-1 flex flex-col">
@@ -341,18 +319,6 @@ export default function CRDTsPage() {
           </div>
         </div>
       </div>
-
-      {showExplanation && (
-        <ExplanationPanel
-          explanation={claude.explanation}
-          isLoading={claude.isLoading}
-          error={claude.error}
-          onClose={() => {
-            setShowExplanation(false);
-            claude.clearExplanation();
-          }}
-        />
-      )}
 
       <TopicArticleDrawer
         open={showArticle}

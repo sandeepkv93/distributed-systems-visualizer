@@ -3,9 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ReplicationLogAlgorithm } from '@/lib/algorithms/replicationLog';
 import { useSimulation } from '@/hooks/useSimulation';
-import { useClaudeExplainer } from '@/hooks/useClaudeExplainer';
 import ControlPanel from '@/components/ControlPanel';
-import ExplanationPanel from '@/components/ExplanationPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import { replicationLogScenarios } from '@/visualizers/replication-log/scenarios';
@@ -17,11 +15,9 @@ export default function ReplicationLogPage() {
   const [partition, setPartition] = useState<LogPartition>(replication.getPartition());
   const [messages, setMessages] = useState<LogMessage[]>(replication.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
-  const [showExplanation, setShowExplanation] = useState(false);
   const [showArticle, setShowArticle] = useState(false);
 
   const simulation = useSimulation([]);
-  const claude = useClaudeExplainer('Replication Log (Kafka-style)');
 
   const updateVisualization = useCallback(() => {
     setPartition({ ...replication.getPartition(), replicas: [...replication.getPartition().replicas] });
@@ -66,27 +62,6 @@ export default function ReplicationLogPage() {
       simulation.setEvents(scenario.events);
       updateVisualization();
     }
-  };
-
-  const handleAskClaude = async (question: string) => {
-    setShowExplanation(true);
-    const stats = replication.getStats();
-    const currentState = {
-      partition: partition.id,
-      leaderId: partition.leaderId,
-      isr: partition.isr,
-      replicas: partition.replicas.map((r) => ({
-        id: r.id,
-        role: r.role,
-        lag: r.lag,
-        hw: r.highWatermark,
-        logSize: r.log.length,
-        inSync: r.inSync,
-      })),
-      stats,
-      scenario: selectedScenario,
-    };
-    await claude.explain(currentState, question);
   };
 
   const produce = () => {
@@ -149,8 +124,6 @@ export default function ReplicationLogPage() {
         }}
         onSpeedChange={simulation.setSpeed}
         onScenarioChange={handleScenarioChange}
-        onAskClaude={handleAskClaude}
-        apiKeyExists={claude.apiKeyExists}
       />
 
       <div className="flex-1 flex flex-col">
@@ -289,18 +262,6 @@ export default function ReplicationLogPage() {
           </div>
         </div>
       </div>
-
-      {showExplanation && (
-        <ExplanationPanel
-          explanation={claude.explanation}
-          isLoading={claude.isLoading}
-          error={claude.error}
-          onClose={() => {
-            setShowExplanation(false);
-            claude.clearExplanation();
-          }}
-        />
-      )}
 
       <TopicArticleDrawer
         open={showArticle}

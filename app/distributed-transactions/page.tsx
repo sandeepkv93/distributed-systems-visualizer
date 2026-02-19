@@ -3,9 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DistributedTransactionsAlgorithm } from '@/lib/algorithms/distributedTransactions';
 import { useSimulation } from '@/hooks/useSimulation';
-import { useClaudeExplainer } from '@/hooks/useClaudeExplainer';
 import ControlPanel from '@/components/ControlPanel';
-import ExplanationPanel from '@/components/ExplanationPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import { distributedTransactionsScenarios } from '@/visualizers/distributed-transactions/scenarios';
@@ -18,11 +16,9 @@ export default function DistributedTransactionsPage() {
   const [sagaSteps, setSagaSteps] = useState<SagaStep[]>(transactions.getSagaSteps());
   const [messages, setMessages] = useState<TransactionMessage[]>(transactions.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
-  const [showExplanation, setShowExplanation] = useState(false);
   const [showArticle, setShowArticle] = useState(false);
 
   const simulation = useSimulation([]);
-  const claude = useClaudeExplainer('Distributed Transactions');
 
   const updateVisualization = useCallback(() => {
     setParticipants([...transactions.getParticipants()]);
@@ -86,18 +82,6 @@ export default function DistributedTransactionsPage() {
       simulation.setEvents(scenario.events);
       updateVisualization();
     }
-  };
-
-  const handleAskClaude = async (question: string) => {
-    setShowExplanation(true);
-    const stats = transactions.getStats();
-    const currentState = {
-      participants,
-      sagaSteps,
-      stats,
-      scenario: selectedScenario,
-    };
-    await claude.explain(currentState, question);
   };
 
   const start3PC = () => {
@@ -177,8 +161,6 @@ export default function DistributedTransactionsPage() {
         }}
         onSpeedChange={simulation.setSpeed}
         onScenarioChange={handleScenarioChange}
-        onAskClaude={handleAskClaude}
-        apiKeyExists={claude.apiKeyExists}
       />
 
       <div className="flex-1 flex flex-col">
@@ -328,18 +310,6 @@ export default function DistributedTransactionsPage() {
             ))}
         </div>
       </div>
-
-      {showExplanation && (
-        <ExplanationPanel
-          explanation={claude.explanation}
-          isLoading={claude.isLoading}
-          error={claude.error}
-          onClose={() => {
-            setShowExplanation(false);
-            claude.clearExplanation();
-          }}
-        />
-      )}
 
       <TopicArticleDrawer
         open={showArticle}

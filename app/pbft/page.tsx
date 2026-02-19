@@ -3,9 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { PBFTAlgorithm } from '@/lib/algorithms/pbft';
 import { useSimulation } from '@/hooks/useSimulation';
-import { useClaudeExplainer } from '@/hooks/useClaudeExplainer';
 import ControlPanel from '@/components/ControlPanel';
-import ExplanationPanel from '@/components/ExplanationPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import { pbftScenarios } from '@/visualizers/pbft/scenarios';
@@ -17,11 +15,9 @@ export default function PBFTPage() {
   const [nodes, setNodes] = useState<PBFTNode[]>(pbft.getNodes());
   const [messages, setMessages] = useState<PBFTMessage[]>(pbft.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
-  const [showExplanation, setShowExplanation] = useState(false);
   const [showArticle, setShowArticle] = useState(false);
 
   const simulation = useSimulation([]);
-  const claude = useClaudeExplainer('PBFT Consensus');
 
   const updateVisualization = useCallback(() => {
     setNodes([...pbft.getNodes()]);
@@ -66,24 +62,6 @@ export default function PBFTPage() {
       simulation.setEvents(scenario.events);
       updateVisualization();
     }
-  };
-
-  const handleAskClaude = async (question: string) => {
-    setShowExplanation(true);
-    const stats = pbft.getStats();
-    const currentState = {
-      nodes: nodes.map((n) => ({
-        id: n.id,
-        role: n.role,
-        view: n.view,
-        status: n.status,
-        logSize: n.log.size,
-        executed: n.executed.length,
-      })),
-      stats,
-      scenario: selectedScenario,
-    };
-    await claude.explain(currentState, question);
   };
 
   const sendClientRequest = () => {
@@ -148,8 +126,6 @@ export default function PBFTPage() {
         }}
         onSpeedChange={simulation.setSpeed}
         onScenarioChange={handleScenarioChange}
-        onAskClaude={handleAskClaude}
-        apiKeyExists={claude.apiKeyExists}
       />
 
       <div className="flex-1 flex flex-col">
@@ -353,18 +329,6 @@ export default function PBFTPage() {
           </div>
         </div>
       </div>
-
-      {showExplanation && (
-        <ExplanationPanel
-          explanation={claude.explanation}
-          isLoading={claude.isLoading}
-          error={claude.error}
-          onClose={() => {
-            setShowExplanation(false);
-            claude.clearExplanation();
-          }}
-        />
-      )}
 
       <TopicArticleDrawer
         open={showArticle}

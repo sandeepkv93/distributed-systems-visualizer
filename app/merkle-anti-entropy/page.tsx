@@ -3,9 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { MerkleAntiEntropyAlgorithm } from '@/lib/algorithms/merkleAntiEntropy';
 import { useSimulation } from '@/hooks/useSimulation';
-import { useClaudeExplainer } from '@/hooks/useClaudeExplainer';
 import ControlPanel from '@/components/ControlPanel';
-import ExplanationPanel from '@/components/ExplanationPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import { merkleAntiEntropyScenarios } from '@/visualizers/merkle-anti-entropy/scenarios';
@@ -17,11 +15,9 @@ export default function MerkleAntiEntropyPage() {
   const [replicas, setReplicas] = useState<MerkleReplica[]>(merkle.getReplicas());
   const [messages, setMessages] = useState<MerkleMessage[]>(merkle.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
-  const [showExplanation, setShowExplanation] = useState(false);
   const [showArticle, setShowArticle] = useState(false);
 
   const simulation = useSimulation([]);
-  const claude = useClaudeExplainer('Merkle Tree Anti-Entropy');
 
   const updateVisualization = useCallback(() => {
     setReplicas([...merkle.getReplicas()]);
@@ -61,21 +57,6 @@ export default function MerkleAntiEntropyPage() {
       simulation.setEvents(scenario.events);
       updateVisualization();
     }
-  };
-
-  const handleAskClaude = async (question: string) => {
-    setShowExplanation(true);
-    const stats = merkle.getStats();
-    const currentState = {
-      replicas: replicas.map((r) => ({
-        id: r.id,
-        rootHash: r.root?.hash,
-        dataSize: r.data.size,
-      })),
-      stats,
-      scenario: selectedScenario,
-    };
-    await claude.explain(currentState, question);
   };
 
   const compareRoots = () => {
@@ -123,8 +104,6 @@ export default function MerkleAntiEntropyPage() {
         }}
         onSpeedChange={simulation.setSpeed}
         onScenarioChange={handleScenarioChange}
-        onAskClaude={handleAskClaude}
-        apiKeyExists={claude.apiKeyExists}
       />
 
       <div className="flex-1 flex flex-col">
@@ -276,18 +255,6 @@ export default function MerkleAntiEntropyPage() {
           </div>
         </div>
       </div>
-
-      {showExplanation && (
-        <ExplanationPanel
-          explanation={claude.explanation}
-          isLoading={claude.isLoading}
-          error={claude.error}
-          onClose={() => {
-            setShowExplanation(false);
-            claude.clearExplanation();
-          }}
-        />
-      )}
 
       <TopicArticleDrawer
         open={showArticle}

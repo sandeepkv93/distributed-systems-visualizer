@@ -3,9 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { VectorClocksAlgorithm } from '@/lib/algorithms/vectorClocks';
 import { useSimulation } from '@/hooks/useSimulation';
-import { useClaudeExplainer } from '@/hooks/useClaudeExplainer';
 import ControlPanel from '@/components/ControlPanel';
-import ExplanationPanel from '@/components/ExplanationPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
@@ -19,13 +17,11 @@ export default function VectorClocksPage() {
   const [processes, setProcesses] = useState<VectorClockProcess[]>(vc.getProcesses());
   const [allEvents, setAllEvents] = useState<VectorClockEvent[]>([]);
   const [selectedScenario, setSelectedScenario] = useState<string>('');
-  const [showExplanation, setShowExplanation] = useState(false);
   const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set());
   const [lastSendEvent, setLastSendEvent] = useState<VectorClockEvent | null>(null);
   const [showArticle, setShowArticle] = useState(false);
 
   const simulation = useSimulation([]);
-  const claude = useClaudeExplainer('Vector Clocks');
 
   // Update visualization
   const updateVisualization = useCallback(() => {
@@ -133,23 +129,6 @@ export default function VectorClocksPage() {
     updateVisualization();
   };
 
-  // Ask Claude
-  const handleAskClaude = async (question: string) => {
-    setShowExplanation(true);
-    const stats = vc.getStats();
-    const currentState = {
-      processes: processes.map((p) => ({
-        id: p.id,
-        vectorClock: p.vectorClock,
-        eventCount: p.events.length,
-      })),
-      stats,
-      totalEvents: allEvents.length,
-      scenario: selectedScenario,
-    };
-    await claude.explain(currentState, question);
-  };
-
   // Helper to format vector clock
   const formatClock = (clock: VectorClock): string => {
     const keys = Object.keys(clock).sort();
@@ -195,8 +174,6 @@ export default function VectorClocksPage() {
         }}
         onSpeedChange={simulation.setSpeed}
         onScenarioChange={handleScenarioChange}
-        onAskClaude={handleAskClaude}
-        apiKeyExists={claude.apiKeyExists}
       />
 
       {/* Main Visualization Area */}
@@ -411,19 +388,6 @@ export default function VectorClocksPage() {
           </div>
         </div>
       </div>
-
-      {/* Explanation Panel */}
-      {showExplanation && (
-        <ExplanationPanel
-          explanation={claude.explanation}
-          isLoading={claude.isLoading}
-          error={claude.error}
-          onClose={() => {
-            setShowExplanation(false);
-            claude.clearExplanation();
-          }}
-        />
-      )}
 
       <TopicArticleDrawer
         open={showArticle}

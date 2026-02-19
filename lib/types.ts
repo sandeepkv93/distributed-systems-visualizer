@@ -620,16 +620,3 @@ export interface UserProgress {
   timeSpent: { [concept: string]: number };
   achievements: string[];
 }
-
-// Claude API types
-export interface ClaudeExplanation {
-  question: string;
-  answer: string;
-  timestamp: number;
-}
-
-export interface ClaudeAPIConfig {
-  apiKey: string;
-  model: string;
-  maxTokens: number;
-}
