@@ -24,10 +24,19 @@ jobs:
       - name: Set up Bazelisk
         uses: bazelbuild/setup-bazelisk@v3
 
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Lint
+        run: bazelisk run //:lint
+
       - name: Build
         run: bazelisk build //:site_export
         env:
           NODE_ENV: production
+
+      - name: Verify export artifact
+        run: test -f ./bazel-bin/out/index.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
