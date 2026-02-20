@@ -59,8 +59,6 @@ Interactive visual simulations for learning distributed systems, with step contr
 
 ### Prerequisites
 
-- Node.js 20.x or higher
-- npm
 - Bazelisk (uses Bazel `9.0.0` via `.bazelversion`)
 
 ### Installation
@@ -72,19 +70,13 @@ git clone https://github.com/sandeepkv93/distributed-systems-visualizer.git
 cd distributed-systems-visualizer
 ```
 
-2. Install dependencies:
+2. Run the development server:
 
 ```bash
-npm install
+bazelisk run //:dev -- "$PWD"
 ```
 
-3. Run the development server:
-
-```bash
-bazelisk run //:dev
-```
-
-4. Open [http://localhost:3000](http://localhost:3000) in your browser
+3. Open [http://localhost:3000](http://localhost:3000) in your browser
 
 ### Building for Production
 
@@ -92,7 +84,8 @@ bazelisk run //:dev
 bazelisk run //:build
 ```
 
-This generates a static export in the `out/` directory, ready for deployment to GitHub Pages or any static hosting service.
+This generates a static export ready for deployment to GitHub Pages or any static hosting service.
+The exported site is written under `bazel-bin/build_/build.runfiles/_main/out/`.
 
 ## 🎯 Usage
 

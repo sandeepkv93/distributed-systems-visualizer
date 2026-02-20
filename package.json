@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "bazelisk run //:dev",
+    "dev": "bazelisk run //:dev -- \"$PWD\"",
     "build": "bazelisk run //:build",
     "start": "next start",
     "lint": "bazelisk run //:lint"
