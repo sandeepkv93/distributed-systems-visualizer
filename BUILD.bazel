@@ -27,6 +27,7 @@ filegroup(
             "package-lock.json",
             "pnpm-lock.yaml",
         ],
+        allow_empty = True,
     ),
     visibility = ["//visibility:private"],
 )
