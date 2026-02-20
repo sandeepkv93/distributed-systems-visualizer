@@ -44,7 +44,6 @@ next_bin.next_binary(
     data = [
         ":app_srcs",
         ":node_modules",
-        "next-env.d.ts",
         "next.config.mjs",
         "package.json",
         "postcss.config.mjs",
@@ -60,7 +59,6 @@ js_run_binary(
     srcs = [
         ":app_srcs",
         ":node_modules",
-        "next-env.d.ts",
         "next.config.mjs",
         "package.json",
         "postcss.config.mjs",
@@ -78,7 +76,6 @@ next_bin.next_binary(
     data = [
         ":app_srcs",
         ":node_modules",
-        "next-env.d.ts",
         "next.config.mjs",
         "package.json",
         "postcss.config.mjs",
