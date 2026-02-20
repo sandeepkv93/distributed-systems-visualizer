@@ -1,6 +1,7 @@
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("@npm//:eslint/package_json.bzl", eslint_bin = "bin")
 load("@npm//:next/package_json.bzl", next_bin = "bin")
+load("@aspect_rules_js//js:defs.bzl", "js_run_binary")
 
 npm_link_all_packages(name = "node_modules")
 
@@ -31,6 +32,11 @@ filegroup(
 )
 
 next_bin.next_binary(
+    name = "next_js_binary",
+    visibility = ["//visibility:private"],
+)
+
+next_bin.next_binary(
     name = "build",
     args = ["build", "--webpack"],
     chdir = package_name(),
@@ -43,6 +49,25 @@ next_bin.next_binary(
         "postcss.config.mjs",
         "tsconfig.json",
     ],
+)
+
+js_run_binary(
+    name = "site_export",
+    tool = ":next_js_binary",
+    args = ["build", "--webpack"],
+    chdir = package_name(),
+    srcs = [
+        ":app_srcs",
+        ":node_modules",
+        "next-env.d.ts",
+        "next.config.mjs",
+        "package.json",
+        "postcss.config.mjs",
+        "tsconfig.json",
+    ],
+    out_dirs = ["out"],
+    mnemonic = "NextJsExport",
+    progress_message = "Export static Next.js site %{label}",
 )
 
 next_bin.next_binary(

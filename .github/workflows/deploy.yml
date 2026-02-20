@@ -25,14 +25,14 @@ jobs:
         uses: bazelbuild/setup-bazelisk@v3
 
       - name: Build
-        run: bazelisk run //:build
+        run: bazelisk build //:site_export
         env:
           NODE_ENV: production
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./bazel-bin/build_/build.runfiles/_main/out
+          path: ./bazel-bin/out
 
   deploy:
     environment:

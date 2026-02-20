@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "bazelisk run //:dev -- \"$PWD\"",
-    "build": "bazelisk run //:build",
+    "build": "bazelisk build //:site_export",
     "start": "next start",
     "lint": "bazelisk run //:lint"
   },

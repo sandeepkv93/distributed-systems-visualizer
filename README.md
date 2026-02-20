@@ -81,11 +81,11 @@ bazelisk run //:dev -- "$PWD"
 ### Building for Production
 
 ```bash
-bazelisk run //:build
+bazelisk build //:site_export
 ```
 
 This generates a static export ready for deployment to GitHub Pages or any static hosting service.
-The exported site is written under `bazel-bin/build_/build.runfiles/_main/out/`.
+The exported site is emitted as Bazel output label `//:site_export` and materialized at `bazel-bin/out/`.
 
 ## 🎯 Usage
 
