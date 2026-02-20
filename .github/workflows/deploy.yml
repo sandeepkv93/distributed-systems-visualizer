@@ -27,11 +27,11 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Set up Bazelisk
+        uses: bazelbuild/setup-bazelisk@v3
 
       - name: Build
-        run: npm run build
+        run: bazelisk run //:build
         env:
           NODE_ENV: production
 

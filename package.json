@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "bazelisk run //:dev",
+    "build": "bazelisk run //:build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "bazelisk run //:lint"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",

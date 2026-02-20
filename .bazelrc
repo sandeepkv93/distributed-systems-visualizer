@@ -1,0 +1,6 @@
+build --color=yes
+build --curses=yes
+build --show_timestamps
+
+run --color=yes
+run --show_timestamps

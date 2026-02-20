@@ -1,0 +1,64 @@
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+
+filegroup(
+    name = "app_srcs",
+    srcs = glob(
+        [
+            "app/**",
+            "components/**",
+            "data/**",
+            "hooks/**",
+            "lib/**",
+            "public/**",
+            "visualizers/**",
+            "*.json",
+            "*.mjs",
+            "*.ts",
+        ],
+        exclude = [
+            ".next/**",
+            "node_modules/**",
+            "out/**",
+        ],
+    ),
+    visibility = ["//visibility:private"],
+)
+
+sh_binary(
+    name = "build",
+    srcs = ["tools/bazel/build.sh"],
+    data = [
+        ":app_srcs",
+        "next-env.d.ts",
+        "next.config.ts",
+        "package-lock.json",
+        "package.json",
+        "postcss.config.mjs",
+        "tsconfig.json",
+    ],
+)
+
+sh_binary(
+    name = "dev",
+    srcs = ["tools/bazel/dev.sh"],
+    data = [
+        ":app_srcs",
+        "next-env.d.ts",
+        "next.config.ts",
+        "package-lock.json",
+        "package.json",
+        "postcss.config.mjs",
+        "tsconfig.json",
+    ],
+)
+
+sh_binary(
+    name = "lint",
+    srcs = ["tools/bazel/lint.sh"],
+    data = [
+        ":app_srcs",
+        "eslint.config.mjs",
+        "package-lock.json",
+        "package.json",
+    ],
+)

@@ -40,3 +40,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# bazel
+/bazel-*
+/bazel-bin
+/bazel-out
+/bazel-testlogs
