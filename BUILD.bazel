@@ -32,7 +32,7 @@ filegroup(
 
 next_bin.next_binary(
     name = "build",
-    args = ["build"],
+    args = ["build", "--webpack"],
     chdir = package_name(),
     data = [
         ":app_srcs",
