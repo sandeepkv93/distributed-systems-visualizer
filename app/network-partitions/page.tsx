@@ -1,16 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { NetworkPartitionsAlgorithm } from '@/lib/algorithms/networkPartitions';
 import { useSimulation } from '@/hooks/useSimulation';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
+import ExportMenu from '@/components/ExportMenu';
 import { networkPartitionsScenarios } from '@/visualizers/network-partitions/scenarios';
 import { PartitionLink, PartitionMessage, PartitionNode } from '@/lib/types';
 import { motion } from 'framer-motion';
 
 export default function NetworkPartitionsPage() {
+  const svgRef = useRef<SVGSVGElement>(null);
   const [np] = useState(() => new NetworkPartitionsAlgorithm(5));
   const [nodes, setNodes] = useState<PartitionNode[]>(np.getNodes());
   const [links, setLinks] = useState<PartitionLink[]>(np.getLinks());
@@ -139,7 +141,15 @@ export default function NetworkPartitionsPage() {
         </div>
 
         <div className="flex-1 relative bg-slate-900 overflow-hidden">
-          <svg className="w-full h-full">
+          <div className="absolute top-4 right-4 z-20">
+            <ExportMenu
+              svgRef={svgRef}
+              concept="Network Partitions + Split-Brain"
+              currentState={{ scenario: selectedScenario }}
+            />
+          </div>
+
+          <svg ref={svgRef} className="w-full h-full">
             {links.map((link) => {
               const fromNode = nodes.find((n) => n.id === link.from);
               const toNode = nodes.find((n) => n.id === link.to);
@@ -172,13 +182,32 @@ export default function NetworkPartitionsPage() {
                   stroke="#1F2937"
                   strokeWidth="3"
                 />
-                <text x={node.position.x} y={node.position.y - 10} textAnchor="middle" fill="#FFF" fontSize="14" fontWeight="bold">
+                <text
+                  x={node.position.x}
+                  y={node.position.y - 10}
+                  textAnchor="middle"
+                  fill="#FFF"
+                  fontSize="14"
+                  fontWeight="bold"
+                >
                   {node.id}
                 </text>
-                <text x={node.position.x} y={node.position.y + 6} textAnchor="middle" fill="#E2E8F0" fontSize="10">
+                <text
+                  x={node.position.x}
+                  y={node.position.y + 6}
+                  textAnchor="middle"
+                  fill="#E2E8F0"
+                  fontSize="10"
+                >
                   {node.role.toUpperCase()}
                 </text>
-                <text x={node.position.x} y={node.position.y + 20} textAnchor="middle" fill="#CBD5E1" fontSize="9">
+                <text
+                  x={node.position.x}
+                  y={node.position.y + 20}
+                  textAnchor="middle"
+                  fill="#CBD5E1"
+                  fontSize="9"
+                >
                   partition {node.partitionId}
                 </text>
               </motion.g>
@@ -187,16 +216,28 @@ export default function NetworkPartitionsPage() {
 
           <div className="absolute bottom-4 left-4 bg-slate-800 rounded-lg p-4 border border-slate-700 space-y-2 max-w-xs">
             <h3 className="text-sm font-semibold text-white">Manual Controls</h3>
-            <button onClick={split} className="w-full px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700">
+            <button
+              onClick={split}
+              className="w-full px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+            >
               Split Network
             </button>
-            <button onClick={heal} className="w-full px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700">
+            <button
+              onClick={heal}
+              className="w-full px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+            >
               Heal Network
             </button>
-            <button onClick={electionA} className="w-full px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
+            <button
+              onClick={electionA}
+              className="w-full px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+            >
               Election Partition A
             </button>
-            <button onClick={electionB} className="w-full px-3 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700">
+            <button
+              onClick={electionB}
+              className="w-full px-3 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700"
+            >
               Election Partition B
             </button>
           </div>

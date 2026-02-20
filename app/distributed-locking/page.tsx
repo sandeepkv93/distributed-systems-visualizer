@@ -1,16 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { DistributedLockAlgorithm } from '@/lib/algorithms/distributedLock';
 import { useSimulation } from '@/hooks/useSimulation';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
+import ExportMenu from '@/components/ExportMenu';
 import { distributedLockingScenarios } from '@/visualizers/distributed-locking/scenarios';
 import { LockMessage, LockNode } from '@/lib/types';
 import { motion } from 'framer-motion';
 
 export default function DistributedLockingPage() {
+  const svgRef = useRef<SVGSVGElement>(null);
   const [lock] = useState(() => new DistributedLockAlgorithm(4, 4000));
   const [nodes, setNodes] = useState<LockNode[]>(lock.getNodes());
   const [messages, setMessages] = useState<LockMessage[]>(lock.getMessages());
@@ -191,13 +193,24 @@ export default function DistributedLockingPage() {
               Queue: <span className="font-semibold text-white">{stats.queueLength}</span>
             </span>
             <span className="text-slate-300">
-              TTL: <span className="font-semibold text-white">{Math.round(stats.leaseTtlMs / 1000)}s</span>
+              TTL:{' '}
+              <span className="font-semibold text-white">
+                {Math.round(stats.leaseTtlMs / 1000)}s
+              </span>
             </span>
           </div>
         </div>
 
         <div className="flex-1 relative bg-slate-900 overflow-hidden">
-          <svg className="w-full h-full">
+          <div className="absolute top-4 right-4 z-20">
+            <ExportMenu
+              svgRef={svgRef}
+              concept="Distributed Locking + Leases"
+              currentState={{ scenario: selectedScenario }}
+            />
+          </div>
+
+          <svg ref={svgRef} className="w-full h-full">
             {nodes.map((node, index) => (
               <motion.g
                 key={node.id}
@@ -346,7 +359,8 @@ export default function DistributedLockingPage() {
                       {node.leaseExpiresAt && (
                         <span className="text-slate-400">
                           {' '}
-                          · expires in {Math.max(0, Math.ceil((node.leaseExpiresAt - Date.now()) / 1000))}s
+                          · expires in{' '}
+                          {Math.max(0, Math.ceil((node.leaseExpiresAt - Date.now()) / 1000))}s
                         </span>
                       )}
                     </div>

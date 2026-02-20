@@ -1,16 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { FailureDetectorsAlgorithm } from '@/lib/algorithms/failureDetectors';
 import { useSimulation } from '@/hooks/useSimulation';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
+import ExportMenu from '@/components/ExportMenu';
 import { failureDetectorScenarios } from '@/visualizers/failure-detectors/scenarios';
 import { FailureDetectorMessage, FailureDetectorNode } from '@/lib/types';
 import { motion } from 'framer-motion';
 
 export default function FailureDetectorsPage() {
+  const svgRef = useRef<SVGSVGElement>(null);
   const [fd] = useState(() => new FailureDetectorsAlgorithm(5));
   const [nodes, setNodes] = useState<FailureDetectorNode[]>(fd.getNodes());
   const [messages, setMessages] = useState<FailureDetectorMessage[]>(fd.getMessages());
@@ -201,7 +203,15 @@ export default function FailureDetectorsPage() {
         </div>
 
         <div className="flex-1 relative bg-slate-900 overflow-hidden">
-          <svg className="w-full h-full">
+          <div className="absolute top-4 right-4 z-20">
+            <ExportMenu
+              svgRef={svgRef}
+              concept="Failure Detectors"
+              currentState={{ scenario: selectedScenario }}
+            />
+          </div>
+
+          <svg ref={svgRef} className="w-full h-full">
             {nodes.map((node, index) => (
               <motion.g
                 key={node.id}

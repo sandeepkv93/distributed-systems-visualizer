@@ -1,16 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { PBFTAlgorithm } from '@/lib/algorithms/pbft';
 import { useSimulation } from '@/hooks/useSimulation';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
+import ExportMenu from '@/components/ExportMenu';
 import { pbftScenarios } from '@/visualizers/pbft/scenarios';
 import { PBFTNode, PBFTMessage } from '@/lib/types';
 import { motion } from 'framer-motion';
 
 export default function PBFTPage() {
+  const svgRef = useRef<SVGSVGElement>(null);
   const [pbft] = useState(() => new PBFTAlgorithm(4));
   const [nodes, setNodes] = useState<PBFTNode[]>(pbft.getNodes());
   const [messages, setMessages] = useState<PBFTMessage[]>(pbft.getMessages());
@@ -162,7 +164,15 @@ export default function PBFTPage() {
         </div>
 
         <div className="flex-1 relative bg-slate-900 overflow-hidden">
-          <svg className="w-full h-full">
+          <div className="absolute top-4 right-4 z-20">
+            <ExportMenu
+              svgRef={svgRef}
+              concept="PBFT Consensus"
+              currentState={{ scenario: selectedScenario }}
+            />
+          </div>
+
+          <svg ref={svgRef} className="w-full h-full">
             {nodes.map((node, index) => (
               <motion.g
                 key={node.id}
@@ -178,7 +188,9 @@ export default function PBFTPage() {
                   stroke="#1F2937"
                   strokeWidth="3"
                   className="cursor-pointer"
-                  onClick={() => (node.status === 'failed' ? recoverNode(node.id) : failNode(node.id))}
+                  onClick={() =>
+                    node.status === 'failed' ? recoverNode(node.id) : failNode(node.id)
+                  }
                 />
                 <text
                   x={node.position.x}

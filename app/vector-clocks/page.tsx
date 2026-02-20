@@ -203,9 +203,42 @@ export default function VectorClocksPage() {
           </div>
         </div>
 
-
         {/* Visualization Canvas */}
         <div className="flex-1 relative bg-slate-900 overflow-auto p-6">
+          <div className="absolute top-4 right-4 z-20">
+            <ExportMenu
+              svgRef={svgRef}
+              concept="Vector Clocks"
+              currentState={{
+                scenario: selectedScenario,
+                stats,
+                processes: processes.map((p) => ({
+                  id: p.id,
+                  status: p.status,
+                  clock: p.vectorClock,
+                  events: p.events.length,
+                })),
+              }}
+            />
+          </div>
+          <svg ref={svgRef} className="hidden" width="1200" height="800" viewBox="0 0 1200 800">
+            <rect width="1200" height="800" fill="#0f172a" />
+            <text x="40" y="70" fill="#e2e8f0" fontSize="38" fontWeight="700">
+              Vector Clocks
+            </text>
+            <text x="40" y="115" fill="#94a3b8" fontSize="20">
+              Scenario: {selectedScenario || 'manual'}
+            </text>
+            <text x="40" y="160" fill="#e2e8f0" fontSize="24">
+              Summary
+            </text>
+            <text x="40" y="200" fill="#93c5fd" fontSize="20">
+              Total Events: {stats.totalEvents}
+            </text>
+            <text x="300" y="200" fill="#fbbf24" fontSize="20">
+              Concurrent Pairs: {stats.concurrentPairs}
+            </text>
+          </svg>
           {/* Process timelines */}
           <div className="space-y-12">
             {processes.map((process, processIndex) => (
@@ -293,10 +326,7 @@ export default function VectorClocksPage() {
                                 refY="3.5"
                                 orient="auto"
                               >
-                                <polygon
-                                  points="0 0, 10 3.5, 0 7"
-                                  fill="#10B981"
-                                />
+                                <polygon points="0 0, 10 3.5, 0 7" fill="#10B981" />
                               </marker>
                             </defs>
                             <line

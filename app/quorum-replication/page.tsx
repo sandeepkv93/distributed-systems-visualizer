@@ -1,16 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { QuorumReplicationAlgorithm } from '@/lib/algorithms/quorumReplication';
 import { useSimulation } from '@/hooks/useSimulation';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
+import ExportMenu from '@/components/ExportMenu';
 import { quorumReplicationScenarios } from '@/visualizers/quorum-replication/scenarios';
 import { QuorumNode, QuorumMessage } from '@/lib/types';
 import { motion } from 'framer-motion';
 
 export default function QuorumReplicationPage() {
+  const svgRef = useRef<SVGSVGElement>(null);
   const [quorum] = useState(() => new QuorumReplicationAlgorithm(5, 3));
   const [nodes, setNodes] = useState<QuorumNode[]>(quorum.getNodes());
   const [messages, setMessages] = useState<QuorumMessage[]>(quorum.getMessages());
@@ -36,7 +38,12 @@ export default function QuorumReplicationPage() {
 
   useEffect(() => {
     simulation.onEvent('write', (event) => {
-      quorum.write(event.data.key, event.data.value, event.data.nodeId, event.data.quorumWrite || quorumWrite);
+      quorum.write(
+        event.data.key,
+        event.data.value,
+        event.data.nodeId,
+        event.data.quorumWrite || quorumWrite
+      );
       updateVisualization();
     });
 
@@ -168,7 +175,15 @@ export default function QuorumReplicationPage() {
         </div>
 
         <div className="flex-1 relative bg-slate-900 overflow-hidden">
-          <svg className="w-full h-full">
+          <div className="absolute top-4 right-4 z-20">
+            <ExportMenu
+              svgRef={svgRef}
+              concept="Quorum Replication + Read Repair"
+              currentState={{ scenario: selectedScenario }}
+            />
+          </div>
+
+          <svg ref={svgRef} className="w-full h-full">
             {nodes.map((node, index) => (
               <motion.g
                 key={node.id}
@@ -184,7 +199,9 @@ export default function QuorumReplicationPage() {
                   stroke="#1F2937"
                   strokeWidth="3"
                   className="cursor-pointer"
-                  onClick={() => (node.status === 'failed' ? recoverNode(node.id) : failNode(node.id))}
+                  onClick={() =>
+                    node.status === 'failed' ? recoverNode(node.id) : failNode(node.id)
+                  }
                 />
                 <text
                   x={node.position.x}
@@ -334,7 +351,8 @@ export default function QuorumReplicationPage() {
                   <div className="pl-2 space-y-1">
                     {Array.from(node.data.entries()).map(([key, dataValue]) => (
                       <div key={`${node.id}-${key}`} className="text-slate-300">
-                        {key}: <span className="text-green-400">{JSON.stringify(dataValue.value)}</span>{' '}
+                        {key}:{' '}
+                        <span className="text-green-400">{JSON.stringify(dataValue.value)}</span>{' '}
                         <span className="text-slate-400">v{dataValue.version}</span>
                       </div>
                     ))}

@@ -1,15 +1,17 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ConsistentHashingAlgorithm } from '@/lib/algorithms/consistentHashing';
 import { useSimulation } from '@/hooks/useSimulation';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
+import ExportMenu from '@/components/ExportMenu';
 import { consistentHashingScenarios } from '@/visualizers/consistent-hashing/scenarios';
 import { motion } from 'framer-motion';
 
 export default function ConsistentHashingPage() {
+  const svgRef = useRef<SVGSVGElement>(null);
   const [ch] = useState(() => new ConsistentHashingAlgorithm(3, 3));
   const [ring, setRing] = useState(ch.getRing());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
@@ -100,7 +102,7 @@ export default function ConsistentHashingPage() {
 
   // Calculate position on ring
   const getPositionOnRing = (hashValue: number): { x: number; y: number } => {
-    const angle = (hashValue / (2 ** 32)) * 2 * Math.PI - Math.PI / 2;
+    const angle = (hashValue / 2 ** 32) * 2 * Math.PI - Math.PI / 2;
     return {
       x: centerX + radius * Math.cos(angle),
       y: centerY + radius * Math.sin(angle),
@@ -180,17 +182,25 @@ export default function ConsistentHashingPage() {
               Keys: <span className="font-semibold text-white">{stats.totalKeys}</span>
             </span>
             <span className="text-slate-300">
-              Balance: <span className="font-semibold text-amber-400">
+              Balance:{' '}
+              <span className="font-semibold text-amber-400">
                 {stats.loadStats.imbalance.toFixed(2)}x
               </span>
             </span>
           </div>
         </div>
 
-
         {/* Visualization Canvas */}
         <div className="flex-1 relative bg-slate-900 overflow-hidden">
-          <svg className="w-full h-full">
+          <div className="absolute top-4 right-4 z-20">
+            <ExportMenu
+              svgRef={svgRef}
+              concept="Consistent Hashing"
+              currentState={{ scenario: selectedScenario }}
+            />
+          </div>
+
+          <svg ref={svgRef} className="w-full h-full">
             {/* Ring circle */}
             <circle
               cx={centerX}
@@ -203,10 +213,22 @@ export default function ConsistentHashingPage() {
             />
 
             {/* Hash space labels */}
-            <text x={centerX} y={centerY - radius - 20} textAnchor="middle" fill="#94A3B8" fontSize="12">
+            <text
+              x={centerX}
+              y={centerY - radius - 20}
+              textAnchor="middle"
+              fill="#94A3B8"
+              fontSize="12"
+            >
               0
             </text>
-            <text x={centerX + radius + 20} y={centerY + 5} textAnchor="start" fill="#94A3B8" fontSize="12">
+            <text
+              x={centerX + radius + 20}
+              y={centerY + 5}
+              textAnchor="start"
+              fill="#94A3B8"
+              fontSize="12"
+            >
               2³¹
             </text>
 
@@ -271,7 +293,14 @@ export default function ConsistentHashingPage() {
             })}
 
             {/* Center info */}
-            <text x={centerX} y={centerY - 10} textAnchor="middle" fill="#FFF" fontSize="16" fontWeight="bold">
+            <text
+              x={centerX}
+              y={centerY - 10}
+              textAnchor="middle"
+              fill="#FFF"
+              fontSize="16"
+              fontWeight="bold"
+            >
               Hash Ring
             </text>
             <text x={centerX} y={centerY + 10} textAnchor="middle" fill="#94A3B8" fontSize="12">
@@ -346,7 +375,9 @@ export default function ConsistentHashingPage() {
                 <div key={serverId} className="mb-2">
                   <div className="flex items-center justify-between text-xs mb-1">
                     <span className="text-white">{serverId}</span>
-                    <span className="text-slate-400">{load} keys ({percentage.toFixed(1)}%)</span>
+                    <span className="text-slate-400">
+                      {load} keys ({percentage.toFixed(1)}%)
+                    </span>
                   </div>
                   <div className="w-full bg-slate-700 rounded-full h-2">
                     <div
@@ -377,7 +408,9 @@ export default function ConsistentHashingPage() {
               </div>
               <div className="flex justify-between text-slate-300">
                 <span>Imbalance:</span>
-                <span className={stats.loadStats.imbalance > 1.5 ? 'text-amber-400' : 'text-green-400'}>
+                <span
+                  className={stats.loadStats.imbalance > 1.5 ? 'text-amber-400' : 'text-green-400'}
+                >
                   {stats.loadStats.imbalance.toFixed(2)}x
                 </span>
               </div>

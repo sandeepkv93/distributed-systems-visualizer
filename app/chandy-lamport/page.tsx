@@ -1,16 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ChandyLamportAlgorithm } from '@/lib/algorithms/chandyLamport';
 import { useSimulation } from '@/hooks/useSimulation';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
+import ExportMenu from '@/components/ExportMenu';
 import { chandyLamportScenarios } from '@/visualizers/chandy-lamport/scenarios';
 import { SnapshotNode, SnapshotMessage } from '@/lib/types';
 import { motion } from 'framer-motion';
 
 export default function ChandyLamportPage() {
+  const svgRef = useRef<SVGSVGElement>(null);
   const [snapshot] = useState(() => new ChandyLamportAlgorithm(5));
   const [nodes, setNodes] = useState<SnapshotNode[]>(snapshot.getNodes());
   const [messages, setMessages] = useState<SnapshotMessage[]>(snapshot.getMessages());
@@ -126,7 +128,9 @@ export default function ChandyLamportPage() {
             </span>
             <span className="text-slate-300">
               Active Snapshots:{' '}
-              <span className={`font-semibold ${stats.snapshotsActive > 0 ? 'text-amber-400' : 'text-slate-300'}`}>
+              <span
+                className={`font-semibold ${stats.snapshotsActive > 0 ? 'text-amber-400' : 'text-slate-300'}`}
+              >
                 {stats.snapshotsActive}
               </span>
             </span>
@@ -138,7 +142,15 @@ export default function ChandyLamportPage() {
         </div>
 
         <div className="flex-1 relative bg-slate-900 overflow-hidden">
-          <svg className="w-full h-full">
+          <div className="absolute top-4 right-4 z-20">
+            <ExportMenu
+              svgRef={svgRef}
+              concept="Chandy-Lamport Snapshot"
+              currentState={{ scenario: selectedScenario }}
+            />
+          </div>
+
+          <svg ref={svgRef} className="w-full h-full">
             {nodes.map((node, index) => (
               <motion.g
                 key={node.id}
@@ -259,7 +271,10 @@ export default function ChandyLamportPage() {
                       <div className="text-slate-400">Channels:</div>
                       {Object.entries(node.snapshot.channels).map(([fromId, records]) => (
                         <div key={`${node.id}-${fromId}`} className="pl-2 text-slate-300">
-                          {fromId}: {records.length > 0 ? records.map((r) => JSON.stringify(r.value)).join(', ') : 'empty'}
+                          {fromId}:{' '}
+                          {records.length > 0
+                            ? records.map((r) => JSON.stringify(r.value)).join(', ')
+                            : 'empty'}
                         </div>
                       ))}
                       {node.snapshot.complete && <div className="text-green-400">Complete</div>}

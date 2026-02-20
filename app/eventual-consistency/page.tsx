@@ -1,16 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { EventualConsistencyAlgorithm } from '@/lib/algorithms/eventualConsistency';
 import { useSimulation } from '@/hooks/useSimulation';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
+import ExportMenu from '@/components/ExportMenu';
 import { eventualConsistencyScenarios } from '@/visualizers/eventual-consistency/scenarios';
 import { EventualConsistencyNode, EventualConsistencyMessage } from '@/lib/types';
 import { motion } from 'framer-motion';
 
 export default function EventualConsistencyPage() {
+  const svgRef = useRef<SVGSVGElement>(null);
   const [ec] = useState(() => new EventualConsistencyAlgorithm(5, 3));
   const [nodes, setNodes] = useState<EventualConsistencyNode[]>(ec.getNodes());
   const [messages, setMessages] = useState<EventualConsistencyMessage[]>(ec.getMessages());
@@ -119,7 +121,11 @@ export default function EventualConsistencyPage() {
   };
 
   // Manual controls
-  const writeKey = (key: string, value: any, consistencyLevel: 'ONE' | 'QUORUM' | 'ALL' = 'QUORUM') => {
+  const writeKey = (
+    key: string,
+    value: any,
+    consistencyLevel: 'ONE' | 'QUORUM' | 'ALL' = 'QUORUM'
+  ) => {
     const healthyNodes = nodes.filter((n) => n.status === 'healthy');
     if (healthyNodes.length > 0) {
       ec.write(key, value, healthyNodes[0].id, consistencyLevel);
@@ -213,20 +219,29 @@ export default function EventualConsistencyPage() {
             </span>
             <span className="text-slate-300">
               Inconsistent:{' '}
-              <span className={`font-semibold ${stats.inconsistentKeys > 0 ? 'text-amber-400' : 'text-green-400'}`}>
+              <span
+                className={`font-semibold ${stats.inconsistentKeys > 0 ? 'text-amber-400' : 'text-green-400'}`}
+              >
                 {stats.inconsistentKeys}
               </span>
             </span>
             <span className="text-slate-300">
-              Replication Factor: <span className="font-semibold text-white">{stats.replicationFactor}</span>
+              Replication Factor:{' '}
+              <span className="font-semibold text-white">{stats.replicationFactor}</span>
             </span>
           </div>
         </div>
 
-
         {/* Visualization Canvas */}
         <div className="flex-1 relative bg-slate-900 overflow-hidden">
-          <svg className="w-full h-full">
+          <div className="absolute top-4 right-4 z-20">
+            <ExportMenu
+              svgRef={svgRef}
+              concept="Eventual Consistency"
+              currentState={{ scenario: selectedScenario }}
+            />
+          </div>
+          <svg ref={svgRef} className="w-full h-full">
             {/* Nodes */}
             {nodes.map((node, index) => (
               <motion.g
@@ -243,7 +258,9 @@ export default function EventualConsistencyPage() {
                   stroke="#1F2937"
                   strokeWidth="3"
                   className="cursor-pointer"
-                  onClick={() => (node.status === 'failed' ? recoverNode(node.id) : failNode(node.id))}
+                  onClick={() =>
+                    node.status === 'failed' ? recoverNode(node.id) : failNode(node.id)
+                  }
                 />
                 <text
                   x={node.position.x}
@@ -380,14 +397,17 @@ export default function EventualConsistencyPage() {
                     <div className="pl-2 space-y-1">
                       {Array.from(node.data.entries()).map(([key, dataValue]) => (
                         <div key={key} className="text-slate-300">
-                          {key}: <span className="text-green-400">{JSON.stringify(dataValue.value)}</span>
+                          {key}:{' '}
+                          <span className="text-green-400">{JSON.stringify(dataValue.value)}</span>
                         </div>
                       ))}
                     </div>
                   </div>
                 ))}
               {nodes.every((n) => n.data.size === 0) && (
-                <p className="text-xs text-slate-400">No data yet. Run a scenario or write manually.</p>
+                <p className="text-xs text-slate-400">
+                  No data yet. Run a scenario or write manually.
+                </p>
               )}
             </div>
           </div>

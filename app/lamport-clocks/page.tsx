@@ -1,16 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { LamportClocksAlgorithm } from '@/lib/algorithms/lamportClocks';
 import { useSimulation } from '@/hooks/useSimulation';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
+import ExportMenu from '@/components/ExportMenu';
 import { lamportClocksScenarios } from '@/visualizers/lamport-clocks/scenarios';
 import { LamportNode, LamportMessage } from '@/lib/types';
 import { motion } from 'framer-motion';
 
 export default function LamportClocksPage() {
+  const svgRef = useRef<SVGSVGElement>(null);
   const [lamport] = useState(() => new LamportClocksAlgorithm(3));
   const [nodes, setNodes] = useState<LamportNode[]>(lamport.getNodes());
   const [messages, setMessages] = useState<LamportMessage[]>(lamport.getMessages());
@@ -120,7 +122,8 @@ export default function LamportClocksPage() {
               Broadcasts: <span className="font-semibold text-white">{stats.totalBroadcasts}</span>
             </span>
             <span className="text-slate-300">
-              Delivered: <span className="font-semibold text-green-400">{stats.totalDelivered}</span>
+              Delivered:{' '}
+              <span className="font-semibold text-green-400">{stats.totalDelivered}</span>
             </span>
             <span className="text-slate-300">
               Pending: <span className="font-semibold text-amber-400">{stats.pendingMessages}</span>
@@ -129,7 +132,15 @@ export default function LamportClocksPage() {
         </div>
 
         <div className="flex-1 relative bg-slate-900 overflow-hidden">
-          <svg className="w-full h-full">
+          <div className="absolute top-4 right-4 z-20">
+            <ExportMenu
+              svgRef={svgRef}
+              concept="Lamport Clocks + Total Order Broadcast"
+              currentState={{ scenario: selectedScenario }}
+            />
+          </div>
+
+          <svg ref={svgRef} className="w-full h-full">
             {nodes.map((node, index) => (
               <motion.g
                 key={node.id}
@@ -247,7 +258,9 @@ export default function LamportClocksPage() {
                 <div key={`delivered-${node.id}`} className="text-xs">
                   <div className="font-semibold text-white mb-1">{node.id}</div>
                   <div className="pl-2 space-y-1 text-slate-300">
-                    {node.delivered.length === 0 && <div className="text-slate-500">No deliveries yet</div>}
+                    {node.delivered.length === 0 && (
+                      <div className="text-slate-500">No deliveries yet</div>
+                    )}
                     {node.delivered.map((msg) => (
                       <div key={`${node.id}-${msg.id}`}>
                         t{msg.timestamp} {msg.from}: {JSON.stringify(msg.value)}

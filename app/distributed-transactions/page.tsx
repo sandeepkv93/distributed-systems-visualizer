@@ -1,18 +1,22 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { DistributedTransactionsAlgorithm } from '@/lib/algorithms/distributedTransactions';
 import { useSimulation } from '@/hooks/useSimulation';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
+import ExportMenu from '@/components/ExportMenu';
 import { distributedTransactionsScenarios } from '@/visualizers/distributed-transactions/scenarios';
 import { TransactionMessage, TransactionParticipant, SagaStep } from '@/lib/types';
 import { motion } from 'framer-motion';
 
 export default function DistributedTransactionsPage() {
+  const svgRef = useRef<SVGSVGElement>(null);
   const [transactions] = useState(() => new DistributedTransactionsAlgorithm(3));
-  const [participants, setParticipants] = useState<TransactionParticipant[]>(transactions.getParticipants());
+  const [participants, setParticipants] = useState<TransactionParticipant[]>(
+    transactions.getParticipants()
+  );
   const [sagaSteps, setSagaSteps] = useState<SagaStep[]>(transactions.getSagaSteps());
   const [messages, setMessages] = useState<TransactionMessage[]>(transactions.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
@@ -188,15 +192,56 @@ export default function DistributedTransactionsPage() {
               Aborted: <span className="font-semibold text-red-400">{stats.aborted}</span>
             </span>
             <span className="text-slate-300">
-              Saga Completed: <span className="font-semibold text-green-400">{stats.sagaCompleted}</span>
+              Saga Completed:{' '}
+              <span className="font-semibold text-green-400">{stats.sagaCompleted}</span>
             </span>
             <span className="text-slate-300">
-              Compensated: <span className="font-semibold text-red-400">{stats.sagaCompensated}</span>
+              Compensated:{' '}
+              <span className="font-semibold text-red-400">{stats.sagaCompensated}</span>
             </span>
           </div>
         </div>
 
         <div className="flex-1 relative bg-slate-900 overflow-hidden">
+          <div className="absolute top-4 right-4 z-20">
+            <ExportMenu
+              svgRef={svgRef}
+              concept="Distributed Transactions"
+              currentState={{
+                scenario: selectedScenario,
+                stats,
+                participants: participants.map((p) => ({ id: p.id, phase: p.phase, vote: p.vote })),
+                sagaSteps: sagaSteps.map((s) => ({ id: s.id, status: s.status })),
+              }}
+            />
+          </div>
+          <svg ref={svgRef} className="hidden" width="1200" height="800" viewBox="0 0 1200 800">
+            <rect width="1200" height="800" fill="#0f172a" />
+            <text x="40" y="70" fill="#e2e8f0" fontSize="38" fontWeight="700">
+              Distributed Transactions
+            </text>
+            <text x="40" y="115" fill="#94a3b8" fontSize="20">
+              Scenario: {selectedScenario || 'manual'}
+            </text>
+            <text x="40" y="160" fill="#e2e8f0" fontSize="24">
+              3PC + Saga Summary
+            </text>
+            <text x="40" y="200" fill="#93c5fd" fontSize="20">
+              Prepared: {stats.prepared}
+            </text>
+            <text x="280" y="200" fill="#86efac" fontSize="20">
+              Committed: {stats.committed}
+            </text>
+            <text x="520" y="200" fill="#fca5a5" fontSize="20">
+              Aborted: {stats.aborted}
+            </text>
+            <text x="40" y="245" fill="#86efac" fontSize="20">
+              Saga Completed: {stats.sagaCompleted}
+            </text>
+            <text x="340" y="245" fill="#fca5a5" fontSize="20">
+              Compensated: {stats.sagaCompensated}
+            </text>
+          </svg>
           <div className="grid grid-cols-2 gap-6 p-6 h-full">
             <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 relative">
               <h2 className="text-lg font-semibold text-white mb-4">3PC Timeline</h2>
@@ -211,7 +256,9 @@ export default function DistributedTransactionsPage() {
                     </div>
                     <div className="text-slate-200 text-sm">
                       {participant.phase.toUpperCase()}
-                      {participant.vote && <span className="text-slate-400"> · vote {participant.vote}</span>}
+                      {participant.vote && (
+                        <span className="text-slate-400"> · vote {participant.vote}</span>
+                      )}
                     </div>
                   </div>
                 ))}

@@ -1,16 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ShardingRebalancingAlgorithm } from '@/lib/algorithms/shardingRebalancing';
 import { useSimulation } from '@/hooks/useSimulation';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
+import ExportMenu from '@/components/ExportMenu';
 import { shardingRebalancingScenarios } from '@/visualizers/sharding-rebalancing/scenarios';
 import { ShardMessage, ShardNode, ShardingStrategy } from '@/lib/types';
 import { motion } from 'framer-motion';
 
 export default function ShardingRebalancingPage() {
+  const svgRef = useRef<SVGSVGElement>(null);
   const [sharding] = useState(() => new ShardingRebalancingAlgorithm(3, 'range'));
   const [nodes, setNodes] = useState<ShardNode[]>(sharding.getNodes());
   const [messages, setMessages] = useState<ShardMessage[]>(sharding.getMessages());
@@ -156,7 +158,15 @@ export default function ShardingRebalancingPage() {
         </div>
 
         <div className="flex-1 relative bg-slate-900 overflow-hidden">
-          <svg className="w-full h-full">
+          <div className="absolute top-4 right-4 z-20">
+            <ExportMenu
+              svgRef={svgRef}
+              concept="Sharding + Rebalancing"
+              currentState={{ scenario: selectedScenario }}
+            />
+          </div>
+
+          <svg ref={svgRef} className="w-full h-full">
             {nodes.map((node, index) => (
               <motion.g
                 key={node.id}

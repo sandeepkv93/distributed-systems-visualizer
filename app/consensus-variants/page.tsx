@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ConsensusVariantsAlgorithm } from '@/lib/algorithms/consensusVariants';
 import { useSimulation } from '@/hooks/useSimulation';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
+import ExportMenu from '@/components/ExportMenu';
 import { consensusVariantsScenarios } from '@/visualizers/consensus-variants/scenarios';
 import { ConsensusMessage, ConsensusNode, ConsensusVariant } from '@/lib/types';
 import { motion } from 'framer-motion';
@@ -17,6 +18,7 @@ const variantLabels: Record<ConsensusVariant, string> = {
 };
 
 export default function ConsensusVariantsPage() {
+  const svgRef = useRef<SVGSVGElement>(null);
   const [variants] = useState(() => new ConsensusVariantsAlgorithm(5));
   const [variant, setVariant] = useState<ConsensusVariant>('raft-joint');
   const [nodes, setNodes] = useState<ConsensusNode[]>(variants.getNodes('raft-joint'));
@@ -182,7 +184,15 @@ export default function ConsensusVariantsPage() {
         </div>
 
         <div className="flex-1 relative bg-slate-900 overflow-hidden">
-          <svg className="w-full h-full">
+          <div className="absolute top-4 right-4 z-20">
+            <ExportMenu
+              svgRef={svgRef}
+              concept="Consensus Variants"
+              currentState={{ scenario: selectedScenario }}
+            />
+          </div>
+
+          <svg ref={svgRef} className="w-full h-full">
             {nodes.map((node, index) => (
               <motion.g
                 key={node.id}
@@ -194,18 +204,43 @@ export default function ConsensusVariantsPage() {
                   cx={node.position.x}
                   cy={node.position.y}
                   r="45"
-                  fill={node.role === 'leader' ? '#3B82F6' : node.role === 'proposer' ? '#F59E0B' : '#6B7280'}
+                  fill={
+                    node.role === 'leader'
+                      ? '#3B82F6'
+                      : node.role === 'proposer'
+                        ? '#F59E0B'
+                        : '#6B7280'
+                  }
                   stroke="#1F2937"
                   strokeWidth="3"
                 />
-                <text x={node.position.x} y={node.position.y - 10} textAnchor="middle" fill="#FFF" fontSize="14" fontWeight="bold">
+                <text
+                  x={node.position.x}
+                  y={node.position.y - 10}
+                  textAnchor="middle"
+                  fill="#FFF"
+                  fontSize="14"
+                  fontWeight="bold"
+                >
                   {node.id}
                 </text>
-                <text x={node.position.x} y={node.position.y + 6} textAnchor="middle" fill="#E2E8F0" fontSize="10">
+                <text
+                  x={node.position.x}
+                  y={node.position.y + 6}
+                  textAnchor="middle"
+                  fill="#E2E8F0"
+                  fontSize="10"
+                >
                   {node.role.toUpperCase()}
                 </text>
                 {variant === 'raft-joint' && (
-                  <text x={node.position.x} y={node.position.y + 20} textAnchor="middle" fill="#CBD5E1" fontSize="9">
+                  <text
+                    x={node.position.x}
+                    y={node.position.y + 20}
+                    textAnchor="middle"
+                    fill="#CBD5E1"
+                    fontSize="9"
+                  >
                     {node.configPhase}
                   </text>
                 )}
@@ -248,28 +283,46 @@ export default function ConsensusVariantsPage() {
 
           <div className="absolute bottom-4 left-4 bg-slate-800 rounded-lg p-4 border border-slate-700 space-y-2 max-w-xs">
             <h3 className="text-sm font-semibold text-white">Manual Controls</h3>
-            <button onClick={electLeader} className="w-full px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
+            <button
+              onClick={electLeader}
+              className="w-full px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+            >
               Elect Leader
             </button>
-            <button onClick={appendEntry} className="w-full px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700">
+            <button
+              onClick={appendEntry}
+              className="w-full px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+            >
               Append Entry
             </button>
             {variant === 'raft-joint' && (
               <>
-                <button onClick={startJoint} className="w-full px-3 py-2 bg-amber-600 text-white text-sm rounded hover:bg-amber-700">
+                <button
+                  onClick={startJoint}
+                  className="w-full px-3 py-2 bg-amber-600 text-white text-sm rounded hover:bg-amber-700"
+                >
                   Start Joint Config
                 </button>
-                <button onClick={finalizeJoint} className="w-full px-3 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700">
+                <button
+                  onClick={finalizeJoint}
+                  className="w-full px-3 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700"
+                >
                   Finalize Config
                 </button>
               </>
             )}
             {variant === 'epaxos' && (
               <>
-                <button onClick={proposeFast} className="w-full px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700">
+                <button
+                  onClick={proposeFast}
+                  className="w-full px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                >
                   EPaxos Fast Path
                 </button>
-                <button onClick={proposeSlow} className="w-full px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700">
+                <button
+                  onClick={proposeSlow}
+                  className="w-full px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+                >
                   EPaxos Slow Path
                 </button>
               </>

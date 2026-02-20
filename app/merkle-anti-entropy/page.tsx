@@ -1,16 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { MerkleAntiEntropyAlgorithm } from '@/lib/algorithms/merkleAntiEntropy';
 import { useSimulation } from '@/hooks/useSimulation';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
+import ExportMenu from '@/components/ExportMenu';
 import { merkleAntiEntropyScenarios } from '@/visualizers/merkle-anti-entropy/scenarios';
 import { MerkleMessage, MerkleReplica } from '@/lib/types';
 import { motion } from 'framer-motion';
 
 export default function MerkleAntiEntropyPage() {
+  const svgRef = useRef<SVGSVGElement>(null);
   const [merkle] = useState(() => new MerkleAntiEntropyAlgorithm(2));
   const [replicas, setReplicas] = useState<MerkleReplica[]>(merkle.getReplicas());
   const [messages, setMessages] = useState<MerkleMessage[]>(merkle.getMessages());
@@ -126,7 +128,9 @@ export default function MerkleAntiEntropyPage() {
             </span>
             <span className="text-slate-300">
               Divergent Keys:{' '}
-              <span className={`font-semibold ${stats.mismatchedKeys > 0 ? 'text-amber-400' : 'text-green-400'}`}>
+              <span
+                className={`font-semibold ${stats.mismatchedKeys > 0 ? 'text-amber-400' : 'text-green-400'}`}
+              >
                 {stats.mismatchedKeys}
               </span>
             </span>
@@ -134,7 +138,15 @@ export default function MerkleAntiEntropyPage() {
         </div>
 
         <div className="flex-1 relative bg-slate-900 overflow-hidden">
-          <svg className="w-full h-full">
+          <div className="absolute top-4 right-4 z-20">
+            <ExportMenu
+              svgRef={svgRef}
+              concept="Merkle Tree Anti-Entropy"
+              currentState={{ scenario: selectedScenario }}
+            />
+          </div>
+
+          <svg ref={svgRef} className="w-full h-full">
             {replicas.map((replica, index) => (
               <motion.g
                 key={replica.id}
@@ -215,7 +227,9 @@ export default function MerkleAntiEntropyPage() {
             >
               Mutate Replica R0
             </button>
-            <p className="text-xs text-slate-400">Compare triggers subtree checks and leaf syncs.</p>
+            <p className="text-xs text-slate-400">
+              Compare triggers subtree checks and leaf syncs.
+            </p>
           </div>
 
           <div className="absolute top-4 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-sm max-h-96 overflow-y-auto">

@@ -1,16 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { TwoPhaseCommitAlgorithm } from '@/lib/algorithms/twoPhaseCommit';
 import { useSimulation } from '@/hooks/useSimulation';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
+import ExportMenu from '@/components/ExportMenu';
 import { twoPhaseCommitScenarios } from '@/visualizers/two-phase-commit/scenarios';
 import { TwoPhaseCommitNode, TwoPhaseCommitMessage } from '@/lib/types';
 import { motion } from 'framer-motion';
 
 export default function TwoPhaseCommitPage() {
+  const svgRef = useRef<SVGSVGElement>(null);
   const [tpc] = useState(() => new TwoPhaseCommitAlgorithm(3));
   const [coordinator, setCoordinator] = useState<TwoPhaseCommitNode>(tpc.getCoordinator());
   const [participants, setParticipants] = useState<TwoPhaseCommitNode[]>(tpc.getParticipants());
@@ -272,10 +274,12 @@ export default function TwoPhaseCommitPage() {
           </div>
           <div className="flex gap-6 mt-2 text-sm">
             <span className="text-slate-300">
-              Participants: <span className="font-semibold text-white">{stats.totalParticipants}</span>
+              Participants:{' '}
+              <span className="font-semibold text-white">{stats.totalParticipants}</span>
             </span>
             <span className="text-slate-300">
-              Healthy: <span className="font-semibold text-green-400">{stats.healthyParticipants}</span>
+              Healthy:{' '}
+              <span className="font-semibold text-green-400">{stats.healthyParticipants}</span>
             </span>
             <span className="text-slate-300">
               YES Votes: <span className="font-semibold text-green-400">{stats.yesVotes}</span>
@@ -290,8 +294,8 @@ export default function TwoPhaseCommitPage() {
                   stats.transactionOutcome === 'committed'
                     ? 'text-green-400'
                     : stats.transactionOutcome === 'aborted'
-                    ? 'text-red-400'
-                    : 'text-amber-400'
+                      ? 'text-red-400'
+                      : 'text-amber-400'
                 }`}
               >
                 {stats.transactionOutcome.toUpperCase()}
@@ -300,10 +304,17 @@ export default function TwoPhaseCommitPage() {
           </div>
         </div>
 
-
         {/* Visualization Canvas */}
         <div className="flex-1 relative bg-slate-900 overflow-hidden">
-          <svg className="w-full h-full">
+          <div className="absolute top-4 right-4 z-20">
+            <ExportMenu
+              svgRef={svgRef}
+              concept="Two-Phase Commit (2PC)"
+              currentState={{ scenario: selectedScenario }}
+            />
+          </div>
+
+          <svg ref={svgRef} className="w-full h-full">
             {/* Coordinator */}
             <motion.g
               initial={{ opacity: 0, y: -20 }}

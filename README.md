@@ -116,7 +116,7 @@ Export your visualizations in multiple formats:
 - **Copy Link**: Copy the current page URL to clipboard
 - **Copy State**: Copy the current state data to clipboard
 
-Click the "Export" button in the header of Raft, Paxos, or CAP Theorem visualizers to access these options.
+Click the "Export" button in any concept visualizer to access these options.
 
 ### Progress Tracking
 

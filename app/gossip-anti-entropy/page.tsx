@@ -1,16 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { GossipAntiEntropyAlgorithm } from '@/lib/algorithms/gossipAntiEntropy';
 import { useSimulation } from '@/hooks/useSimulation';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
+import ExportMenu from '@/components/ExportMenu';
 import { gossipAntiEntropyScenarios } from '@/visualizers/gossip-anti-entropy/scenarios';
 import { GossipNode, GossipMessage, GossipMode } from '@/lib/types';
 import { motion } from 'framer-motion';
 
 export default function GossipAntiEntropyPage() {
+  const svgRef = useRef<SVGSVGElement>(null);
   const [gossip] = useState(() => new GossipAntiEntropyAlgorithm(6));
   const [nodes, setNodes] = useState<GossipNode[]>(gossip.getNodes());
   const [messages, setMessages] = useState<GossipMessage[]>(gossip.getMessages());
@@ -183,7 +185,9 @@ export default function GossipAntiEntropyPage() {
             </span>
             <span className="text-slate-300">
               Divergent Nodes:{' '}
-              <span className={`font-semibold ${stats.divergentNodes > 0 ? 'text-amber-400' : 'text-green-400'}`}>
+              <span
+                className={`font-semibold ${stats.divergentNodes > 0 ? 'text-amber-400' : 'text-green-400'}`}
+              >
                 {stats.divergentNodes}
               </span>
             </span>
@@ -191,7 +195,15 @@ export default function GossipAntiEntropyPage() {
         </div>
 
         <div className="flex-1 relative bg-slate-900 overflow-hidden">
-          <svg className="w-full h-full">
+          <div className="absolute top-4 right-4 z-20">
+            <ExportMenu
+              svgRef={svgRef}
+              concept="Gossip & Anti-Entropy"
+              currentState={{ scenario: selectedScenario }}
+            />
+          </div>
+
+          <svg ref={svgRef} className="w-full h-full">
             {nodes.map((node, index) => (
               <motion.g
                 key={node.id}
@@ -207,7 +219,9 @@ export default function GossipAntiEntropyPage() {
                   stroke="#1F2937"
                   strokeWidth="3"
                   className="cursor-pointer"
-                  onClick={() => (node.status === 'failed' ? recoverNode(node.id) : failNode(node.id))}
+                  onClick={() =>
+                    node.status === 'failed' ? recoverNode(node.id) : failNode(node.id)
+                  }
                 />
                 <text
                   x={node.position.x}
@@ -354,7 +368,8 @@ export default function GossipAntiEntropyPage() {
                   <div className="pl-2 space-y-1">
                     {Array.from(node.data.entries()).map(([key, dataValue]) => (
                       <div key={`${node.id}-${key}`} className="text-slate-300">
-                        {key}: <span className="text-green-400">{JSON.stringify(dataValue.value)}</span>{' '}
+                        {key}:{' '}
+                        <span className="text-green-400">{JSON.stringify(dataValue.value)}</span>{' '}
                         <span className="text-slate-400">v{dataValue.version}</span>
                       </div>
                     ))}

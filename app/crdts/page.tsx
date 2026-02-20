@@ -1,16 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { CRDTAlgorithm } from '@/lib/algorithms/crdts';
 import { useSimulation } from '@/hooks/useSimulation';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
+import ExportMenu from '@/components/ExportMenu';
 import { crdtScenarios } from '@/visualizers/crdts/scenarios';
 import { CRDTMessage, CRDTReplica } from '@/lib/types';
 import { motion } from 'framer-motion';
 
 export default function CRDTsPage() {
+  const svgRef = useRef<SVGSVGElement>(null);
   const [crdt] = useState(() => new CRDTAlgorithm(3));
   const [replicas, setReplicas] = useState<CRDTReplica[]>(crdt.getReplicas());
   const [messages, setMessages] = useState<CRDTMessage[]>(crdt.getMessages());
@@ -166,19 +168,25 @@ export default function CRDTsPage() {
             </span>
             <span className="text-slate-300">
               Divergent Counters:{' '}
-              <span className={`font-semibold ${stats.divergentGCounter > 0 ? 'text-amber-400' : 'text-green-400'}`}>
+              <span
+                className={`font-semibold ${stats.divergentGCounter > 0 ? 'text-amber-400' : 'text-green-400'}`}
+              >
                 {stats.divergentGCounter}
               </span>
             </span>
             <span className="text-slate-300">
               Divergent OR-Set:{' '}
-              <span className={`font-semibold ${stats.divergentORSet > 0 ? 'text-amber-400' : 'text-green-400'}`}>
+              <span
+                className={`font-semibold ${stats.divergentORSet > 0 ? 'text-amber-400' : 'text-green-400'}`}
+              >
                 {stats.divergentORSet}
               </span>
             </span>
             <span className="text-slate-300">
               Divergent RGA:{' '}
-              <span className={`font-semibold ${stats.divergentRGA > 0 ? 'text-amber-400' : 'text-green-400'}`}>
+              <span
+                className={`font-semibold ${stats.divergentRGA > 0 ? 'text-amber-400' : 'text-green-400'}`}
+              >
                 {stats.divergentRGA}
               </span>
             </span>
@@ -186,7 +194,15 @@ export default function CRDTsPage() {
         </div>
 
         <div className="flex-1 relative bg-slate-900 overflow-hidden">
-          <svg className="w-full h-full">
+          <div className="absolute top-4 right-4 z-20">
+            <ExportMenu
+              svgRef={svgRef}
+              concept="CRDTs"
+              currentState={{ scenario: selectedScenario }}
+            />
+          </div>
+
+          <svg ref={svgRef} className="w-full h-full">
             {replicas.map((replica, index) => (
               <motion.g
                 key={replica.id}
@@ -310,7 +326,11 @@ export default function CRDTsPage() {
                     <div>G-Counter: {JSON.stringify(replica.gCounter)}</div>
                     <div>OR-Set: {crdt.getORSetValues(replica).join(', ') || 'empty'}</div>
                     <div>
-                      RGA: {crdt.getRgaSequence(replica).map((e) => e.value).join(' ') || 'empty'}
+                      RGA:{' '}
+                      {crdt
+                        .getRgaSequence(replica)
+                        .map((e) => e.value)
+                        .join(' ') || 'empty'}
                     </div>
                   </div>
                 </div>

@@ -1,16 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ReplicationLogAlgorithm } from '@/lib/algorithms/replicationLog';
 import { useSimulation } from '@/hooks/useSimulation';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
+import ExportMenu from '@/components/ExportMenu';
 import { replicationLogScenarios } from '@/visualizers/replication-log/scenarios';
 import { LogMessage, LogPartition } from '@/lib/types';
 import { motion } from 'framer-motion';
 
 export default function ReplicationLogPage() {
+  const svgRef = useRef<SVGSVGElement>(null);
   const [replication] = useState(() => new ReplicationLogAlgorithm(3));
   const [partition, setPartition] = useState<LogPartition>(replication.getPartition());
   const [messages, setMessages] = useState<LogMessage[]>(replication.getMessages());
@@ -20,7 +22,10 @@ export default function ReplicationLogPage() {
   const simulation = useSimulation([]);
 
   const updateVisualization = useCallback(() => {
-    setPartition({ ...replication.getPartition(), replicas: [...replication.getPartition().replicas] });
+    setPartition({
+      ...replication.getPartition(),
+      replicas: [...replication.getPartition().replicas],
+    });
     setMessages([...replication.getMessages()]);
 
     const inFlight = replication.getMessages().filter((m) => m.status === 'in-flight');
@@ -157,7 +162,15 @@ export default function ReplicationLogPage() {
         </div>
 
         <div className="flex-1 relative bg-slate-900 overflow-hidden">
-          <svg className="w-full h-full">
+          <div className="absolute top-4 right-4 z-20">
+            <ExportMenu
+              svgRef={svgRef}
+              concept="Replication Log (Kafka-style)"
+              currentState={{ scenario: selectedScenario }}
+            />
+          </div>
+
+          <svg ref={svgRef} className="w-full h-full">
             {partition.replicas.map((replica, index) => (
               <motion.g
                 key={replica.id}
@@ -173,10 +186,23 @@ export default function ReplicationLogPage() {
                   stroke="#1F2937"
                   strokeWidth="3"
                 />
-                <text x={160 + index * 260} y={150} textAnchor="middle" fill="#FFF" fontSize="14" fontWeight="bold">
+                <text
+                  x={160 + index * 260}
+                  y={150}
+                  textAnchor="middle"
+                  fill="#FFF"
+                  fontSize="14"
+                  fontWeight="bold"
+                >
                   {replica.id}
                 </text>
-                <text x={160 + index * 260} y={168} textAnchor="middle" fill="#E2E8F0" fontSize="10">
+                <text
+                  x={160 + index * 260}
+                  y={168}
+                  textAnchor="middle"
+                  fill="#E2E8F0"
+                  fontSize="10"
+                >
                   {replica.role.toUpperCase()}
                 </text>
                 <text x={160 + index * 260} y={182} textAnchor="middle" fill="#CBD5E1" fontSize="9">
@@ -223,7 +249,10 @@ export default function ReplicationLogPage() {
 
           <div className="absolute bottom-4 left-4 bg-slate-800 rounded-lg p-4 border border-slate-700 space-y-2 max-w-xs">
             <h3 className="text-sm font-semibold text-white">Manual Controls</h3>
-            <button onClick={produce} className="w-full px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
+            <button
+              onClick={produce}
+              className="w-full px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+            >
               Produce Message
             </button>
             <button
