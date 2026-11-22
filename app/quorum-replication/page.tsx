@@ -156,7 +156,10 @@ export default function QuorumReplicationPage() {
           updateVisualization();
         }}
         onSpeedChange={simulation.setSpeed}
+        currentEventIndex={simulation.state.currentEventIndex}
+        events={simulation.state.events}
         onScenarioChange={handleScenarioChange}
+        onJumpToStep={simulation.jumpToStep}
       />
 
       <div className="flex-1 flex flex-col">

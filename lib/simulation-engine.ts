@@ -170,10 +170,10 @@ export class SimulationEngine {
     this.notify();
   }
 
-  // Jump to specific event
-  jumpToEvent(eventId: number, stateSnapshot?: unknown): void {
-    const targetIndex = this.state.events.findIndex((e) => e.id === eventId);
-    if (targetIndex === -1) return;
+  // Jump to a specific step index (0 = initial state, k = after k events executed)
+  jumpToStep(stepIndex: number, stateSnapshot?: unknown): void {
+    const targetIndex = Math.max(0, Math.min(this.state.events.length, stepIndex));
+    if (targetIndex === this.state.currentEventIndex) return;
 
     this.state.isPlaying = false;
     this.stopTimer();
@@ -198,6 +198,13 @@ export class SimulationEngine {
         this.stepForward(stateSnapshot);
       }
     }
+  }
+
+  // Jump to specific event by ID
+  jumpToEvent(eventId: number, stateSnapshot?: unknown): void {
+    const targetIndex = this.state.events.findIndex((e) => e.id === eventId);
+    if (targetIndex === -1) return;
+    this.jumpToStep(targetIndex, stateSnapshot);
   }
 
   // Run simulation loop

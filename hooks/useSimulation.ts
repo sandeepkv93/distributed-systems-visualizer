@@ -107,6 +107,16 @@ export function useSimulation<TSnapshot = unknown>(
     engineRef.current!.setSpeed(multiplier);
   }, []);
 
+  // Jump to step index (0..events.length)
+  const jumpToStep = useCallback(
+    (stepIndex: number) => {
+      clearScheduledTimeouts();
+      const fallbackSnapshot = snapshotRef.current ? undefined : customState ?? undefined;
+      engineRef.current!.jumpToStep(stepIndex, fallbackSnapshot);
+    },
+    [clearScheduledTimeouts, customState]
+  );
+
   // Jump to event
   const jumpToEvent = useCallback(
     (eventId: number) => {
@@ -157,6 +167,7 @@ export function useSimulation<TSnapshot = unknown>(
       stepBackward,
       reset,
       setSpeed,
+      jumpToStep,
       jumpToEvent,
       setEvents,
       onEvent,
@@ -175,6 +186,7 @@ export function useSimulation<TSnapshot = unknown>(
       stepBackward,
       reset,
       setSpeed,
+      jumpToStep,
       jumpToEvent,
       setEvents,
       onEvent,

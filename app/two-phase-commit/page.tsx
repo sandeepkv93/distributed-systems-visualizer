@@ -264,7 +264,10 @@ export default function TwoPhaseCommitPage() {
           updateVisualization();
         }}
         onSpeedChange={simulation.setSpeed}
+        currentEventIndex={simulation.state.currentEventIndex}
+        events={simulation.state.events}
         onScenarioChange={handleScenarioChange}
+        onJumpToStep={simulation.jumpToStep}
       />
 
       {/* Main Visualization Area */}
