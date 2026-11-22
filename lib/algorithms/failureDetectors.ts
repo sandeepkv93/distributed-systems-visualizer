@@ -1,9 +1,17 @@
 import { FailureDetectorMessage, FailureDetectorNode, FDStatus, SimulationEvent } from '../types';
+import { Snapshotable, cloneSnapshot } from '../snapshot';
 
 const PHI_THRESHOLD = 8;
 const HEARTBEAT_INTERVAL = 1000;
 
-export class FailureDetectorsAlgorithm {
+export interface FailureDetectorsSnapshot {
+  nodes: FailureDetectorNode[];
+  messages: FailureDetectorMessage[];
+  eventLog: SimulationEvent[];
+  messageIdCounter: number;
+}
+
+export class FailureDetectorsAlgorithm implements Snapshotable<FailureDetectorsSnapshot> {
   private nodes: FailureDetectorNode[];
   private messages: FailureDetectorMessage[];
   private eventLog: SimulationEvent[];
@@ -216,5 +224,22 @@ export class FailureDetectorsAlgorithm {
       data,
     };
     this.eventLog.push(event);
+  }
+
+  serialize(): FailureDetectorsSnapshot {
+    return cloneSnapshot({
+      nodes: this.nodes,
+      messages: this.messages,
+      eventLog: this.eventLog,
+      messageIdCounter: this.messageIdCounter,
+    });
+  }
+
+  restore(snapshot: FailureDetectorsSnapshot): void {
+    const cloned = cloneSnapshot(snapshot);
+    this.nodes = cloned.nodes;
+    this.messages = cloned.messages;
+    this.eventLog = cloned.eventLog;
+    this.messageIdCounter = cloned.messageIdCounter;
   }
 }

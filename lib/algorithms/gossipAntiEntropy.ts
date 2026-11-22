@@ -1,6 +1,14 @@
 import { GossipNode, GossipMessage, GossipMode, GossipValue, SimulationEvent } from '../types';
+import { Snapshotable, cloneSnapshot } from '../snapshot';
 
-export class GossipAntiEntropyAlgorithm {
+export interface GossipAntiEntropySnapshot {
+  nodes: GossipNode[];
+  messages: GossipMessage[];
+  eventLog: SimulationEvent[];
+  messageIdCounter: number;
+}
+
+export class GossipAntiEntropyAlgorithm implements Snapshotable<GossipAntiEntropySnapshot> {
   private nodes: GossipNode[];
   private messages: GossipMessage[];
   private eventLog: SimulationEvent[];
@@ -238,5 +246,22 @@ export class GossipAntiEntropyAlgorithm {
 
   clearMessages(): void {
     this.messages = this.messages.filter((m) => m.status === 'in-flight');
+  }
+
+  serialize(): GossipAntiEntropySnapshot {
+    return cloneSnapshot({
+      nodes: this.nodes,
+      messages: this.messages,
+      eventLog: this.eventLog,
+      messageIdCounter: this.messageIdCounter,
+    });
+  }
+
+  restore(snapshot: GossipAntiEntropySnapshot): void {
+    const cloned = cloneSnapshot(snapshot);
+    this.nodes = cloned.nodes;
+    this.messages = cloned.messages;
+    this.eventLog = cloned.eventLog;
+    this.messageIdCounter = cloned.messageIdCounter;
   }
 }

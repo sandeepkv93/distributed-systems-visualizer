@@ -1,6 +1,16 @@
 import { TwoPhaseCommitNode, TwoPhaseCommitMessage, TwoPhaseCommitState, SimulationEvent } from '../types';
+import { Snapshotable, cloneSnapshot } from '../snapshot';
 
-export class TwoPhaseCommitAlgorithm {
+export interface TwoPhaseCommitSnapshot {
+  coordinator: TwoPhaseCommitNode;
+  participants: TwoPhaseCommitNode[];
+  messages: TwoPhaseCommitMessage[];
+  eventLog: SimulationEvent[];
+  currentTransactionId: string;
+  messageIdCounter: number;
+}
+
+export class TwoPhaseCommitAlgorithm implements Snapshotable<TwoPhaseCommitSnapshot> {
   private coordinator: TwoPhaseCommitNode;
   private participants: TwoPhaseCommitNode[];
   private messages: TwoPhaseCommitMessage[];
@@ -374,5 +384,26 @@ export class TwoPhaseCommitAlgorithm {
   // Clear messages
   clearMessages(): void {
     this.messages = [];
+  }
+
+  serialize(): TwoPhaseCommitSnapshot {
+    return cloneSnapshot({
+      coordinator: this.coordinator,
+      participants: this.participants,
+      messages: this.messages,
+      eventLog: this.eventLog,
+      currentTransactionId: this.currentTransactionId,
+      messageIdCounter: this.messageIdCounter,
+    });
+  }
+
+  restore(snapshot: TwoPhaseCommitSnapshot): void {
+    const cloned = cloneSnapshot(snapshot);
+    this.coordinator = cloned.coordinator;
+    this.participants = cloned.participants;
+    this.messages = cloned.messages;
+    this.eventLog = cloned.eventLog;
+    this.currentTransactionId = cloned.currentTransactionId;
+    this.messageIdCounter = cloned.messageIdCounter;
   }
 }

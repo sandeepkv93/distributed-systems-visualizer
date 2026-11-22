@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { ConsistentHashingAlgorithm } from '@/lib/algorithms/consistentHashing';
+import { ConsistentHashingAlgorithm, DistributionSnapshot } from '@/lib/algorithms/consistentHashing';
 import { useSimulation } from '@/hooks/useSimulation';
+import { useScenarioCompletion } from '@/hooks/useProgress';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
@@ -14,15 +15,33 @@ export default function ConsistentHashingPage() {
   const svgRef = useRef<SVGSVGElement>(null);
   const [ch] = useState(() => new ConsistentHashingAlgorithm(3, 3));
   const [ring, setRing] = useState(ch.getRing());
+  const [distributionSnapshot, setDistributionSnapshot] = useState<DistributionSnapshot | null>(
+    ch.getLastDistributionSnapshot()
+  );
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
 
-  const simulation = useSimulation([]);
-
   // Update visualization
   const updateVisualization = useCallback(() => {
-    setRing({ ...ch.getRing() });
+    setRing({
+      ...ch.getRing(),
+      nodes: [...ch.getRing().nodes],
+      keys: [...ch.getRing().keys],
+    });
+    setDistributionSnapshot(ch.getLastDistributionSnapshot());
   }, [ch]);
+
+  const simulation = useSimulation([], {
+    snapshot: {
+      capture: () => ch.serialize(),
+      restore: (snapshot) => {
+        ch.restore(snapshot);
+        updateVisualization();
+      },
+    },
+  });
+
+  useScenarioCompletion('consistent-hashing', selectedScenario, simulation.state);
 
   // Handle events
   useEffect(() => {
@@ -45,21 +64,35 @@ export default function ConsistentHashingPage() {
       ch.setVirtualNodesPerServer(event.data.count);
       updateVisualization();
     });
+
+    simulation.onEvent('show_distribution', (event) => {
+      ch.recordDistributionSnapshot(event.description);
+      updateVisualization();
+    });
   }, [ch, simulation, updateVisualization]);
+
+  const initializeRing = useCallback(
+    (serverCount: number, virtualNodes: number) => {
+      ch.reset();
+      for (let i = 0; i < serverCount; i++) {
+        ch.addServer(`server-${i}`);
+      }
+      if (virtualNodes) {
+        ch.setVirtualNodesPerServer(virtualNodes);
+      }
+    },
+    [ch]
+  );
 
   // Handle scenario selection
   const handleScenarioChange = (scenarioId: string) => {
     setSelectedScenario(scenarioId);
     const scenario = consistentHashingScenarios.find((s) => s.id === scenarioId);
     if (scenario) {
-      ch.reset();
-      // Initialize with scenario parameters
-      for (let i = 0; i < scenario.initialState.serverCount; i++) {
-        ch.addServer(`server-${i}`);
-      }
-      if (scenario.initialState.virtualNodes) {
-        ch.setVirtualNodesPerServer(scenario.initialState.virtualNodes);
-      }
+      initializeRing(
+        scenario.initialState.serverCount || 3,
+        scenario.initialState.virtualNodes || 3
+      );
       simulation.setEvents(scenario.events);
       updateVisualization();
     }
@@ -121,7 +154,7 @@ export default function ConsistentHashingPage() {
   ];
 
   const getServerColor = (serverId: string): string => {
-    const index = parseInt(serverId.split('-')[1]) % serverColors.length;
+    const index = parseInt(serverId.split('-')[1], 10) % serverColors.length;
     return serverColors[index];
   };
 
@@ -143,10 +176,14 @@ export default function ConsistentHashingPage() {
         onStepBackward={simulation.stepBackward}
         onReset={() => {
           simulation.reset();
-          ch.reset();
-          // Re-initialize with 3 servers
-          for (let i = 0; i < 3; i++) {
-            ch.addServer(`server-${i}`);
+          const scenario = consistentHashingScenarios.find((s) => s.id === selectedScenario);
+          if (scenario) {
+            initializeRing(
+              scenario.initialState.serverCount || 3,
+              scenario.initialState.virtualNodes || 3
+            );
+          } else {
+            initializeRing(3, 3);
           }
           updateVisualization();
         }}
@@ -196,7 +233,7 @@ export default function ConsistentHashingPage() {
             <ExportMenu
               svgRef={svgRef}
               concept="Consistent Hashing"
-              currentState={{ scenario: selectedScenario }}
+              currentState={{ scenario: selectedScenario, distributionSnapshot }}
             />
           </div>
 
@@ -364,8 +401,17 @@ export default function ConsistentHashingPage() {
           </div>
 
           {/* Load distribution */}
-          <div className="absolute top-4 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-xs">
+          <div
+            className={`absolute top-16 right-4 bg-slate-800 rounded-lg p-4 border max-w-xs transition-colors ${
+              distributionSnapshot ? 'border-blue-500' : 'border-slate-700'
+            }`}
+          >
             <h3 className="text-sm font-semibold text-white mb-2">Load Distribution</h3>
+            {distributionSnapshot && (
+              <div className="mb-3 px-2 py-1.5 rounded bg-blue-900/40 border border-blue-700 text-xs text-blue-200">
+                {distributionSnapshot.label}
+              </div>
+            )}
             {servers.map((serverId) => {
               const load = stats.loadDistribution.get(serverId) || 0;
               const percentage = stats.totalKeys > 0 ? (load / stats.totalKeys) * 100 : 0;

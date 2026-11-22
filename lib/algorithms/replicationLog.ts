@@ -1,6 +1,14 @@
 import { LogMessage, LogPartition, LogReplica, ReplicationLogEntry, SimulationEvent } from '../types';
+import { Snapshotable, cloneSnapshot } from '../snapshot';
 
-export class ReplicationLogAlgorithm {
+export interface ReplicationLogSnapshot {
+  partition: LogPartition;
+  messages: LogMessage[];
+  eventLog: SimulationEvent[];
+  messageIdCounter: number;
+}
+
+export class ReplicationLogAlgorithm implements Snapshotable<ReplicationLogSnapshot> {
   private partition: LogPartition;
   private messages: LogMessage[];
   private eventLog: SimulationEvent[];
@@ -176,5 +184,22 @@ export class ReplicationLogAlgorithm {
       data,
     };
     this.eventLog.push(event);
+  }
+
+  serialize(): ReplicationLogSnapshot {
+    return cloneSnapshot({
+      partition: this.partition,
+      messages: this.messages,
+      eventLog: this.eventLog,
+      messageIdCounter: this.messageIdCounter,
+    });
+  }
+
+  restore(snapshot: ReplicationLogSnapshot): void {
+    const cloned = cloneSnapshot(snapshot);
+    this.partition = cloned.partition;
+    this.messages = cloned.messages;
+    this.eventLog = cloned.eventLog;
+    this.messageIdCounter = cloned.messageIdCounter;
   }
 }

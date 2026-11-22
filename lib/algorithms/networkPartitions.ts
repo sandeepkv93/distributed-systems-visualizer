@@ -1,6 +1,16 @@
 import { PartitionLink, PartitionMessage, PartitionNode, PartitionRole, SimulationEvent } from '../types';
+import { Snapshotable, cloneSnapshot } from '../snapshot';
 
-export class NetworkPartitionsAlgorithm {
+export interface NetworkPartitionsSnapshot {
+  nodes: PartitionNode[];
+  links: PartitionLink[];
+  messages: PartitionMessage[];
+  eventLog: SimulationEvent[];
+  messageIdCounter: number;
+  currentTerm: number;
+}
+
+export class NetworkPartitionsAlgorithm implements Snapshotable<NetworkPartitionsSnapshot> {
   private nodes: PartitionNode[];
   private links: PartitionLink[];
   private messages: PartitionMessage[];
@@ -214,5 +224,26 @@ export class NetworkPartitionsAlgorithm {
       data,
     };
     this.eventLog.push(event);
+  }
+
+  serialize(): NetworkPartitionsSnapshot {
+    return cloneSnapshot({
+      nodes: this.nodes,
+      links: this.links,
+      messages: this.messages,
+      eventLog: this.eventLog,
+      messageIdCounter: this.messageIdCounter,
+      currentTerm: this.currentTerm,
+    });
+  }
+
+  restore(snapshot: NetworkPartitionsSnapshot): void {
+    const cloned = cloneSnapshot(snapshot);
+    this.nodes = cloned.nodes;
+    this.links = cloned.links;
+    this.messages = cloned.messages;
+    this.eventLog = cloned.eventLog;
+    this.messageIdCounter = cloned.messageIdCounter;
+    this.currentTerm = cloned.currentTerm;
   }
 }

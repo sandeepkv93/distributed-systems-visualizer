@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { RaftAlgorithm } from '@/lib/algorithms/raft';
 import { useSimulation } from '@/hooks/useSimulation';
+import { useScenarioCompletion } from '@/hooks/useProgress';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
@@ -16,21 +17,60 @@ export default function RaftPage() {
   const [raft] = useState(() => new RaftAlgorithm(5));
   const [nodes, setNodes] = useState<RaftNodeType[]>(raft.getNodes());
   const [messages, setMessages] = useState<RaftMessage[]>([]);
+  const [partitions, setPartitions] = useState<string[][]>([]);
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
 
-  const simulation = useSimulation([]);
-
-  // Update visualization
+  // Update visualization from algorithm state
   const updateVisualization = useCallback(() => {
     setNodes([...raft.getNodes()]);
     setMessages([...raft.getMessages()]);
+    setPartitions(raft.getPartitions());
   }, [raft]);
+
+  const simulation = useSimulation([], {
+    snapshot: {
+      capture: () => raft.serialize(),
+      restore: (snapshot) => {
+        raft.restore(snapshot);
+        updateVisualization();
+      },
+    },
+  });
+
+  useScenarioCompletion('raft', selectedScenario, simulation.state);
 
   // Handle events
   useEffect(() => {
     simulation.onEvent('start_election', (event) => {
       raft.startElection(event.data.nodeId);
+      updateVisualization();
+    });
+
+    simulation.onEvent('request_vote', () => {
+      raft.processRequestVotes();
+      updateVisualization();
+    });
+
+    simulation.onEvent('vote_response', () => {
+      raft.processVoteResponses();
+      updateVisualization();
+    });
+
+    simulation.onEvent('leader_elected', () => {
+      raft.finalizeElection();
+      updateVisualization();
+    });
+
+    simulation.onEvent('network_partition', (event) => {
+      if (Array.isArray(event.data?.partition)) {
+        raft.partitionNetwork(event.data.partition);
+      }
+      updateVisualization();
+    });
+
+    simulation.onEvent('heal_partition', () => {
+      raft.healPartition();
       updateVisualization();
     });
 
@@ -46,6 +86,18 @@ export default function RaftPage() {
 
     simulation.onEvent('client_request', (event) => {
       raft.addClientRequest(event.data.leaderId, event.data.command);
+      updateVisualization();
+    });
+
+    simulation.onEvent('replicate_log', () => {
+      raft.replicatePendingLogs();
+      updateVisualization();
+    });
+
+    simulation.onEvent('catch_up', (event) => {
+      if (event.data?.nodeId) {
+        raft.catchUpNode(event.data.nodeId);
+      }
       updateVisualization();
     });
   }, [raft, simulation, updateVisualization]);
@@ -111,13 +163,21 @@ export default function RaftPage() {
             <p className="text-slate-400 text-sm mt-1">
               Leader election and log replication in distributed systems
             </p>
-            <div className="mt-3">
+            <div className="mt-3 flex flex-wrap items-center gap-2">
               <button
                 onClick={() => setShowArticle(true)}
                 className="px-3 py-1 text-sm bg-slate-700 text-white rounded hover:bg-slate-600"
               >
                 Read the theory
               </button>
+              {partitions.length > 0 && (
+                <span className="px-3 py-1 text-xs font-semibold bg-amber-900/50 border border-amber-500 text-amber-300 rounded">
+                  Partition Active:{' '}
+                  {partitions
+                    .map((group) => `[${group.map((id) => id.replace('node-', 'N')).join(', ')}]`)
+                    .join(' | ')}
+                </span>
+              )}
             </div>
           </div>
           <ExportMenu
@@ -131,11 +191,11 @@ export default function RaftPage() {
                 logLength: n.log.length,
                 status: n.status,
               })),
+              partitions,
               scenario: selectedScenario,
             }}
           />
         </div>
-
 
         {/* Visualization Canvas */}
         <div className="flex-1 relative bg-slate-900 overflow-hidden">
@@ -180,6 +240,8 @@ export default function RaftPage() {
               else if (node.state === 'leader') nodeColor = '#3B82F6'; // leader - blue
               else if (node.state === 'candidate') nodeColor = '#8B5CF6'; // candidate - purple
 
+              const partitionIndex = partitions.findIndex((group) => group.includes(node.id));
+
               return (
                 <g key={node.id}>
                   {/* Node circle */}
@@ -188,8 +250,8 @@ export default function RaftPage() {
                     cy={node.position.y}
                     r="40"
                     fill={nodeColor}
-                    stroke="#1F2937"
-                    strokeWidth="3"
+                    stroke={partitionIndex === 0 ? '#F59E0B' : partitionIndex === 1 ? '#06B6D4' : '#1F2937'}
+                    strokeWidth={partitionIndex >= 0 ? '4' : '3'}
                     className="cursor-pointer"
                     onClick={() => handleNodeClick(node.id)}
                     whileHover={{ scale: 1.1 }}
@@ -285,9 +347,19 @@ export default function RaftPage() {
               </button>
               <button
                 onClick={() => {
+                  raft.finalizeElection();
+                  updateVisualization();
+                }}
+                className="w-full px-3 py-1 bg-purple-600 text-white text-sm rounded hover:bg-purple-700"
+              >
+                Process Votes
+              </button>
+              <button
+                onClick={() => {
                   const leader = nodes.find((n) => n.state === 'leader');
                   if (leader) {
                     raft.addClientRequest(leader.id, `SET x=${Date.now()}`);
+                    raft.replicatePendingLogs();
                     updateVisualization();
                   }
                 }}

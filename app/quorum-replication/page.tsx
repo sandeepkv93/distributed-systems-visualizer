@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { QuorumReplicationAlgorithm } from '@/lib/algorithms/quorumReplication';
 import { useSimulation } from '@/hooks/useSimulation';
+import { useScenarioCompletion } from '@/hooks/useProgress';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
@@ -21,20 +22,34 @@ export default function QuorumReplicationPage() {
   const [quorumWrite, setQuorumWrite] = useState(2);
   const [quorumRead, setQuorumRead] = useState(2);
 
-  const simulation = useSimulation([]);
-
-  const updateVisualization = useCallback(() => {
+  const syncVisualization = useCallback(() => {
     setNodes([...quorum.getNodes()]);
     setMessages([...quorum.getMessages()]);
+  }, [quorum]);
+
+  const simulation = useSimulation([], {
+    snapshot: {
+      capture: () => quorum.serialize(),
+      restore: (snapshot) => {
+        quorum.restore(snapshot);
+        syncVisualization();
+      },
+    },
+  });
+
+  useScenarioCompletion('quorum-replication', selectedScenario, simulation.state);
+
+  const updateVisualization = useCallback(() => {
+    syncVisualization();
 
     const inFlight = quorum.getMessages().filter((m) => m.status === 'in-flight');
     if (inFlight.length > 0) {
-      setTimeout(() => {
+      simulation.scheduleTimeout(() => {
         inFlight.forEach((msg) => quorum.deliverMessage(msg.id));
         updateVisualization();
       }, 500);
     }
-  }, [quorum]);
+  }, [quorum, simulation, syncVisualization]);
 
   useEffect(() => {
     simulation.onEvent('write', (event) => {

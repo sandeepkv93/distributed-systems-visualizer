@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { NetworkPartitionsAlgorithm } from '@/lib/algorithms/networkPartitions';
 import { useSimulation } from '@/hooks/useSimulation';
+import { useScenarioCompletion } from '@/hooks/useProgress';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
@@ -20,21 +21,35 @@ export default function NetworkPartitionsPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
 
-  const simulation = useSimulation([]);
-
-  const updateVisualization = useCallback(() => {
+  const syncVisualization = useCallback(() => {
     setNodes([...np.getNodes()]);
     setLinks([...np.getLinks()]);
     setMessages([...np.getMessages()]);
+  }, [np]);
+
+  const simulation = useSimulation([], {
+    snapshot: {
+      capture: () => np.serialize(),
+      restore: (snapshot) => {
+        np.restore(snapshot);
+        syncVisualization();
+      },
+    },
+  });
+
+  useScenarioCompletion('network-partitions', selectedScenario, simulation.state);
+
+  const updateVisualization = useCallback(() => {
+    syncVisualization();
 
     const inFlight = np.getMessages().filter((m) => m.status === 'in-flight');
     if (inFlight.length > 0) {
-      setTimeout(() => {
+      simulation.scheduleTimeout(() => {
         inFlight.forEach((msg) => np.deliverMessage(msg.id));
         updateVisualization();
       }, 500);
     }
-  }, [np]);
+  }, [np, simulation, syncVisualization]);
 
   useEffect(() => {
     simulation.onEvent('partition', (event) => {

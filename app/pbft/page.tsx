@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { PBFTAlgorithm } from '@/lib/algorithms/pbft';
 import { useSimulation } from '@/hooks/useSimulation';
+import { useScenarioCompletion } from '@/hooks/useProgress';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
@@ -19,20 +20,34 @@ export default function PBFTPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
 
-  const simulation = useSimulation([]);
-
-  const updateVisualization = useCallback(() => {
+  const syncVisualization = useCallback(() => {
     setNodes([...pbft.getNodes()]);
     setMessages([...pbft.getMessages()]);
+  }, [pbft]);
+
+  const simulation = useSimulation([], {
+    snapshot: {
+      capture: () => pbft.serialize(),
+      restore: (snapshot) => {
+        pbft.restore(snapshot);
+        syncVisualization();
+      },
+    },
+  });
+
+  useScenarioCompletion('pbft', selectedScenario, simulation.state);
+
+  const updateVisualization = useCallback(() => {
+    syncVisualization();
 
     const inFlight = pbft.getMessages().filter((m) => m.status === 'in-flight');
     if (inFlight.length > 0) {
-      setTimeout(() => {
+      simulation.scheduleTimeout(() => {
         inFlight.forEach((msg) => pbft.deliverMessage(msg.id));
         updateVisualization();
       }, 500);
     }
-  }, [pbft]);
+  }, [pbft, simulation, syncVisualization]);
 
   useEffect(() => {
     simulation.onEvent('client_request', (event) => {

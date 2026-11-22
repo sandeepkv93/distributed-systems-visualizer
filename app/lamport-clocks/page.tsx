@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { LamportClocksAlgorithm } from '@/lib/algorithms/lamportClocks';
 import { useSimulation } from '@/hooks/useSimulation';
+import { useScenarioCompletion } from '@/hooks/useProgress';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
@@ -19,20 +20,34 @@ export default function LamportClocksPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
 
-  const simulation = useSimulation([]);
-
-  const updateVisualization = useCallback(() => {
+  const syncVisualization = useCallback(() => {
     setNodes([...lamport.getNodes()]);
     setMessages([...lamport.getMessages()]);
+  }, [lamport]);
+
+  const simulation = useSimulation([], {
+    snapshot: {
+      capture: () => lamport.serialize(),
+      restore: (snapshot) => {
+        lamport.restore(snapshot);
+        syncVisualization();
+      },
+    },
+  });
+
+  useScenarioCompletion('lamport-clocks', selectedScenario, simulation.state);
+
+  const updateVisualization = useCallback(() => {
+    syncVisualization();
 
     const inFlight = lamport.getMessages().filter((m) => m.status === 'in-flight');
     if (inFlight.length > 0) {
-      setTimeout(() => {
+      simulation.scheduleTimeout(() => {
         inFlight.forEach((msg) => lamport.deliverMessage(msg.id));
         updateVisualization();
       }, 450);
     }
-  }, [lamport]);
+  }, [lamport, simulation, syncVisualization]);
 
   useEffect(() => {
     simulation.onEvent('local_event', (event) => {

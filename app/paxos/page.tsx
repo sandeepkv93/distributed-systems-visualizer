@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { PaxosAlgorithm } from '@/lib/algorithms/paxos';
 import { useSimulation } from '@/hooks/useSimulation';
+import { useScenarioCompletion } from '@/hooks/useProgress';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
@@ -19,26 +20,43 @@ export default function PaxosPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
   const [decidedValue, setDecidedValue] = useState<any>(null);
+  const [decidedValues, setDecidedValues] = useState<any[]>([]);
 
-  const simulation = useSimulation([]);
-
-  // Update visualization
+  // Update visualization from algorithm state
   const updateVisualization = useCallback(() => {
     setNodes([...paxos.getAllNodes()]);
     setMessages([...paxos.getMessages()]);
     setDecidedValue(paxos.getDecidedValue());
+    setDecidedValues(paxos.getDecidedValues());
   }, [paxos]);
 
-  // Handle events
+  const simulation = useSimulation([], {
+    snapshot: {
+      capture: () => paxos.serialize(),
+      restore: (snapshot) => {
+        paxos.restore(snapshot);
+        updateVisualization();
+      },
+    },
+  });
+
+  useScenarioCompletion('paxos', selectedScenario, simulation.state);
+
+  // Handle events (reading live messages from paxos instance to avoid stale closures)
   useEffect(() => {
     simulation.onEvent('start_proposal', (event) => {
-      paxos.startProposal(event.data.proposerId, event.data.value);
+      paxos.startProposal(
+        event.data.proposerId,
+        event.data.value,
+        Boolean(event.data.newInstance)
+      );
       updateVisualization();
     });
 
     simulation.onEvent('handle_prepare', () => {
-      // Process all Prepare messages
-      const prepareMessages = messages.filter((m) => m.type === 'Prepare' && m.status === 'in-flight');
+      const prepareMessages = paxos
+        .getMessages()
+        .filter((m) => m.type === 'Prepare' && m.status === 'in-flight');
       prepareMessages.forEach((msg) => {
         paxos.handlePrepare(msg.id);
       });
@@ -46,20 +64,27 @@ export default function PaxosPage() {
     });
 
     simulation.onEvent('handle_promise', (event) => {
-      // Process all Promise messages
-      const promiseMessages = messages.filter((m) => m.type === 'Promise' && m.status === 'in-flight');
+      const promiseMessages = paxos
+        .getMessages()
+        .filter((m) => m.type === 'Promise' && m.status === 'in-flight');
       promiseMessages.forEach((msg) => {
-        paxos.handlePromise(msg.id, event.data.value);
+        paxos.handlePromise(msg.id, event.data?.value);
       });
       updateVisualization();
     });
 
     simulation.onEvent('handle_accept', () => {
-      // Process all Accept messages
-      const acceptMessages = messages.filter((m) => m.type === 'Accept' && m.status === 'in-flight');
+      const acceptMessages = paxos
+        .getMessages()
+        .filter((m) => m.type === 'Accept' && m.status === 'in-flight');
       acceptMessages.forEach((msg) => {
         paxos.handleAccept(msg.id);
       });
+      updateVisualization();
+    });
+
+    simulation.onEvent('consensus_reached', (event) => {
+      paxos.finalizeConsensus(event.data?.value);
       updateVisualization();
     });
 
@@ -72,7 +97,7 @@ export default function PaxosPage() {
       paxos.recoverNode(event.data.nodeId);
       updateVisualization();
     });
-  }, [paxos, simulation, updateVisualization, messages]);
+  }, [paxos, simulation, updateVisualization]);
 
   // Handle scenario selection
   const handleScenarioChange = (scenarioId: string) => {
@@ -159,10 +184,16 @@ export default function PaxosPage() {
                 Read the theory
               </button>
             </div>
-            {decidedValue && (
+            {decidedValues.length > 0 ? (
               <div className="mt-2 inline-block bg-green-600 text-white px-3 py-1 rounded text-sm font-semibold">
-                ✓ Consensus Reached: {decidedValue}
+                ✓ Consensus Reached: {decidedValues.join(', ')}
               </div>
+            ) : (
+              decidedValue && (
+                <div className="mt-2 inline-block bg-green-600 text-white px-3 py-1 rounded text-sm font-semibold">
+                  ✓ Consensus Reached: {decidedValue}
+                </div>
+              )
             )}
           </div>
           <ExportMenu
@@ -182,11 +213,11 @@ export default function PaxosPage() {
                 acceptedValue: n.acceptedValue,
               })),
               decidedValue,
+              decidedValues,
               scenario: selectedScenario,
             }}
           />
         </div>
-
 
         {/* Visualization Canvas */}
         <div className="flex-1 relative bg-slate-900 overflow-hidden">

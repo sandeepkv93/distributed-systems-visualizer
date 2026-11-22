@@ -1,4 +1,5 @@
 import { EventualConsistencyNode, EventualConsistencyMessage, VectorClock, ConsistencyLevel, SimulationEvent } from '../types';
+import { Snapshotable, cloneSnapshot } from '../snapshot';
 
 interface DataValue {
   value: any;
@@ -6,7 +7,15 @@ interface DataValue {
   timestamp: number;
 }
 
-export class EventualConsistencyAlgorithm {
+export interface EventualConsistencySnapshot {
+  nodes: EventualConsistencyNode[];
+  messages: EventualConsistencyMessage[];
+  eventLog: SimulationEvent[];
+  messageIdCounter: number;
+  replicationFactor: number;
+}
+
+export class EventualConsistencyAlgorithm implements Snapshotable<EventualConsistencySnapshot> {
   private nodes: EventualConsistencyNode[];
   private messages: EventualConsistencyMessage[];
   private eventLog: SimulationEvent[];
@@ -418,5 +427,24 @@ export class EventualConsistencyAlgorithm {
   // Clear messages
   clearMessages(): void {
     this.messages = this.messages.filter((m) => m.status === 'in-flight');
+  }
+
+  serialize(): EventualConsistencySnapshot {
+    return cloneSnapshot({
+      nodes: this.nodes,
+      messages: this.messages,
+      eventLog: this.eventLog,
+      messageIdCounter: this.messageIdCounter,
+      replicationFactor: this.replicationFactor,
+    });
+  }
+
+  restore(snapshot: EventualConsistencySnapshot): void {
+    const cloned = cloneSnapshot(snapshot);
+    this.nodes = cloned.nodes;
+    this.messages = cloned.messages;
+    this.eventLog = cloned.eventLog;
+    this.messageIdCounter = cloned.messageIdCounter;
+    this.replicationFactor = cloned.replicationFactor;
   }
 }

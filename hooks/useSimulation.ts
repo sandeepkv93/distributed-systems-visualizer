@@ -1,117 +1,188 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { SimulationEngine } from '@/lib/simulation-engine';
+import { SnapshotAdapter } from '@/lib/snapshot';
 import { SimulationEvent, SimulationState } from '@/lib/types';
 
-export function useSimulation(initialEvents: SimulationEvent[] = []) {
-  const engineRef = useRef<SimulationEngine>(new SimulationEngine(initialEvents));
-  const [state, setState] = useState<SimulationState>(engineRef.current.getState());
-  const [customState, setCustomState] = useState<any>(null);
+export interface UseSimulationOptions<TSnapshot = unknown> {
+  snapshot?: SnapshotAdapter<TSnapshot>;
+}
 
-  // Update state from engine
-  const updateState = useCallback(() => {
-    setState(engineRef.current.getState());
+export function useSimulation<TSnapshot = unknown>(
+  initialEvents: SimulationEvent[] = [],
+  options?: UseSimulationOptions<TSnapshot>
+) {
+  const engineRef = useRef<SimulationEngine | null>(null);
+  if (!engineRef.current) {
+    engineRef.current = new SimulationEngine(initialEvents);
+  }
+
+  const snapshotRef = useRef<SnapshotAdapter<TSnapshot> | undefined>(options?.snapshot);
+  const pendingTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+
+  const [state, setState] = useState<SimulationState>(() => engineRef.current!.getState());
+  const [customState, setCustomState] = useState<unknown>(null);
+
+  const clearScheduledTimeouts = useCallback(() => {
+    pendingTimersRef.current.forEach((timerId) => {
+      clearTimeout(timerId);
+    });
+    pendingTimersRef.current.clear();
   }, []);
+
+  const scheduleTimeout = useCallback((callback: () => void, delayMs: number) => {
+    const timerId = setTimeout(() => {
+      pendingTimersRef.current.delete(timerId);
+      callback();
+    }, delayMs);
+    pendingTimersRef.current.add(timerId);
+    return timerId;
+  }, []);
+
+  // Keep latest snapshot adapter in ref so closures never go stale
+  useEffect(() => {
+    snapshotRef.current = options?.snapshot;
+  }, [options?.snapshot]);
+
+  // Subscribe to engine state updates and register snapshot adapter; clean up on unmount
+  useEffect(() => {
+    const engine = engineRef.current!;
+
+    engine.setSnapshotAdapter({
+      capture: () => snapshotRef.current?.capture(),
+      restore: (snapshot) => {
+        clearScheduledTimeouts();
+        snapshotRef.current?.restore(snapshot as TSnapshot);
+      },
+    });
+
+    const unsubscribe = engine.subscribe((nextState) => {
+      setState(nextState);
+    });
+
+    return () => {
+      unsubscribe();
+      engine.pause();
+      engine.setSnapshotAdapter(null);
+      clearScheduledTimeouts();
+    };
+  }, [clearScheduledTimeouts]);
 
   // Play simulation
   const play = useCallback(() => {
-    engineRef.current.play();
-    updateState();
-  }, [updateState]);
+    engineRef.current!.play();
+  }, []);
 
   // Pause simulation
   const pause = useCallback(() => {
-    engineRef.current.pause();
-    updateState();
-  }, [updateState]);
+    engineRef.current!.pause();
+  }, []);
 
   // Step forward
   const stepForward = useCallback(() => {
-    const success = engineRef.current.stepForward(customState);
-    updateState();
-    return success;
-  }, [updateState, customState]);
+    const fallbackSnapshot = snapshotRef.current ? undefined : customState ?? undefined;
+    return engineRef.current!.stepForward(fallbackSnapshot);
+  }, [customState]);
 
   // Step backward
   const stepBackward = useCallback(() => {
-    const previousState = engineRef.current.stepBackward();
-    if (previousState) {
+    clearScheduledTimeouts();
+    const previousState = engineRef.current!.stepBackward();
+    if (!snapshotRef.current && previousState !== null) {
       setCustomState(previousState);
     }
-    updateState();
     return previousState;
-  }, [updateState]);
+  }, [clearScheduledTimeouts]);
 
   // Reset simulation
   const reset = useCallback(() => {
-    engineRef.current.reset();
+    clearScheduledTimeouts();
+    engineRef.current!.reset();
     setCustomState(null);
-    updateState();
-  }, [updateState]);
+  }, [clearScheduledTimeouts]);
 
   // Set speed
-  const setSpeed = useCallback(
-    (multiplier: number) => {
-      engineRef.current.setSpeed(multiplier);
-      updateState();
-    },
-    [updateState]
-  );
+  const setSpeed = useCallback((multiplier: number) => {
+    engineRef.current!.setSpeed(multiplier);
+  }, []);
 
   // Jump to event
   const jumpToEvent = useCallback(
     (eventId: number) => {
-      engineRef.current.jumpToEvent(eventId, customState);
-      updateState();
+      clearScheduledTimeouts();
+      const fallbackSnapshot = snapshotRef.current ? undefined : customState ?? undefined;
+      engineRef.current!.jumpToEvent(eventId, fallbackSnapshot);
     },
-    [updateState, customState]
+    [clearScheduledTimeouts, customState]
   );
 
   // Set events
   const setEvents = useCallback(
     (events: SimulationEvent[]) => {
-      engineRef.current.setEvents(events);
-      updateState();
+      clearScheduledTimeouts();
+      engineRef.current!.setEvents(events);
     },
-    [updateState]
+    [clearScheduledTimeouts]
   );
 
   // Register event handler
   const onEvent = useCallback((eventType: string, handler: (event: SimulationEvent) => void) => {
-    engineRef.current.on(eventType, handler);
+    engineRef.current!.on(eventType, handler);
   }, []);
 
   // Get current event
   const getCurrentEvent = useCallback(() => {
-    return engineRef.current.getCurrentEvent();
+    return engineRef.current!.getCurrentEvent();
   }, []);
 
   // Check if complete
   const isComplete = useCallback(() => {
-    return engineRef.current.isComplete();
+    return engineRef.current!.isComplete();
   }, []);
 
   // Get progress
   const getProgress = useCallback(() => {
-    return engineRef.current.getProgress();
+    return engineRef.current!.getProgress();
   }, []);
 
-  return {
-    state,
-    customState,
-    setCustomState,
-    play,
-    pause,
-    stepForward,
-    stepBackward,
-    reset,
-    setSpeed,
-    jumpToEvent,
-    setEvents,
-    onEvent,
-    getCurrentEvent,
-    isComplete,
-    getProgress,
-  };
+  return useMemo(
+    () => ({
+      state,
+      customState,
+      setCustomState,
+      play,
+      pause,
+      stepForward,
+      stepBackward,
+      reset,
+      setSpeed,
+      jumpToEvent,
+      setEvents,
+      onEvent,
+      getCurrentEvent,
+      isComplete,
+      getProgress,
+      scheduleTimeout,
+      clearScheduledTimeouts,
+    }),
+    [
+      state,
+      customState,
+      play,
+      pause,
+      stepForward,
+      stepBackward,
+      reset,
+      setSpeed,
+      jumpToEvent,
+      setEvents,
+      onEvent,
+      getCurrentEvent,
+      isComplete,
+      getProgress,
+      scheduleTimeout,
+      clearScheduledTimeouts,
+    ]
+  );
 }

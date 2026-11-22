@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ChandyLamportAlgorithm } from '@/lib/algorithms/chandyLamport';
 import { useSimulation } from '@/hooks/useSimulation';
+import { useScenarioCompletion } from '@/hooks/useProgress';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
@@ -19,20 +20,34 @@ export default function ChandyLamportPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
 
-  const simulation = useSimulation([]);
-
-  const updateVisualization = useCallback(() => {
+  const syncVisualization = useCallback(() => {
     setNodes([...snapshot.getNodes()]);
     setMessages([...snapshot.getMessages()]);
+  }, [snapshot]);
+
+  const simulation = useSimulation([], {
+    snapshot: {
+      capture: () => snapshot.serialize(),
+      restore: (savedState) => {
+        snapshot.restore(savedState);
+        syncVisualization();
+      },
+    },
+  });
+
+  useScenarioCompletion('chandy-lamport', selectedScenario, simulation.state);
+
+  const updateVisualization = useCallback(() => {
+    syncVisualization();
 
     const inFlight = snapshot.getMessages().filter((m) => m.status === 'in-flight');
     if (inFlight.length > 0) {
-      setTimeout(() => {
+      simulation.scheduleTimeout(() => {
         inFlight.forEach((msg) => snapshot.deliverMessage(msg.id));
         updateVisualization();
       }, 500);
     }
-  }, [snapshot]);
+  }, [snapshot, simulation, syncVisualization]);
 
   useEffect(() => {
     simulation.onEvent('send_message', (event) => {

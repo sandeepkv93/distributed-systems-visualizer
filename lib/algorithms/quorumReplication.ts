@@ -1,6 +1,15 @@
 import { QuorumNode, QuorumMessage, QuorumValue, SimulationEvent } from '../types';
+import { Snapshotable, cloneSnapshot } from '../snapshot';
 
-export class QuorumReplicationAlgorithm {
+export interface QuorumReplicationSnapshot {
+  nodes: QuorumNode[];
+  messages: QuorumMessage[];
+  eventLog: SimulationEvent[];
+  messageIdCounter: number;
+  replicationFactor: number;
+}
+
+export class QuorumReplicationAlgorithm implements Snapshotable<QuorumReplicationSnapshot> {
   private nodes: QuorumNode[];
   private messages: QuorumMessage[];
   private eventLog: SimulationEvent[];
@@ -247,5 +256,24 @@ export class QuorumReplicationAlgorithm {
     this.messages = [];
     this.eventLog = [];
     this.messageIdCounter = 0;
+  }
+
+  serialize(): QuorumReplicationSnapshot {
+    return cloneSnapshot({
+      nodes: this.nodes,
+      messages: this.messages,
+      eventLog: this.eventLog,
+      messageIdCounter: this.messageIdCounter,
+      replicationFactor: this.replicationFactor,
+    });
+  }
+
+  restore(snapshot: QuorumReplicationSnapshot): void {
+    const cloned = cloneSnapshot(snapshot);
+    this.nodes = cloned.nodes;
+    this.messages = cloned.messages;
+    this.eventLog = cloned.eventLog;
+    this.messageIdCounter = cloned.messageIdCounter;
+    this.replicationFactor = cloned.replicationFactor;
   }
 }

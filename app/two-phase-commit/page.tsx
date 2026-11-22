@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { TwoPhaseCommitAlgorithm } from '@/lib/algorithms/twoPhaseCommit';
 import { useSimulation } from '@/hooks/useSimulation';
+import { useScenarioCompletion } from '@/hooks/useProgress';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
@@ -20,14 +21,24 @@ export default function TwoPhaseCommitPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
 
-  const simulation = useSimulation([]);
-
   // Update visualization
   const updateVisualization = useCallback(() => {
     setCoordinator({ ...tpc.getCoordinator() });
     setParticipants([...tpc.getParticipants()]);
     setMessages([...tpc.getMessages()]);
   }, [tpc]);
+
+  const simulation = useSimulation([], {
+    snapshot: {
+      capture: () => tpc.serialize(),
+      restore: (snapshot) => {
+        tpc.restore(snapshot);
+        updateVisualization();
+      },
+    },
+  });
+
+  useScenarioCompletion('two-phase-commit', selectedScenario, simulation.state);
 
   // Handle events
   useEffect(() => {
@@ -88,7 +99,7 @@ export default function TwoPhaseCommitPage() {
     });
 
     simulation.onEvent('all_participants_finalize', (event) => {
-      participants.forEach((p) => {
+      tpc.getParticipants().forEach((p) => {
         if (p.status === 'healthy') {
           tpc.participantFinalize(p.id, event.data.decision);
         }
@@ -105,7 +116,7 @@ export default function TwoPhaseCommitPage() {
       // Visual indicator only
       updateVisualization();
     });
-  }, [tpc, simulation, updateVisualization, participants]);
+  }, [tpc, simulation, updateVisualization]);
 
   // Handle scenario selection
   const handleScenarioChange = (scenarioId: string) => {
@@ -127,11 +138,11 @@ export default function TwoPhaseCommitPage() {
 
   const voteYes = (participantId: string) => {
     tpc.participantVote(participantId, 'yes');
-    setTimeout(() => {
+    simulation.scheduleTimeout(() => {
       const decision = tpc.coordinatorDecide();
       if (decision !== 'waiting') {
-        setTimeout(() => {
-          participants.forEach((p) => {
+        simulation.scheduleTimeout(() => {
+          tpc.getParticipants().forEach((p) => {
             if (p.status === 'healthy') {
               tpc.participantFinalize(p.id, decision);
             }
@@ -147,11 +158,11 @@ export default function TwoPhaseCommitPage() {
 
   const voteNo = (participantId: string) => {
     tpc.participantVote(participantId, 'no');
-    setTimeout(() => {
+    simulation.scheduleTimeout(() => {
       const decision = tpc.coordinatorDecide();
       if (decision !== 'waiting') {
-        setTimeout(() => {
-          participants.forEach((p) => {
+        simulation.scheduleTimeout(() => {
+          tpc.getParticipants().forEach((p) => {
             if (p.status === 'healthy') {
               tpc.participantFinalize(p.id, decision);
             }

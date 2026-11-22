@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ShardingRebalancingAlgorithm } from '@/lib/algorithms/shardingRebalancing';
 import { useSimulation } from '@/hooks/useSimulation';
+import { useScenarioCompletion } from '@/hooks/useProgress';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
@@ -20,20 +21,35 @@ export default function ShardingRebalancingPage() {
   const [showArticle, setShowArticle] = useState(false);
   const [strategy, setStrategy] = useState<ShardingStrategy>('range');
 
-  const simulation = useSimulation([]);
-
-  const updateVisualization = useCallback(() => {
+  const syncVisualization = useCallback(() => {
     setNodes([...sharding.getNodes()]);
     setMessages([...sharding.getMessages()]);
+    setStrategy(sharding.getStrategy());
+  }, [sharding]);
+
+  const simulation = useSimulation([], {
+    snapshot: {
+      capture: () => sharding.serialize(),
+      restore: (snapshot) => {
+        sharding.restore(snapshot);
+        syncVisualization();
+      },
+    },
+  });
+
+  useScenarioCompletion('sharding-rebalancing', selectedScenario, simulation.state);
+
+  const updateVisualization = useCallback(() => {
+    syncVisualization();
 
     const inFlight = sharding.getMessages().filter((m) => m.status === 'in-flight');
     if (inFlight.length > 0) {
-      setTimeout(() => {
+      simulation.scheduleTimeout(() => {
         inFlight.forEach((msg) => sharding.deliverMessage(msg.id));
         updateVisualization();
       }, 500);
     }
-  }, [sharding]);
+  }, [sharding, simulation, syncVisualization]);
 
   useEffect(() => {
     simulation.onEvent('set_strategy', (event) => {
@@ -65,7 +81,7 @@ export default function ShardingRebalancingPage() {
     if (scenario) {
       sharding.reset();
       simulation.setEvents(scenario.events);
-      updateVisualization();
+      syncVisualization();
     }
   };
 

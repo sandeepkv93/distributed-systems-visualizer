@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { VectorClocksAlgorithm } from '@/lib/algorithms/vectorClocks';
 import { useSimulation } from '@/hooks/useSimulation';
+import { useScenarioCompletion } from '@/hooks/useProgress';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
@@ -18,16 +19,26 @@ export default function VectorClocksPage() {
   const [allEvents, setAllEvents] = useState<VectorClockEvent[]>([]);
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set());
-  const [lastSendEvent, setLastSendEvent] = useState<VectorClockEvent | null>(null);
   const [showArticle, setShowArticle] = useState(false);
-
-  const simulation = useSimulation([]);
 
   // Update visualization
   const updateVisualization = useCallback(() => {
     setProcesses([...vc.getProcesses()]);
     setAllEvents([...vc.getAllEvents()]);
   }, [vc]);
+
+  const simulation = useSimulation([], {
+    snapshot: {
+      capture: () => vc.serialize(),
+      restore: (snapshot) => {
+        vc.restore(snapshot);
+        setSelectedEvents(new Set());
+        updateVisualization();
+      },
+    },
+  });
+
+  useScenarioCompletion('vector-clocks', selectedScenario, simulation.state);
 
   // Handle events
   useEffect(() => {
@@ -37,15 +48,24 @@ export default function VectorClocksPage() {
     });
 
     simulation.onEvent('send_message', (event) => {
-      const sendEvent = vc.sendMessage(event.data.from, event.data.to, event.data.message);
-      if (sendEvent) {
-        setLastSendEvent(sendEvent);
-      }
+      vc.sendMessage(event.data.from, event.data.to, event.data.message);
       updateVisualization();
     });
 
     simulation.onEvent('receive_message', (event) => {
-      const sendEvent = lastSendEvent || allEvents.find((e) => e.id === event.data.sendEventId);
+      const currentEvents = vc.getAllEvents();
+      let sendEvent: VectorClockEvent | undefined;
+      if (event.data.sendEventId) {
+        sendEvent = currentEvents.find((e) => e.id === event.data.sendEventId);
+      }
+      if (!sendEvent) {
+        for (let i = currentEvents.length - 1; i >= 0; i--) {
+          if (currentEvents[i].type === 'send') {
+            sendEvent = currentEvents[i];
+            break;
+          }
+        }
+      }
       if (sendEvent) {
         vc.receiveMessage(event.data.to, sendEvent.vectorClock, sendEvent.id, event.data.message);
       }
@@ -61,7 +81,7 @@ export default function VectorClocksPage() {
       vc.recoverProcess(event.data.processId);
       updateVisualization();
     });
-  }, [vc, simulation, updateVisualization, lastSendEvent, allEvents]);
+  }, [vc, simulation, updateVisualization]);
 
   // Handle scenario selection
   const handleScenarioChange = (scenarioId: string) => {
@@ -69,7 +89,6 @@ export default function VectorClocksPage() {
     const scenario = vectorClockScenarios.find((s) => s.id === scenarioId);
     if (scenario) {
       vc.reset();
-      setLastSendEvent(null);
       setSelectedEvents(new Set());
       simulation.setEvents(scenario.events);
       updateVisualization();
@@ -121,7 +140,7 @@ export default function VectorClocksPage() {
     const sendEvent = vc.sendMessage(fromId, toId, `${fromId}→${toId}`);
     if (sendEvent) {
       // Auto-receive after delay
-      setTimeout(() => {
+      simulation.scheduleTimeout(() => {
         vc.receiveMessage(toId, sendEvent.vectorClock, sendEvent.id, `${fromId}→${toId}`);
         updateVisualization();
       }, 100);
@@ -169,7 +188,6 @@ export default function VectorClocksPage() {
           simulation.reset();
           vc.reset();
           setSelectedEvents(new Set());
-          setLastSendEvent(null);
           updateVisualization();
         }}
         onSpeedChange={simulation.setSpeed}

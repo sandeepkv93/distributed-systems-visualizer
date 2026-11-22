@@ -1,6 +1,23 @@
 import { PaxosNode, PaxosMessage, SimulationEvent } from '../types';
+import { Snapshotable, cloneSnapshot } from '../snapshot';
 
-export class PaxosAlgorithm {
+export interface PaxosSnapshot {
+  proposers: Map<string, PaxosNode>;
+  acceptors: Map<string, PaxosNode>;
+  learners: Map<string, PaxosNode>;
+  messages: PaxosMessage[];
+  eventLog: SimulationEvent[];
+  nextProposalNumber: number;
+  decidedValue: any;
+  decidedValues: any[];
+  proposedValues: Map<number, any>;
+  acceptSentForProposal: Set<number>;
+  currentInstance: number;
+  instanceDecided: boolean;
+  messageIdCounter: number;
+}
+
+export class PaxosAlgorithm implements Snapshotable<PaxosSnapshot> {
   private proposers: Map<string, PaxosNode>;
   private acceptors: Map<string, PaxosNode>;
   private learners: Map<string, PaxosNode>;
@@ -8,6 +25,12 @@ export class PaxosAlgorithm {
   private eventLog: SimulationEvent[];
   private nextProposalNumber: number;
   private decidedValue: any;
+  private decidedValues: any[];
+  private proposedValues: Map<number, any>;
+  private acceptSentForProposal: Set<number>;
+  private currentInstance: number;
+  private instanceDecided: boolean;
+  private messageIdCounter: number = 0;
 
   constructor(proposerCount: number = 2, acceptorCount: number = 5, learnerCount: number = 2) {
     this.proposers = new Map();
@@ -17,6 +40,11 @@ export class PaxosAlgorithm {
     this.eventLog = [];
     this.nextProposalNumber = 1;
     this.decidedValue = null;
+    this.decidedValues = [];
+    this.proposedValues = new Map();
+    this.acceptSentForProposal = new Set();
+    this.currentInstance = 1;
+    this.instanceDecided = false;
 
     // Initialize proposers (top row)
     for (let i = 0; i < proposerCount; i++) {
@@ -54,6 +82,11 @@ export class PaxosAlgorithm {
       };
       this.learners.set(node.id, node);
     }
+  }
+
+  private generateMessageId(from: string, to: string): string {
+    this.messageIdCounter++;
+    return `paxos-msg-${this.messageIdCounter}-${from}-${to}`;
   }
 
   // Get all nodes
@@ -113,12 +146,29 @@ export class PaxosAlgorithm {
   // Generate unique proposal number
   private generateProposalNumber(proposerId: string): number {
     // Use round number + proposer ID to ensure uniqueness
-    const proposerIndex = parseInt(proposerId.split('-')[1]);
+    const proposerIndex = parseInt(proposerId.split('-')[1], 10);
     return this.nextProposalNumber * 10 + proposerIndex;
   }
 
+  // Start a new Multi-Paxos consensus instance (slot) while retaining decided history
+  startNewInstance(): void {
+    this.currentInstance++;
+    this.instanceDecided = false;
+    this.acceptors.forEach((acceptor) => {
+      acceptor.promisedProposal = 0;
+      acceptor.acceptedProposal = 0;
+      acceptor.acceptedValue = null;
+    });
+    this.messages = [];
+    this.acceptSentForProposal.clear();
+  }
+
   // Phase 1a: Proposer sends Prepare
-  startProposal(proposerId: string, value: any): SimulationEvent[] {
+  startProposal(proposerId: string, value: any, newInstance: boolean = false): SimulationEvent[] {
+    if (newInstance) {
+      this.startNewInstance();
+    }
+
     const proposer = this.proposers.get(proposerId);
     if (!proposer || proposer.status !== 'healthy') return [];
 
@@ -128,19 +178,25 @@ export class PaxosAlgorithm {
     const proposalNumber = this.generateProposalNumber(proposerId);
     this.nextProposalNumber++;
     proposer.proposalNumber = proposalNumber;
+    this.proposedValues.set(proposalNumber, value);
 
-    this.addEvent('prepare_start', `${proposerId} starts proposal ${proposalNumber} with value: ${value}`, {
-      proposerId,
-      proposalNumber,
-      value,
-    });
+    this.addEvent(
+      'prepare_start',
+      `${proposerId} starts proposal ${proposalNumber} with value: ${value}`,
+      {
+        proposerId,
+        proposalNumber,
+        value,
+        instance: this.currentInstance,
+      }
+    );
     events.push(...this.eventLog.slice(-1));
 
     // Send Prepare to all acceptors
     this.acceptors.forEach((acceptor) => {
       if (acceptor.status === 'healthy') {
         const message: PaxosMessage = {
-          id: `msg-${Date.now()}-${proposerId}-${acceptor.id}`,
+          id: this.generateMessageId(proposerId, acceptor.id),
           from: proposerId,
           to: acceptor.id,
           type: 'Prepare',
@@ -188,7 +244,7 @@ export class PaxosAlgorithm {
       acceptor.promisedProposal = proposalNumber;
 
       const response: PaxosMessage = {
-        id: `msg-${Date.now()}-${acceptor.id}-${message.from}`,
+        id: this.generateMessageId(acceptor.id, message.from),
         from: acceptor.id,
         to: message.from,
         type: 'Promise',
@@ -212,7 +268,7 @@ export class PaxosAlgorithm {
     } else {
       // Send Nack
       const response: PaxosMessage = {
-        id: `msg-${Date.now()}-${acceptor.id}-${message.from}`,
+        id: this.generateMessageId(acceptor.id, message.from),
         from: acceptor.id,
         to: message.from,
         type: 'Nack',
@@ -224,11 +280,15 @@ export class PaxosAlgorithm {
       };
       this.addMessage(response);
 
-      this.addEvent('nack_sent', `${acceptor.id} → ${message.from}: Nack (promised ${acceptor.promisedProposal})`, {
-        from: acceptor.id,
-        to: message.from,
-        promisedProposal: acceptor.promisedProposal,
-      });
+      this.addEvent(
+        'nack_sent',
+        `${acceptor.id} → ${message.from}: Nack (promised ${acceptor.promisedProposal})`,
+        {
+          from: acceptor.id,
+          to: message.from,
+          promisedProposal: acceptor.promisedProposal,
+        }
+      );
       events.push(...this.eventLog.slice(-1));
     }
 
@@ -236,7 +296,7 @@ export class PaxosAlgorithm {
   }
 
   // Phase 2a: Proposer receives promises and sends Accept
-  handlePromise(messageId: string, proposedValue: any): SimulationEvent[] {
+  handlePromise(messageId: string, proposedValue?: any): SimulationEvent[] {
     const message = this.messages.find((m) => m.id === messageId);
     if (!message || message.type !== 'Promise') return [];
 
@@ -262,12 +322,16 @@ export class PaxosAlgorithm {
 
     const majority = Math.floor(this.acceptors.size / 2) + 1;
 
-    // If we have a majority of promises, send Accept
-    if (promises.length >= majority) {
-      // Check if any acceptor has already accepted a value
-      let valueToPropose = proposedValue;
+    // If we have a majority of promises and haven't already sent Accept for this proposal
+    if (promises.length >= majority && !this.acceptSentForProposal.has(proposalNumber)) {
+      this.acceptSentForProposal.add(proposalNumber);
+
+      // Fall back to the value originally proposed with this proposalNumber
+      let valueToPropose =
+        proposedValue !== undefined ? proposedValue : this.proposedValues.get(proposalNumber);
       let highestAcceptedProposal = 0;
 
+      // Check if any acceptor has already accepted a value
       promises.forEach((p) => {
         if (p.payload.acceptedProposal && p.payload.acceptedProposal > highestAcceptedProposal) {
           highestAcceptedProposal = p.payload.acceptedProposal;
@@ -286,7 +350,7 @@ export class PaxosAlgorithm {
       this.acceptors.forEach((acceptor) => {
         if (acceptor.status === 'healthy') {
           const acceptMessage: PaxosMessage = {
-            id: `msg-${Date.now()}-${proposer.id}-${acceptor.id}`,
+            id: this.generateMessageId(proposer.id, acceptor.id),
             from: proposer.id,
             to: acceptor.id,
             type: 'Accept',
@@ -299,12 +363,16 @@ export class PaxosAlgorithm {
           };
           this.addMessage(acceptMessage);
 
-          this.addEvent('accept_sent', `${proposer.id} → ${acceptor.id}: Accept(${proposalNumber}, ${valueToPropose})`, {
-            from: proposer.id,
-            to: acceptor.id,
-            proposalNumber,
-            value: valueToPropose,
-          });
+          this.addEvent(
+            'accept_sent',
+            `${proposer.id} → ${acceptor.id}: Accept(${proposalNumber}, ${valueToPropose})`,
+            {
+              from: proposer.id,
+              to: acceptor.id,
+              proposalNumber,
+              value: valueToPropose,
+            }
+          );
           events.push(...this.eventLog.slice(-1));
         }
       });
@@ -337,7 +405,7 @@ export class PaxosAlgorithm {
       acceptor.acceptedValue = value;
 
       const response: PaxosMessage = {
-        id: `msg-${Date.now()}-${acceptor.id}-learners`,
+        id: this.generateMessageId(acceptor.id, 'learners'),
         from: acceptor.id,
         to: 'learners',
         type: 'Accepted',
@@ -361,7 +429,7 @@ export class PaxosAlgorithm {
       this.learners.forEach((learner) => {
         if (learner.status === 'healthy') {
           const learnerMessage: PaxosMessage = {
-            id: `msg-${Date.now()}-${acceptor.id}-${learner.id}`,
+            id: this.generateMessageId(acceptor.id, learner.id),
             from: acceptor.id,
             to: learner.id,
             type: 'Accepted',
@@ -385,25 +453,80 @@ export class PaxosAlgorithm {
 
   // Check if a value has been decided (majority accepted)
   private checkForDecision(value: any): void {
+    if (value === undefined || value === null) return;
+
     const acceptedCount = Array.from(this.acceptors.values()).filter(
       (a) => a.acceptedValue === value
     ).length;
 
     const majority = Math.floor(this.acceptors.size / 2) + 1;
 
-    if (acceptedCount >= majority && this.decidedValue === null) {
+    if (acceptedCount >= majority && !this.instanceDecided) {
+      this.instanceDecided = true;
       this.decidedValue = value;
+      this.decidedValues.push(value);
 
       this.addEvent('value_decided', `Consensus reached! Decided value: ${value}`, {
         value,
         acceptorCount: acceptedCount,
+        instance: this.currentInstance,
       });
     }
   }
 
-  // Get decided value
+  // Finalize consensus step (process any remaining in-flight protocol messages and notify learners)
+  finalizeConsensus(expectedValue?: any): SimulationEvent[] {
+    const events: SimulationEvent[] = [];
+
+    // Process any remaining in-flight Prepare -> Promise -> Accept messages
+    this.messages
+      .filter((m) => m.type === 'Prepare' && m.status === 'in-flight')
+      .forEach((m) => events.push(...this.handlePrepare(m.id)));
+
+    this.messages
+      .filter((m) => m.type === 'Promise' && m.status === 'in-flight')
+      .forEach((m) => events.push(...this.handlePromise(m.id, expectedValue)));
+
+    this.messages
+      .filter((m) => m.type === 'Accept' && m.status === 'in-flight')
+      .forEach((m) => events.push(...this.handleAccept(m.id)));
+
+    // Mark learner Accepted notifications as delivered
+    this.messages.forEach((m) => {
+      if (m.type === 'Accepted' && m.status === 'in-flight') {
+        m.status = 'success';
+      }
+    });
+
+    if (this.decidedValue !== null) {
+      this.learners.forEach((learner) => {
+        if (learner.status === 'healthy') {
+          learner.acceptedValue = this.decidedValue;
+        }
+      });
+
+      this.addEvent(
+        'consensus_reached',
+        `Learners confirmed consensus value: ${this.decidedValue}`,
+        {
+          value: this.decidedValue,
+          instance: this.currentInstance,
+        }
+      );
+      events.push(...this.eventLog.slice(-1));
+    }
+
+    return events;
+  }
+
+  // Get latest decided value
   getDecidedValue(): any {
     return this.decidedValue;
+  }
+
+  // Get all decided values across Multi-Paxos instances
+  getDecidedValues(): any[] {
+    return [...this.decidedValues];
   }
 
   // Fail a node
@@ -440,10 +563,52 @@ export class PaxosAlgorithm {
     });
     this.learners.forEach((node) => {
       node.status = 'healthy';
+      node.acceptedValue = undefined;
     });
     this.messages = [];
     this.eventLog = [];
     this.nextProposalNumber = 1;
     this.decidedValue = null;
+    this.decidedValues = [];
+    this.proposedValues = new Map();
+    this.acceptSentForProposal = new Set();
+    this.currentInstance = 1;
+    this.instanceDecided = false;
+    this.messageIdCounter = 0;
+  }
+
+  serialize(): PaxosSnapshot {
+    return cloneSnapshot({
+      proposers: this.proposers,
+      acceptors: this.acceptors,
+      learners: this.learners,
+      messages: this.messages,
+      eventLog: this.eventLog,
+      nextProposalNumber: this.nextProposalNumber,
+      decidedValue: this.decidedValue,
+      decidedValues: this.decidedValues,
+      proposedValues: this.proposedValues,
+      acceptSentForProposal: this.acceptSentForProposal,
+      currentInstance: this.currentInstance,
+      instanceDecided: this.instanceDecided,
+      messageIdCounter: this.messageIdCounter,
+    });
+  }
+
+  restore(snapshot: PaxosSnapshot): void {
+    const cloned = cloneSnapshot(snapshot);
+    this.proposers = cloned.proposers;
+    this.acceptors = cloned.acceptors;
+    this.learners = cloned.learners;
+    this.messages = cloned.messages;
+    this.eventLog = cloned.eventLog;
+    this.nextProposalNumber = cloned.nextProposalNumber;
+    this.decidedValue = cloned.decidedValue;
+    this.decidedValues = cloned.decidedValues;
+    this.proposedValues = cloned.proposedValues;
+    this.acceptSentForProposal = cloned.acceptSentForProposal;
+    this.currentInstance = cloned.currentInstance;
+    this.instanceDecided = cloned.instanceDecided;
+    this.messageIdCounter = cloned.messageIdCounter;
   }
 }

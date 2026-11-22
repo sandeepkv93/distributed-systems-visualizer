@@ -1,6 +1,17 @@
 import { LoadMessage, LoadRequest, LoadWorker, SimulationEvent } from '../types';
+import { Snapshotable, cloneSnapshot } from '../snapshot';
 
-export class LoadBalancingAlgorithm {
+export interface LoadBalancingSnapshot {
+  workers: LoadWorker[];
+  requests: LoadRequest[];
+  messages: LoadMessage[];
+  eventLog: SimulationEvent[];
+  messageIdCounter: number;
+  requestCounter: number;
+  maxQueue: number;
+}
+
+export class LoadBalancingAlgorithm implements Snapshotable<LoadBalancingSnapshot> {
   private workers: LoadWorker[];
   private requests: LoadRequest[];
   private messages: LoadMessage[];
@@ -226,5 +237,28 @@ export class LoadBalancingAlgorithm {
       data,
     };
     this.eventLog.push(event);
+  }
+
+  serialize(): LoadBalancingSnapshot {
+    return cloneSnapshot({
+      workers: this.workers,
+      requests: this.requests,
+      messages: this.messages,
+      eventLog: this.eventLog,
+      messageIdCounter: this.messageIdCounter,
+      requestCounter: this.requestCounter,
+      maxQueue: this.maxQueue,
+    });
+  }
+
+  restore(snapshot: LoadBalancingSnapshot): void {
+    const cloned = cloneSnapshot(snapshot);
+    this.workers = cloned.workers;
+    this.requests = cloned.requests;
+    this.messages = cloned.messages;
+    this.eventLog = cloned.eventLog;
+    this.messageIdCounter = cloned.messageIdCounter;
+    this.requestCounter = cloned.requestCounter;
+    this.maxQueue = cloned.maxQueue;
   }
 }

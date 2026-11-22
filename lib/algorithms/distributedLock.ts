@@ -1,6 +1,17 @@
 import { LockLease, LockMessage, LockNode, SimulationEvent } from '../types';
+import { Snapshotable, cloneSnapshot } from '../snapshot';
 
-export class DistributedLockAlgorithm {
+export interface DistributedLockSnapshot {
+  nodes: LockNode[];
+  messages: LockMessage[];
+  eventLog: SimulationEvent[];
+  messageIdCounter: number;
+  lease: LockLease;
+  queue: string[];
+  leaseTtlMs: number;
+}
+
+export class DistributedLockAlgorithm implements Snapshotable<DistributedLockSnapshot> {
   private nodes: LockNode[];
   private messages: LockMessage[];
   private eventLog: SimulationEvent[];
@@ -346,5 +357,28 @@ export class DistributedLockAlgorithm {
       data,
     };
     this.eventLog.push(event);
+  }
+
+  serialize(): DistributedLockSnapshot {
+    return cloneSnapshot({
+      nodes: this.nodes,
+      messages: this.messages,
+      eventLog: this.eventLog,
+      messageIdCounter: this.messageIdCounter,
+      lease: this.lease,
+      queue: this.queue,
+      leaseTtlMs: this.leaseTtlMs,
+    });
+  }
+
+  restore(snapshot: DistributedLockSnapshot): void {
+    const cloned = cloneSnapshot(snapshot);
+    this.nodes = cloned.nodes;
+    this.messages = cloned.messages;
+    this.eventLog = cloned.eventLog;
+    this.messageIdCounter = cloned.messageIdCounter;
+    this.lease = cloned.lease;
+    this.queue = cloned.queue;
+    this.leaseTtlMs = cloned.leaseTtlMs;
   }
 }

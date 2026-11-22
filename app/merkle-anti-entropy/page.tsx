@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { MerkleAntiEntropyAlgorithm } from '@/lib/algorithms/merkleAntiEntropy';
 import { useSimulation } from '@/hooks/useSimulation';
+import { useScenarioCompletion } from '@/hooks/useProgress';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
@@ -19,20 +20,34 @@ export default function MerkleAntiEntropyPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
 
-  const simulation = useSimulation([]);
-
-  const updateVisualization = useCallback(() => {
+  const syncVisualization = useCallback(() => {
     setReplicas([...merkle.getReplicas()]);
     setMessages([...merkle.getMessages()]);
+  }, [merkle]);
+
+  const simulation = useSimulation([], {
+    snapshot: {
+      capture: () => merkle.serialize(),
+      restore: (snapshot) => {
+        merkle.restore(snapshot);
+        syncVisualization();
+      },
+    },
+  });
+
+  useScenarioCompletion('merkle-anti-entropy', selectedScenario, simulation.state);
+
+  const updateVisualization = useCallback(() => {
+    syncVisualization();
 
     const inFlight = merkle.getMessages().filter((m) => m.status === 'in-flight');
     if (inFlight.length > 0) {
-      setTimeout(() => {
+      simulation.scheduleTimeout(() => {
         inFlight.forEach((msg) => merkle.deliverMessage(msg.id));
         updateVisualization();
       }, 500);
     }
-  }, [merkle]);
+  }, [merkle, simulation, syncVisualization]);
 
   useEffect(() => {
     simulation.onEvent('compare_roots', () => {

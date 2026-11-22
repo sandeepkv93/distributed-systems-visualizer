@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { DistributedTransactionsAlgorithm } from '@/lib/algorithms/distributedTransactions';
 import { useSimulation } from '@/hooks/useSimulation';
+import { useScenarioCompletion } from '@/hooks/useProgress';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
@@ -22,21 +23,35 @@ export default function DistributedTransactionsPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
 
-  const simulation = useSimulation([]);
-
-  const updateVisualization = useCallback(() => {
+  const syncVisualization = useCallback(() => {
     setParticipants([...transactions.getParticipants()]);
     setSagaSteps([...transactions.getSagaSteps()]);
     setMessages([...transactions.getMessages()]);
+  }, [transactions]);
+
+  const simulation = useSimulation([], {
+    snapshot: {
+      capture: () => transactions.serialize(),
+      restore: (snapshot) => {
+        transactions.restore(snapshot);
+        syncVisualization();
+      },
+    },
+  });
+
+  useScenarioCompletion('distributed-transactions', selectedScenario, simulation.state);
+
+  const updateVisualization = useCallback(() => {
+    syncVisualization();
 
     const inFlight = transactions.getMessages().filter((m) => m.status === 'in-flight');
     if (inFlight.length > 0) {
-      setTimeout(() => {
+      simulation.scheduleTimeout(() => {
         inFlight.forEach((msg) => transactions.deliverMessage(msg.id));
         updateVisualization();
       }, 500);
     }
-  }, [transactions]);
+  }, [transactions, simulation, syncVisualization]);
 
   useEffect(() => {
     simulation.onEvent('start_3pc', () => {

@@ -1,82 +1,103 @@
-import { useState, useEffect, useCallback } from 'react';
+'use client';
+
+import { useEffect, useCallback, useSyncExternalStore } from 'react';
 import {
-  getProgress,
   markConceptCompleted,
   markScenarioCompleted,
-  saveQuizScore,
   startSession,
   endSession,
-  getAllAchievements,
-  getProgressStats,
   resetProgress,
+  subscribeProgress,
+  getClientProgressSnapshot,
+  getServerProgressSnapshot,
 } from '@/lib/progress';
-import { UserProgress } from '@/lib/types';
+import { CONCEPTS_BY_ID, normalizeConceptId } from '@/lib/catalog';
+import { SimulationState } from '@/lib/types';
 
 export function useProgress(concept?: string) {
-  const [progress, setProgress] = useState<UserProgress>(getProgress());
-  const [achievements, setAchievements] = useState(getAllAchievements());
-  const [stats, setStats] = useState(getProgressStats());
+  const snapshot = useSyncExternalStore(
+    subscribeProgress,
+    getClientProgressSnapshot,
+    getServerProgressSnapshot
+  );
 
-  // Refresh progress from localStorage
-  const refresh = useCallback(() => {
-    setProgress(getProgress());
-    setAchievements(getAllAchievements());
-    setStats(getProgressStats());
-  }, []);
-
-  // Start session tracking
+  // Start session tracking on mount and flush on unmount / page hide
   useEffect(() => {
-    if (concept) {
-      startSession(concept);
+    if (!concept) return;
 
-      return () => {
-        endSession();
-        refresh();
-      };
-    }
-  }, [concept, refresh]);
+    startSession(concept);
+
+    const handlePageHide = () => {
+      endSession();
+    };
+
+    window.addEventListener('pagehide', handlePageHide);
+
+    return () => {
+      window.removeEventListener('pagehide', handlePageHide);
+      endSession();
+    };
+  }, [concept]);
 
   // Complete a concept
-  const completeConcept = useCallback(
-    (conceptName: string) => {
-      markConceptCompleted(conceptName);
-      refresh();
-    },
-    [refresh]
-  );
+  const completeConcept = useCallback((conceptName: string) => {
+    markConceptCompleted(conceptName);
+  }, []);
 
   // Complete a scenario
   const completeScenario = useCallback(
-    (scenarioId: string) => {
-      markScenarioCompleted(scenarioId);
-      refresh();
+    (scenarioId: string, explicitConcept?: string) => {
+      markScenarioCompleted(scenarioId, explicitConcept ?? concept);
     },
-    [refresh]
-  );
-
-  // Save a quiz score
-  const recordQuizScore = useCallback(
-    (quizId: string, score: number) => {
-      saveQuizScore(quizId, score);
-      refresh();
-    },
-    [refresh]
+    [concept]
   );
 
   // Reset all progress
   const reset = useCallback(() => {
     resetProgress();
-    refresh();
-  }, [refresh]);
+  }, []);
+
+  // No-op kept for API compatibility (store updates automatically via subscriptions)
+  const refresh = useCallback(() => {}, []);
 
   return {
-    progress,
-    achievements,
-    stats,
+    progress: snapshot.progress,
+    achievements: snapshot.achievements,
+    stats: snapshot.stats,
     completeConcept,
     completeScenario,
-    recordQuizScore,
     reset,
     refresh,
   };
+}
+
+/**
+ * Tracks session time for a visualizer concept and automatically marks the
+ * selected scenario (and its parent concept when all scenarios finish) completed
+ * once playback reaches the final event.
+ */
+export function useScenarioCompletion(
+  concept: string,
+  selectedScenario: string,
+  simulationState: SimulationState
+) {
+  const { completeScenario } = useProgress(concept);
+
+  useEffect(() => {
+    if (!selectedScenario) return;
+    if (simulationState.events.length === 0) return;
+    if (simulationState.currentEventIndex < simulationState.events.length) return;
+
+    const conceptEntry = CONCEPTS_BY_ID.get(normalizeConceptId(concept));
+    const scenarioExists = conceptEntry?.scenarios.some((s) => s.id === selectedScenario);
+    if (!scenarioExists) return;
+
+    completeScenario(selectedScenario, concept);
+  }, [
+    concept,
+    selectedScenario,
+    simulationState.currentEventIndex,
+    simulationState.events.length,
+    completeScenario,
+  ]);
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { EventualConsistencyAlgorithm } from '@/lib/algorithms/eventualConsistency';
 import { useSimulation } from '@/hooks/useSimulation';
+import { useScenarioCompletion } from '@/hooks/useProgress';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
@@ -19,24 +20,38 @@ export default function EventualConsistencyPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
 
-  const simulation = useSimulation([]);
+  const syncVisualization = useCallback(() => {
+    setNodes([...ec.getNodes()]);
+    setMessages([...ec.getMessages()]);
+  }, [ec]);
+
+  const simulation = useSimulation([], {
+    snapshot: {
+      capture: () => ec.serialize(),
+      restore: (snapshot) => {
+        ec.restore(snapshot);
+        syncVisualization();
+      },
+    },
+  });
+
+  useScenarioCompletion('eventual-consistency', selectedScenario, simulation.state);
 
   // Update visualization
   const updateVisualization = useCallback(() => {
-    setNodes([...ec.getNodes()]);
-    setMessages([...ec.getMessages()]);
+    syncVisualization();
 
     // Process in-flight messages
     const inFlightMessages = ec.getMessages().filter((m) => m.status === 'in-flight');
     if (inFlightMessages.length > 0) {
-      setTimeout(() => {
+      simulation.scheduleTimeout(() => {
         inFlightMessages.forEach((msg) => {
           ec.receiveReplicate(msg.id);
         });
         updateVisualization();
       }, 500);
     }
-  }, [ec]);
+  }, [ec, simulation, syncVisualization]);
 
   // Handle events
   useEffect(() => {
@@ -57,7 +72,7 @@ export default function EventualConsistencyPage() {
 
     simulation.onEvent('replicate_complete', () => {
       // Visual indicator only
-      setTimeout(() => updateVisualization(), 300);
+      simulation.scheduleTimeout(() => updateVisualization(), 300);
     });
 
     simulation.onEvent('replicate_progress', () => {

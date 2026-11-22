@@ -1,6 +1,15 @@
 import { PBFTLogEntry, PBFTMessage, PBFTNode, PBFTPhase, SimulationEvent } from '../types';
+import { Snapshotable, cloneSnapshot } from '../snapshot';
 
-export class PBFTAlgorithm {
+export interface PBFTSnapshot {
+  nodes: PBFTNode[];
+  messages: PBFTMessage[];
+  eventLog: SimulationEvent[];
+  messageIdCounter: number;
+  seqCounter: number;
+}
+
+export class PBFTAlgorithm implements Snapshotable<PBFTSnapshot> {
   private nodes: PBFTNode[];
   private messages: PBFTMessage[];
   private eventLog: SimulationEvent[];
@@ -352,5 +361,24 @@ export class PBFTAlgorithm {
       data,
     };
     this.eventLog.push(event);
+  }
+
+  serialize(): PBFTSnapshot {
+    return cloneSnapshot({
+      nodes: this.nodes,
+      messages: this.messages,
+      eventLog: this.eventLog,
+      messageIdCounter: this.messageIdCounter,
+      seqCounter: this.seqCounter,
+    });
+  }
+
+  restore(snapshot: PBFTSnapshot): void {
+    const cloned = cloneSnapshot(snapshot);
+    this.nodes = cloned.nodes;
+    this.messages = cloned.messages;
+    this.eventLog = cloned.eventLog;
+    this.messageIdCounter = cloned.messageIdCounter;
+    this.seqCounter = cloned.seqCounter;
   }
 }

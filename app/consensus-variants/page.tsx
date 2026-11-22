@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ConsensusVariantsAlgorithm } from '@/lib/algorithms/consensusVariants';
 import { useSimulation } from '@/hooks/useSimulation';
+import { useScenarioCompletion } from '@/hooks/useProgress';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
@@ -26,20 +27,34 @@ export default function ConsensusVariantsPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
 
-  const simulation = useSimulation([]);
-
-  const updateVisualization = useCallback(() => {
+  const syncVisualization = useCallback(() => {
     setNodes([...variants.getNodes(variant)]);
     setMessages([...variants.getMessages()]);
+  }, [variants, variant]);
+
+  const simulation = useSimulation([], {
+    snapshot: {
+      capture: () => variants.serialize(),
+      restore: (snapshot) => {
+        variants.restore(snapshot);
+        syncVisualization();
+      },
+    },
+  });
+
+  useScenarioCompletion('consensus-variants', selectedScenario, simulation.state);
+
+  const updateVisualization = useCallback(() => {
+    syncVisualization();
 
     const inFlight = variants.getMessages().filter((m) => m.status === 'in-flight');
     if (inFlight.length > 0) {
-      setTimeout(() => {
+      simulation.scheduleTimeout(() => {
         inFlight.forEach((msg) => variants.deliverMessage(msg.id));
         updateVisualization();
       }, 500);
     }
-  }, [variants, variant]);
+  }, [variants, simulation, syncVisualization]);
 
   useEffect(() => {
     simulation.onEvent('elect_leader', (event) => {

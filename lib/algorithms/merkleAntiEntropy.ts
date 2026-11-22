@@ -1,4 +1,5 @@
 import { MerkleLeaf, MerkleMessage, MerkleNode, MerkleReplica, SimulationEvent } from '../types';
+import { Snapshotable, cloneSnapshot } from '../snapshot';
 
 function simpleHash(input: string): string {
   let hash = 0;
@@ -8,7 +9,15 @@ function simpleHash(input: string): string {
   return hash.toString(16);
 }
 
-export class MerkleAntiEntropyAlgorithm {
+export interface MerkleAntiEntropySnapshot {
+  replicas: MerkleReplica[];
+  messages: MerkleMessage[];
+  eventLog: SimulationEvent[];
+  messageIdCounter: number;
+  keySpace: string[];
+}
+
+export class MerkleAntiEntropyAlgorithm implements Snapshotable<MerkleAntiEntropySnapshot> {
   private replicas: MerkleReplica[];
   private messages: MerkleMessage[];
   private eventLog: SimulationEvent[];
@@ -299,5 +308,24 @@ export class MerkleAntiEntropyAlgorithm {
       data,
     };
     this.eventLog.push(event);
+  }
+
+  serialize(): MerkleAntiEntropySnapshot {
+    return cloneSnapshot({
+      replicas: this.replicas,
+      messages: this.messages,
+      eventLog: this.eventLog,
+      messageIdCounter: this.messageIdCounter,
+      keySpace: this.keySpace,
+    });
+  }
+
+  restore(snapshot: MerkleAntiEntropySnapshot): void {
+    const cloned = cloneSnapshot(snapshot);
+    this.replicas = cloned.replicas;
+    this.messages = cloned.messages;
+    this.eventLog = cloned.eventLog;
+    this.messageIdCounter = cloned.messageIdCounter;
+    this.keySpace = cloned.keySpace;
   }
 }

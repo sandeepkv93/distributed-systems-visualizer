@@ -4,6 +4,7 @@ import { useProgress } from '@/hooks/useProgress';
 import { Trophy, Award, Clock, BookOpen, Target, RotateCcw, Download, Upload } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { exportProgress, importProgress } from '@/lib/progress';
+import { CONCEPTS_CATALOG } from '@/lib/catalog';
 
 interface ProgressDashboardProps {
   onClose: () => void;
@@ -15,11 +16,18 @@ export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
   const formatTime = (milliseconds: number): string => {
     const hours = Math.floor(milliseconds / 3600000);
     const minutes = Math.floor((milliseconds % 3600000) / 60000);
+    const seconds = Math.floor((milliseconds % 60000) / 1000);
 
     if (hours > 0) {
       return `${hours}h ${minutes}m`;
     }
-    return `${minutes}m`;
+    if (minutes > 0) {
+      return `${minutes}m`;
+    }
+    if (seconds > 0) {
+      return `${seconds}s`;
+    }
+    return '0m';
   };
 
   const handleExport = () => {
@@ -56,7 +64,10 @@ export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
     input.click();
   };
 
-  const completionPercentage = Math.round((stats.completedScenarios / stats.totalScenarios) * 100);
+  const completionPercentage =
+    stats.totalScenarios > 0
+      ? Math.round((stats.completedScenarios / stats.totalScenarios) * 100)
+      : 0;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -88,7 +99,7 @@ export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
                 className="bg-gradient-to-r from-blue-500 to-purple-500 h-4 rounded-full"
                 initial={{ width: 0 }}
                 animate={{ width: `${completionPercentage}%` }}
-                transition={{ duration: 1, ease: 'easeOut' }}
+                transition={{ duration: 0.8, ease: 'easeOut' }}
               />
             </div>
             <p className="text-slate-300 text-sm">
@@ -174,28 +185,43 @@ export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
 
           {/* Concept Progress */}
           <div className="bg-slate-700/50 rounded-lg p-6">
-            <h3 className="text-xl font-semibold text-white mb-4">Concepts Completed</h3>
-            <div className="space-y-2">
-              {[
-                'Raft Consensus',
-                'Paxos Consensus',
-                'Vector Clocks',
-                'Consistent Hashing',
-                'Two-Phase Commit',
-                'Eventual Consistency',
-                'CAP Theorem',
-              ].map((concept) => {
-                const isCompleted = progress.conceptsCompleted.includes(concept);
+            <h3 className="text-xl font-semibold text-white mb-4">
+              Concepts Progress ({stats.completedConcepts}/{stats.totalConcepts})
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {CONCEPTS_CATALOG.map((concept) => {
+                const isCompleted = progress.conceptsCompleted.includes(concept.id);
+                const completedCount = concept.scenarioKeys.filter((key) =>
+                  progress.scenariosCompleted.includes(key)
+                ).length;
+                const totalCount = concept.scenarioKeys.length;
+
                 return (
-                  <div key={concept} className="flex items-center gap-3">
-                    <div
-                      className={`w-5 h-5 rounded-full flex items-center justify-center ${
-                        isCompleted ? 'bg-green-500' : 'bg-slate-600'
-                      }`}
-                    >
-                      {isCompleted && <span className="text-white text-xs">✓</span>}
+                  <div
+                    key={concept.id}
+                    className="flex items-center justify-between gap-3 py-1.5 px-2 rounded bg-slate-800/40"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div
+                        className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          isCompleted ? 'bg-green-500' : 'bg-slate-600'
+                        }`}
+                      >
+                        {isCompleted && <span className="text-white text-xs">✓</span>}
+                      </div>
+                      <span
+                        className={`truncate text-sm ${isCompleted ? 'text-white font-medium' : 'text-slate-400'}`}
+                      >
+                        {concept.name}
+                      </span>
                     </div>
-                    <span className={`${isCompleted ? 'text-white' : 'text-slate-400'}`}>{concept}</span>
+                    <span className="text-xs text-slate-400 flex-shrink-0">
+                      {totalCount > 0
+                        ? `${completedCount}/${totalCount}`
+                        : isCompleted
+                        ? 'Explored'
+                        : 'Interactive'}
+                    </span>
                   </div>
                 );
               })}

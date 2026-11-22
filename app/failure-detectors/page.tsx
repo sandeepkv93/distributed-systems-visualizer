@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { FailureDetectorsAlgorithm } from '@/lib/algorithms/failureDetectors';
 import { useSimulation } from '@/hooks/useSimulation';
+import { useScenarioCompletion } from '@/hooks/useProgress';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
@@ -19,21 +20,35 @@ export default function FailureDetectorsPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
 
-  const simulation = useSimulation([]);
+  const syncVisualization = useCallback(() => {
+    setNodes([...fd.getNodes()]);
+    setMessages([...fd.getMessages()]);
+  }, [fd]);
+
+  const simulation = useSimulation([], {
+    snapshot: {
+      capture: () => fd.serialize(),
+      restore: (snapshot) => {
+        fd.restore(snapshot);
+        syncVisualization();
+      },
+    },
+  });
+
+  useScenarioCompletion('failure-detectors', selectedScenario, simulation.state);
 
   const updateVisualization = useCallback(() => {
     fd.tick();
-    setNodes([...fd.getNodes()]);
-    setMessages([...fd.getMessages()]);
+    syncVisualization();
 
     const inFlight = fd.getMessages().filter((m) => m.status === 'in-flight');
     if (inFlight.length > 0) {
-      setTimeout(() => {
+      simulation.scheduleTimeout(() => {
         inFlight.forEach((msg) => fd.deliverMessage(msg.id));
         updateVisualization();
       }, 500);
     }
-  }, [fd]);
+  }, [fd, simulation, syncVisualization]);
 
   useEffect(() => {
     simulation.onEvent('heartbeat', (event) => {
@@ -91,7 +106,7 @@ export default function FailureDetectorsPage() {
     if (scenario) {
       fd.reset();
       simulation.setEvents(scenario.events);
-      updateVisualization();
+      syncVisualization();
     }
   };
 
@@ -169,7 +184,7 @@ export default function FailureDetectorsPage() {
         onReset={() => {
           simulation.reset();
           fd.reset();
-          updateVisualization();
+          syncVisualization();
         }}
         onSpeedChange={simulation.setSpeed}
         onScenarioChange={handleScenarioChange}

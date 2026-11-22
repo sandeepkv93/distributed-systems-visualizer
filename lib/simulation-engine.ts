@@ -1,23 +1,50 @@
 import { SimulationEvent, SimulationState } from './types';
+import { SnapshotAdapter } from './snapshot';
+
+export type SimulationStateListener = (state: SimulationState) => void;
 
 export class SimulationEngine {
   private state: SimulationState;
   private eventHandlers: Map<string, (event: SimulationEvent) => void>;
-  private timerId: NodeJS.Timeout | null = null;
-  private stateHistory: any[] = [];
+  private listeners: Set<SimulationStateListener>;
+  private snapshotAdapter: SnapshotAdapter | null = null;
+  private timerId: ReturnType<typeof setTimeout> | null = null;
+  private stateHistory: unknown[] = [];
 
   constructor(events: SimulationEvent[] = []) {
     this.state = {
       isPlaying: false,
       speed: 1,
       currentEventIndex: 0,
-      events,
+      events: [...events],
     };
     this.eventHandlers = new Map();
+    this.listeners = new Set();
+  }
+
+  // Subscribe to simulation state changes
+  subscribe(listener: SimulationStateListener): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  // Notify all subscribers of current state
+  private notify(): void {
+    const snapshot = this.getState();
+    this.listeners.forEach((listener) => {
+      listener(snapshot);
+    });
+  }
+
+  // Register a snapshot adapter for real algorithm state capture/restore
+  setSnapshotAdapter(adapter: SnapshotAdapter | null): void {
+    this.snapshotAdapter = adapter;
   }
 
   // Register event handlers
-  on(eventType: string, handler: (event: SimulationEvent) => void) {
+  on(eventType: string, handler: (event: SimulationEvent) => void): void {
     this.eventHandlers.set(eventType, handler);
   }
 
@@ -27,50 +54,68 @@ export class SimulationEngine {
   }
 
   // Set events
-  setEvents(events: SimulationEvent[]) {
-    this.state.events = events;
+  setEvents(events: SimulationEvent[]): void {
+    this.stopTimer();
+    this.state.isPlaying = false;
+    this.state.events = [...events];
     this.state.currentEventIndex = 0;
     this.stateHistory = [];
+    this.notify();
   }
 
-  // Save current state to history
-  private saveStateToHistory(stateSnapshot: any) {
-    this.stateHistory.push(stateSnapshot);
-  }
-
-  // Get state from history
-  private getStateFromHistory(index: number): any {
-    return this.stateHistory[index];
-  }
-
-  // Play simulation
-  play() {
-    if (this.state.isPlaying) return;
-
-    this.state.isPlaying = true;
-    this.runSimulation();
-  }
-
-  // Pause simulation
-  pause() {
-    this.state.isPlaying = false;
-    if (this.timerId) {
+  // Clear pending playback timer without notifying
+  private stopTimer(): void {
+    if (this.timerId !== null) {
       clearTimeout(this.timerId);
       this.timerId = null;
     }
   }
 
+  // Save current state to history
+  private saveStateToHistory(stateSnapshot: unknown): void {
+    this.stateHistory.push(stateSnapshot);
+  }
+
+  // Play simulation
+  play(): void {
+    if (this.state.isPlaying) return;
+    if (this.state.events.length === 0 || this.isComplete()) {
+      return;
+    }
+
+    this.state.isPlaying = true;
+    this.notify();
+    this.runSimulation();
+  }
+
+  // Pause simulation
+  pause(): void {
+    const wasPlaying = this.state.isPlaying;
+    this.state.isPlaying = false;
+    this.stopTimer();
+    if (wasPlaying) {
+      this.notify();
+    }
+  }
+
   // Step forward one event
-  stepForward(stateSnapshot?: any) {
+  stepForward(stateSnapshot?: unknown): boolean {
     if (this.state.currentEventIndex >= this.state.events.length) {
       return false;
     }
 
     const event = this.state.events[this.state.currentEventIndex];
 
-    // Save state before executing event
-    if (stateSnapshot) {
-      this.saveStateToHistory(stateSnapshot);
+    // Capture state before executing event
+    const snapshotToSave =
+      stateSnapshot !== undefined
+        ? stateSnapshot
+        : this.snapshotAdapter
+        ? this.snapshotAdapter.capture()
+        : undefined;
+
+    if (snapshotToSave !== undefined) {
+      this.saveStateToHistory(snapshotToSave);
     }
 
     // Execute event handler
@@ -80,49 +125,75 @@ export class SimulationEngine {
     }
 
     this.state.currentEventIndex++;
+    this.notify();
     return true;
   }
 
   // Step backward one event
-  stepBackward(): any | null {
+  stepBackward(): unknown | null {
     if (this.state.currentEventIndex <= 0) {
       return null;
     }
 
+    // Pause autoplay when stepping backward manually
+    this.state.isPlaying = false;
+    this.stopTimer();
+
     this.state.currentEventIndex--;
 
     // Restore previous state
-    const previousState = this.getStateFromHistory(this.state.currentEventIndex);
-    this.stateHistory.pop(); // Remove last state from history
+    const previousState =
+      this.stateHistory.length > this.state.currentEventIndex
+        ? this.stateHistory.pop()
+        : undefined;
 
-    return previousState;
+    if (previousState !== undefined && this.snapshotAdapter) {
+      this.snapshotAdapter.restore(previousState);
+    }
+
+    this.notify();
+    return previousState ?? null;
   }
 
   // Reset simulation
-  reset() {
-    this.pause();
+  reset(): void {
+    this.state.isPlaying = false;
+    this.stopTimer();
     this.state.currentEventIndex = 0;
     this.stateHistory = [];
+    this.notify();
   }
 
   // Set playback speed
-  setSpeed(multiplier: number) {
+  setSpeed(multiplier: number): void {
     this.state.speed = Math.max(0.5, Math.min(5, multiplier));
+    this.notify();
   }
 
   // Jump to specific event
-  jumpToEvent(eventId: number, stateSnapshot?: any) {
+  jumpToEvent(eventId: number, stateSnapshot?: unknown): void {
     const targetIndex = this.state.events.findIndex((e) => e.id === eventId);
     if (targetIndex === -1) return;
 
+    this.state.isPlaying = false;
+    this.stopTimer();
+
     if (targetIndex < this.state.currentEventIndex) {
-      // Going backward - need to reset and replay
-      this.reset();
-      while (this.state.currentEventIndex < targetIndex) {
-        this.stepForward(stateSnapshot);
+      if (this.stateHistory.length > targetIndex) {
+        const snapshot = this.stateHistory[targetIndex];
+        this.stateHistory.length = targetIndex;
+        this.state.currentEventIndex = targetIndex;
+        if (snapshot !== undefined && this.snapshotAdapter) {
+          this.snapshotAdapter.restore(snapshot);
+        }
+        this.notify();
+      } else {
+        this.reset();
+        while (this.state.currentEventIndex < targetIndex) {
+          this.stepForward(stateSnapshot);
+        }
       }
     } else {
-      // Going forward
       while (this.state.currentEventIndex < targetIndex) {
         this.stepForward(stateSnapshot);
       }
@@ -130,12 +201,12 @@ export class SimulationEngine {
   }
 
   // Run simulation loop
-  private runSimulation() {
+  private runSimulation(): void {
     if (!this.state.isPlaying) return;
 
     const hasMore = this.stepForward();
 
-    if (!hasMore) {
+    if (!hasMore || this.isComplete()) {
       this.pause();
       return;
     }
@@ -145,6 +216,7 @@ export class SimulationEngine {
     const delay = baseDelay / this.state.speed;
 
     this.timerId = setTimeout(() => {
+      this.timerId = null;
       this.runSimulation();
     }, delay);
   }

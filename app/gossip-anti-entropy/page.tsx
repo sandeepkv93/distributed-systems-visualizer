@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { GossipAntiEntropyAlgorithm } from '@/lib/algorithms/gossipAntiEntropy';
 import { useSimulation } from '@/hooks/useSimulation';
+import { useScenarioCompletion } from '@/hooks/useProgress';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
@@ -20,22 +21,36 @@ export default function GossipAntiEntropyPage() {
   const [showArticle, setShowArticle] = useState(false);
   const [fanout, setFanout] = useState(1);
 
-  const simulation = useSimulation([]);
-
-  const updateVisualization = useCallback(() => {
+  const syncVisualization = useCallback(() => {
     setNodes([...gossip.getNodes()]);
     setMessages([...gossip.getMessages()]);
+  }, [gossip]);
+
+  const simulation = useSimulation([], {
+    snapshot: {
+      capture: () => gossip.serialize(),
+      restore: (snapshot) => {
+        gossip.restore(snapshot);
+        syncVisualization();
+      },
+    },
+  });
+
+  useScenarioCompletion('gossip-anti-entropy', selectedScenario, simulation.state);
+
+  const updateVisualization = useCallback(() => {
+    syncVisualization();
 
     const inFlight = gossip.getMessages().filter((m) => m.status === 'in-flight');
     if (inFlight.length > 0) {
-      setTimeout(() => {
+      simulation.scheduleTimeout(() => {
         inFlight.forEach((msg) => {
           gossip.deliverGossip(msg.id);
         });
         updateVisualization();
       }, 500);
     }
-  }, [gossip]);
+  }, [gossip, simulation, syncVisualization]);
 
   useEffect(() => {
     simulation.onEvent('set_value', (event) => {

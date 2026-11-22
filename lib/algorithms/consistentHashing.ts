@@ -1,9 +1,25 @@
 import { ConsistentHashNode, ConsistentHashKey, ConsistentHashRing, SimulationEvent } from '../types';
+import { Snapshotable, cloneSnapshot } from '../snapshot';
 
-export class ConsistentHashingAlgorithm {
+export interface DistributionSnapshot {
+  label: string;
+  totalKeys: number;
+  physicalServers: number;
+  imbalance: number;
+  distribution: Record<string, number>;
+}
+
+export interface ConsistentHashingSnapshot {
+  ring: ConsistentHashRing;
+  eventLog: SimulationEvent[];
+  lastDistributionSnapshot: DistributionSnapshot | null;
+}
+
+export class ConsistentHashingAlgorithm implements Snapshotable<ConsistentHashingSnapshot> {
   private ring: ConsistentHashRing;
   private hashSpace: number = 2 ** 32; // 32-bit hash space
   private eventLog: SimulationEvent[];
+  private lastDistributionSnapshot: DistributionSnapshot | null = null;
 
   constructor(serverCount: number = 3, virtualNodesPerServer: number = 3) {
     this.ring = {
@@ -228,6 +244,35 @@ export class ConsistentHashingAlgorithm {
     return { min, max, avg, stdDev, imbalance };
   }
 
+  // Record a distribution inspection snapshot (used by show_distribution scenario events)
+  recordDistributionSnapshot(label: string = 'Load distribution'): DistributionSnapshot {
+    const stats = this.getStats();
+    const distributionRecord: Record<string, number> = {};
+    this.getPhysicalServers().forEach((serverId) => {
+      distributionRecord[serverId] = stats.loadDistribution.get(serverId) || 0;
+    });
+
+    const snapshot: DistributionSnapshot = {
+      label,
+      totalKeys: stats.totalKeys,
+      physicalServers: stats.physicalServers,
+      imbalance: stats.loadStats.imbalance,
+      distribution: distributionRecord,
+    };
+
+    this.lastDistributionSnapshot = snapshot;
+
+    this.addEvent('show_distribution', `${label} (imbalance ${stats.loadStats.imbalance.toFixed(2)}x)`, {
+      ...snapshot,
+    });
+
+    return snapshot;
+  }
+
+  getLastDistributionSnapshot(): DistributionSnapshot | null {
+    return this.lastDistributionSnapshot ? { ...this.lastDistributionSnapshot } : null;
+  }
+
   // Add event to log
   private addEvent(type: string, description: string, data: any = {}): void {
     const event: SimulationEvent = {
@@ -250,6 +295,7 @@ export class ConsistentHashingAlgorithm {
     this.ring.nodes = [];
     this.ring.keys = [];
     this.eventLog = [];
+    this.lastDistributionSnapshot = null;
   }
 
   // Batch add keys
@@ -301,5 +347,20 @@ export class ConsistentHashingAlgorithm {
     this.addEvent('virtual_nodes_changed', `Changed virtual nodes per server to ${count}`, {
       count,
     });
+  }
+
+  serialize(): ConsistentHashingSnapshot {
+    return cloneSnapshot({
+      ring: this.ring,
+      eventLog: this.eventLog,
+      lastDistributionSnapshot: this.lastDistributionSnapshot,
+    });
+  }
+
+  restore(snapshot: ConsistentHashingSnapshot): void {
+    const cloned = cloneSnapshot(snapshot);
+    this.ring = cloned.ring;
+    this.eventLog = cloned.eventLog;
+    this.lastDistributionSnapshot = cloned.lastDistributionSnapshot;
   }
 }

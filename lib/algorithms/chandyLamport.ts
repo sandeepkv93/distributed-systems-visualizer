@@ -1,6 +1,15 @@
 import { SnapshotNode, SnapshotMessage, SnapshotState, SnapshotChannelRecord, SimulationEvent } from '../types';
+import { Snapshotable, cloneSnapshot } from '../snapshot';
 
-export class ChandyLamportAlgorithm {
+export interface ChandyLamportSnapshot {
+  nodes: SnapshotNode[];
+  messages: SnapshotMessage[];
+  eventLog: SimulationEvent[];
+  messageIdCounter: number;
+  snapshotCounter: number;
+}
+
+export class ChandyLamportAlgorithm implements Snapshotable<ChandyLamportSnapshot> {
   private nodes: SnapshotNode[];
   private messages: SnapshotMessage[];
   private eventLog: SimulationEvent[];
@@ -244,5 +253,24 @@ export class ChandyLamportAlgorithm {
     this.eventLog = [];
     this.messageIdCounter = 0;
     this.snapshotCounter = 0;
+  }
+
+  serialize(): ChandyLamportSnapshot {
+    return cloneSnapshot({
+      nodes: this.nodes,
+      messages: this.messages,
+      eventLog: this.eventLog,
+      messageIdCounter: this.messageIdCounter,
+      snapshotCounter: this.snapshotCounter,
+    });
+  }
+
+  restore(snapshot: ChandyLamportSnapshot): void {
+    const cloned = cloneSnapshot(snapshot);
+    this.nodes = cloned.nodes;
+    this.messages = cloned.messages;
+    this.eventLog = cloned.eventLog;
+    this.messageIdCounter = cloned.messageIdCounter;
+    this.snapshotCounter = cloned.snapshotCounter;
   }
 }

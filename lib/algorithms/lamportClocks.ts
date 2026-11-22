@@ -1,6 +1,15 @@
 import { LamportNode, LamportMessage, LamportHoldbackMessage, SimulationEvent } from '../types';
+import { Snapshotable, cloneSnapshot } from '../snapshot';
 
-export class LamportClocksAlgorithm {
+export interface LamportClocksSnapshot {
+  nodes: LamportNode[];
+  messages: LamportMessage[];
+  eventLog: SimulationEvent[];
+  messageIdCounter: number;
+  pendingAcks: Map<string, Set<string>>;
+}
+
+export class LamportClocksAlgorithm implements Snapshotable<LamportClocksSnapshot> {
   private nodes: LamportNode[];
   private messages: LamportMessage[];
   private eventLog: SimulationEvent[];
@@ -285,5 +294,24 @@ export class LamportClocksAlgorithm {
     this.eventLog = [];
     this.messageIdCounter = 0;
     this.pendingAcks.clear();
+  }
+
+  serialize(): LamportClocksSnapshot {
+    return cloneSnapshot({
+      nodes: this.nodes,
+      messages: this.messages,
+      eventLog: this.eventLog,
+      messageIdCounter: this.messageIdCounter,
+      pendingAcks: this.pendingAcks,
+    });
+  }
+
+  restore(snapshot: LamportClocksSnapshot): void {
+    const cloned = cloneSnapshot(snapshot);
+    this.nodes = cloned.nodes;
+    this.messages = cloned.messages;
+    this.eventLog = cloned.eventLog;
+    this.messageIdCounter = cloned.messageIdCounter;
+    this.pendingAcks = cloned.pendingAcks;
   }
 }

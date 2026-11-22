@@ -1,9 +1,17 @@
 import { CRDTElement, CRDTMessage, CRDTReplica, SimulationEvent } from '../types';
+import { Snapshotable, cloneSnapshot } from '../snapshot';
 
 const HEAD_ID = 'HEAD';
 const DEFAULT_REPLICA_COUNT = 3;
 
-export class CRDTAlgorithm {
+export interface CRDTSnapshot {
+  replicas: CRDTReplica[];
+  messages: CRDTMessage[];
+  eventLog: SimulationEvent[];
+  messageIdCounter: number;
+}
+
+export class CRDTAlgorithm implements Snapshotable<CRDTSnapshot> {
   private replicas: CRDTReplica[];
   private messages: CRDTMessage[];
   private eventLog: SimulationEvent[];
@@ -265,5 +273,22 @@ export class CRDTAlgorithm {
       data,
     };
     this.eventLog.push(event);
+  }
+
+  serialize(): CRDTSnapshot {
+    return cloneSnapshot({
+      replicas: this.replicas,
+      messages: this.messages,
+      eventLog: this.eventLog,
+      messageIdCounter: this.messageIdCounter,
+    });
+  }
+
+  restore(snapshot: CRDTSnapshot): void {
+    const cloned = cloneSnapshot(snapshot);
+    this.replicas = cloned.replicas;
+    this.messages = cloned.messages;
+    this.eventLog = cloned.eventLog;
+    this.messageIdCounter = cloned.messageIdCounter;
   }
 }

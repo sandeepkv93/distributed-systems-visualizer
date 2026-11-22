@@ -5,8 +5,17 @@ import {
   TransactionPhase,
   SimulationEvent,
 } from '../types';
+import { Snapshotable, cloneSnapshot } from '../snapshot';
 
-export class DistributedTransactionsAlgorithm {
+export interface DistributedTransactionsSnapshot {
+  participants: TransactionParticipant[];
+  sagaSteps: SagaStep[];
+  messages: TransactionMessage[];
+  eventLog: SimulationEvent[];
+  messageIdCounter: number;
+}
+
+export class DistributedTransactionsAlgorithm implements Snapshotable<DistributedTransactionsSnapshot> {
   private participants: TransactionParticipant[];
   private sagaSteps: SagaStep[];
   private messages: TransactionMessage[];
@@ -216,5 +225,24 @@ export class DistributedTransactionsAlgorithm {
       data,
     };
     this.eventLog.push(event);
+  }
+
+  serialize(): DistributedTransactionsSnapshot {
+    return cloneSnapshot({
+      participants: this.participants,
+      sagaSteps: this.sagaSteps,
+      messages: this.messages,
+      eventLog: this.eventLog,
+      messageIdCounter: this.messageIdCounter,
+    });
+  }
+
+  restore(snapshot: DistributedTransactionsSnapshot): void {
+    const cloned = cloneSnapshot(snapshot);
+    this.participants = cloned.participants;
+    this.sagaSteps = cloned.sagaSteps;
+    this.messages = cloned.messages;
+    this.eventLog = cloned.eventLog;
+    this.messageIdCounter = cloned.messageIdCounter;
   }
 }

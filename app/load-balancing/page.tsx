@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { LoadBalancingAlgorithm } from '@/lib/algorithms/loadBalancing';
 import { useSimulation } from '@/hooks/useSimulation';
+import { useScenarioCompletion } from '@/hooks/useProgress';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
@@ -20,22 +21,36 @@ export default function LoadBalancingPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
 
-  const simulation = useSimulation([]);
-
-  const updateVisualization = useCallback(() => {
-    lb.tick();
+  const syncVisualization = useCallback(() => {
     setWorkers([...lb.getWorkers()]);
     setRequests([...lb.getRequests()]);
     setMessages([...lb.getMessages()]);
+  }, [lb]);
+
+  const simulation = useSimulation([], {
+    snapshot: {
+      capture: () => lb.serialize(),
+      restore: (snapshot) => {
+        lb.restore(snapshot);
+        syncVisualization();
+      },
+    },
+  });
+
+  useScenarioCompletion('load-balancing', selectedScenario, simulation.state);
+
+  const updateVisualization = useCallback(() => {
+    lb.tick();
+    syncVisualization();
 
     const inFlight = lb.getMessages().filter((m) => m.status === 'in-flight');
     if (inFlight.length > 0) {
-      setTimeout(() => {
+      simulation.scheduleTimeout(() => {
         inFlight.forEach((msg) => lb.deliverMessage(msg.id));
         updateVisualization();
       }, 400);
     }
-  }, [lb]);
+  }, [lb, simulation, syncVisualization]);
 
   useEffect(() => {
     simulation.onEvent('request', (event) => {
@@ -72,7 +87,7 @@ export default function LoadBalancingPage() {
     if (scenario) {
       lb.reset();
       simulation.setEvents(scenario.events);
-      updateVisualization();
+      syncVisualization();
     }
   };
 
@@ -127,7 +142,7 @@ export default function LoadBalancingPage() {
         onReset={() => {
           simulation.reset();
           lb.reset();
-          updateVisualization();
+          syncVisualization();
         }}
         onSpeedChange={simulation.setSpeed}
         onScenarioChange={handleScenarioChange}

@@ -1,6 +1,14 @@
 import { VectorClockProcess, VectorClockEvent, VectorClock, SimulationEvent } from '../types';
+import { Snapshotable, cloneSnapshot } from '../snapshot';
 
-export class VectorClocksAlgorithm {
+export interface VectorClocksSnapshot {
+  processes: Map<string, VectorClockProcess>;
+  allEvents: VectorClockEvent[];
+  eventLog: SimulationEvent[];
+  nextEventId: number;
+}
+
+export class VectorClocksAlgorithm implements Snapshotable<VectorClocksSnapshot> {
   private processes: Map<string, VectorClockProcess>;
   private allEvents: VectorClockEvent[];
   private eventLog: SimulationEvent[];
@@ -306,5 +314,22 @@ export class VectorClocksAlgorithm {
       receiveEvents,
       concurrentPairs,
     };
+  }
+
+  serialize(): VectorClocksSnapshot {
+    return cloneSnapshot({
+      processes: this.processes,
+      allEvents: this.allEvents,
+      eventLog: this.eventLog,
+      nextEventId: this.nextEventId,
+    });
+  }
+
+  restore(snapshot: VectorClocksSnapshot): void {
+    const cloned = cloneSnapshot(snapshot);
+    this.processes = cloned.processes;
+    this.allEvents = cloned.allEvents;
+    this.eventLog = cloned.eventLog;
+    this.nextEventId = cloned.nextEventId;
   }
 }

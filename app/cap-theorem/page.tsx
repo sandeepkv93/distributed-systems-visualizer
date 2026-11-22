@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
+import { useProgress } from '@/hooks/useProgress';
 import { motion } from 'framer-motion';
 
 type CAPProperty = 'C' | 'A' | 'P';
@@ -100,7 +101,11 @@ export default function CAPTheoremPage() {
   const svgRef = useRef<SVGSVGElement>(null);
   const [selectedCombination, setSelectedCombination] = useState<CAPCombination>(null);
   const [selectedSystem, setSelectedSystem] = useState<System | null>(null);
+  const [exploredCombinations, setExploredCombinations] = useState<Set<'CA' | 'CP' | 'AP'>>(
+    () => new Set()
+  );
   const [showArticle, setShowArticle] = useState(false);
+  const { completeConcept } = useProgress('cap-theorem');
 
   // Triangle vertices
   const triangleVertices = {
@@ -125,14 +130,33 @@ export default function CAPTheoremPage() {
     },
   };
 
+  useEffect(() => {
+    if (exploredCombinations.size === 3) {
+      completeConcept('cap-theorem');
+    }
+  }, [exploredCombinations.size, completeConcept]);
+
+  const recordCombinationExplored = (combo: 'CA' | 'CP' | 'AP') => {
+    setExploredCombinations((prev) => {
+      if (prev.has(combo)) return prev;
+      const next = new Set(prev);
+      next.add(combo);
+      return next;
+    });
+  };
+
   const handleCombinationClick = (combo: CAPCombination) => {
     setSelectedCombination(selectedCombination === combo ? null : combo);
     setSelectedSystem(null);
+    if (combo) {
+      recordCombinationExplored(combo);
+    }
   };
 
   const handleSystemClick = (system: System) => {
     setSelectedSystem(selectedSystem?.name === system.name ? null : system);
     setSelectedCombination(system.category);
+    recordCombinationExplored(system.category);
   };
 
   return (
@@ -235,13 +259,16 @@ export default function CAPTheoremPage() {
             <p className="text-slate-400 text-sm mt-1">
               Click on combinations or systems to explore trade-offs in distributed systems
             </p>
-            <div className="mt-3">
+            <div className="mt-3 flex items-center gap-3">
               <button
                 onClick={() => setShowArticle(true)}
                 className="px-3 py-1 text-sm bg-slate-700 text-white rounded hover:bg-slate-600"
               >
                 Read the theory
               </button>
+              <span className="text-xs text-slate-300 bg-slate-700/70 px-2.5 py-1 rounded">
+                Explored: {exploredCombinations.size}/3 trade-offs
+              </span>
             </div>
           </div>
           <ExportMenu

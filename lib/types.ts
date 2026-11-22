@@ -593,30 +593,10 @@ export interface Scenario {
   expectedOutcome: string;
 }
 
-// Quiz types
-export type QuizQuestionType = 'multiple-choice' | 'open-ended';
-
-export interface QuizQuestion {
-  id: string;
-  question: string;
-  type: QuizQuestionType;
-  options?: string[];
-  correctAnswer: string | number;
-  explanation: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-}
-
-export interface Quiz {
-  id: string;
-  concept: string;
-  questions: QuizQuestion[];
-}
-
 // Progress tracking types
 export interface UserProgress {
   conceptsCompleted: string[];
   scenariosCompleted: string[];
-  quizScores: { [quizId: string]: number };
   timeSpent: { [concept: string]: number };
   achievements: string[];
 }

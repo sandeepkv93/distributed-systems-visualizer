@@ -1,9 +1,19 @@
 import { ShardMessage, ShardMigration, ShardNode, ShardRange, ShardingStrategy, SimulationEvent } from '../types';
+import { Snapshotable, cloneSnapshot } from '../snapshot';
 
 const HASH_RING_SIZE = 100;
 const DEFAULT_KEY_COUNT = 60;
 
-export class ShardingRebalancingAlgorithm {
+export interface ShardingRebalancingSnapshot {
+  nodes: ShardNode[];
+  messages: ShardMessage[];
+  eventLog: SimulationEvent[];
+  messageIdCounter: number;
+  strategy: ShardingStrategy;
+  keys: number[];
+}
+
+export class ShardingRebalancingAlgorithm implements Snapshotable<ShardingRebalancingSnapshot> {
   private nodes: ShardNode[];
   private messages: ShardMessage[];
   private eventLog: SimulationEvent[];
@@ -238,5 +248,30 @@ export class ShardingRebalancingAlgorithm {
       data,
     };
     this.eventLog.push(event);
+  }
+
+  getStrategy(): ShardingStrategy {
+    return this.strategy;
+  }
+
+  serialize(): ShardingRebalancingSnapshot {
+    return cloneSnapshot({
+      nodes: this.nodes,
+      messages: this.messages,
+      eventLog: this.eventLog,
+      messageIdCounter: this.messageIdCounter,
+      strategy: this.strategy,
+      keys: this.keys,
+    });
+  }
+
+  restore(snapshot: ShardingRebalancingSnapshot): void {
+    const cloned = cloneSnapshot(snapshot);
+    this.nodes = cloned.nodes;
+    this.messages = cloned.messages;
+    this.eventLog = cloned.eventLog;
+    this.messageIdCounter = cloned.messageIdCounter;
+    this.strategy = cloned.strategy;
+    this.keys = cloned.keys;
   }
 }

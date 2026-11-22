@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { DistributedLockAlgorithm } from '@/lib/algorithms/distributedLock';
 import { useSimulation } from '@/hooks/useSimulation';
+import { useScenarioCompletion } from '@/hooks/useProgress';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
@@ -19,21 +20,35 @@ export default function DistributedLockingPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
 
-  const simulation = useSimulation([]);
+  const syncVisualization = useCallback(() => {
+    setNodes([...lock.getNodes()]);
+    setMessages([...lock.getMessages()]);
+  }, [lock]);
+
+  const simulation = useSimulation([], {
+    snapshot: {
+      capture: () => lock.serialize(),
+      restore: (snapshot) => {
+        lock.restore(snapshot);
+        syncVisualization();
+      },
+    },
+  });
+
+  useScenarioCompletion('distributed-locking', selectedScenario, simulation.state);
 
   const updateVisualization = useCallback(() => {
     lock.checkTimeouts();
-    setNodes([...lock.getNodes()]);
-    setMessages([...lock.getMessages()]);
+    syncVisualization();
 
     const inFlight = lock.getMessages().filter((m) => m.status === 'in-flight');
     if (inFlight.length > 0) {
-      setTimeout(() => {
+      simulation.scheduleTimeout(() => {
         inFlight.forEach((msg) => lock.deliverMessage(msg.id));
         updateVisualization();
       }, 500);
     }
-  }, [lock]);
+  }, [lock, simulation, syncVisualization]);
 
   useEffect(() => {
     simulation.onEvent('request_lock', (event) => {
@@ -73,7 +88,7 @@ export default function DistributedLockingPage() {
     if (scenario) {
       lock.reset();
       simulation.setEvents(scenario.events);
-      updateVisualization();
+      syncVisualization();
     }
   };
 
@@ -158,7 +173,7 @@ export default function DistributedLockingPage() {
         onReset={() => {
           simulation.reset();
           lock.reset();
-          updateVisualization();
+          syncVisualization();
         }}
         onSpeedChange={simulation.setSpeed}
         onScenarioChange={handleScenarioChange}

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ReplicationLogAlgorithm } from '@/lib/algorithms/replicationLog';
 import { useSimulation } from '@/hooks/useSimulation';
+import { useScenarioCompletion } from '@/hooks/useProgress';
 import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
@@ -19,23 +20,37 @@ export default function ReplicationLogPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
 
-  const simulation = useSimulation([]);
-
-  const updateVisualization = useCallback(() => {
+  const syncVisualization = useCallback(() => {
     setPartition({
       ...replication.getPartition(),
       replicas: [...replication.getPartition().replicas],
     });
     setMessages([...replication.getMessages()]);
+  }, [replication]);
+
+  const simulation = useSimulation([], {
+    snapshot: {
+      capture: () => replication.serialize(),
+      restore: (snapshot) => {
+        replication.restore(snapshot);
+        syncVisualization();
+      },
+    },
+  });
+
+  useScenarioCompletion('replication-log', selectedScenario, simulation.state);
+
+  const updateVisualization = useCallback(() => {
+    syncVisualization();
 
     const inFlight = replication.getMessages().filter((m) => m.status === 'in-flight');
     if (inFlight.length > 0) {
-      setTimeout(() => {
+      simulation.scheduleTimeout(() => {
         inFlight.forEach((msg) => replication.deliverMessage(msg.id));
         updateVisualization();
       }, 500);
     }
-  }, [replication]);
+  }, [replication, simulation, syncVisualization]);
 
   useEffect(() => {
     simulation.onEvent('produce', (event) => {

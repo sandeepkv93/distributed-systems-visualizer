@@ -6,8 +6,18 @@ import {
   EPaxosInstance,
   SimulationEvent,
 } from '../types';
+import { Snapshotable, cloneSnapshot } from '../snapshot';
 
-export class ConsensusVariantsAlgorithm {
+export interface ConsensusVariantsSnapshot {
+  variants: Record<ConsensusVariant, ConsensusNode[]>;
+  messages: ConsensusMessage[];
+  eventLog: SimulationEvent[];
+  messageIdCounter: number;
+  entryCounter: number;
+  instanceCounter: number;
+}
+
+export class ConsensusVariantsAlgorithm implements Snapshotable<ConsensusVariantsSnapshot> {
   private variants: Record<ConsensusVariant, ConsensusNode[]>;
   private messages: ConsensusMessage[];
   private eventLog: SimulationEvent[];
@@ -208,5 +218,26 @@ export class ConsensusVariantsAlgorithm {
       data,
     };
     this.eventLog.push(event);
+  }
+
+  serialize(): ConsensusVariantsSnapshot {
+    return cloneSnapshot({
+      variants: this.variants,
+      messages: this.messages,
+      eventLog: this.eventLog,
+      messageIdCounter: this.messageIdCounter,
+      entryCounter: this.entryCounter,
+      instanceCounter: this.instanceCounter,
+    });
+  }
+
+  restore(snapshot: ConsensusVariantsSnapshot): void {
+    const cloned = cloneSnapshot(snapshot);
+    this.variants = cloned.variants;
+    this.messages = cloned.messages;
+    this.eventLog = cloned.eventLog;
+    this.messageIdCounter = cloned.messageIdCounter;
+    this.entryCounter = cloned.entryCounter;
+    this.instanceCounter = cloned.instanceCounter;
   }
 }

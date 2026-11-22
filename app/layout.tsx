@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import Navigation from '@/components/Navigation';
+import AchievementToast from '@/components/AchievementToast';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -23,6 +24,7 @@ export default function RootLayout({
       <body className={`${inter.variable} font-sans antialiased bg-slate-900 text-white`}>
         <Navigation />
         <main>{children}</main>
+        <AchievementToast />
       </body>
     </html>
   );
