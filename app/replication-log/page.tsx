@@ -126,7 +126,7 @@ export default function ReplicationLogPage() {
   const stats = replication.getStats();
 
   return (
-    <div className="flex h-screen bg-slate-900">
+    <div className="flex flex-col md:flex-row min-h-screen md:h-screen bg-slate-900">
       <ControlPanel
         isPlaying={simulation.state.isPlaying}
         speed={simulation.state.speed}
@@ -179,7 +179,7 @@ export default function ReplicationLogPage() {
           </div>
         </div>
 
-        <div className="flex-1 relative bg-slate-900 overflow-hidden">
+        <div className="flex-1 relative bg-slate-900 overflow-hidden min-h-[420px]">
           <div className="absolute top-4 right-4 z-20">
             <ExportMenu
               svgRef={svgRef}
@@ -188,7 +188,7 @@ export default function ReplicationLogPage() {
             />
           </div>
 
-          <svg ref={svgRef} className="w-full h-full">
+          <svg ref={svgRef} viewBox="0 0 840 340" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
             {partition.replicas.map((replica, index) => (
               <motion.g
                 key={replica.id}

@@ -1,10 +1,22 @@
 'use client';
 
+import { useState } from 'react';
 import { useProgress } from '@/hooks/useProgress';
-import { Trophy, Award, Clock, BookOpen, Target, RotateCcw, Download, Upload } from 'lucide-react';
-import { motion } from 'framer-motion';
+import {
+  Trophy,
+  Award,
+  Clock,
+  BookOpen,
+  Target,
+  RotateCcw,
+  Download,
+  Upload,
+  AlertTriangle,
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { exportProgress, importProgress } from '@/lib/progress';
 import { CONCEPTS_CATALOG } from '@/lib/catalog';
+import { showToast } from '@/lib/toast';
 
 interface ProgressDashboardProps {
   onClose: () => void;
@@ -12,6 +24,7 @@ interface ProgressDashboardProps {
 
 export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
   const { progress, achievements, stats, reset, refresh } = useProgress();
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const formatTime = (milliseconds: number): string => {
     const hours = Math.floor(milliseconds / 3600000);
@@ -39,6 +52,7 @@ export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
     a.download = 'distributed-systems-progress.json';
     a.click();
     URL.revokeObjectURL(url);
+    showToast('Progress exported as JSON.', 'success');
   };
 
   const handleImport = () => {
@@ -53,15 +67,21 @@ export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
           const content = event.target?.result as string;
           if (importProgress(content)) {
             refresh();
-            alert('Progress imported successfully!');
+            showToast('Progress imported successfully!', 'success');
           } else {
-            alert('Failed to import progress. Please check the file format.');
+            showToast('Failed to import progress. Please check the file format.', 'error');
           }
         };
         reader.readAsText(file);
       }
     };
     input.click();
+  };
+
+  const handleConfirmReset = () => {
+    reset();
+    setShowResetConfirm(false);
+    showToast('All learning progress has been reset.', 'info');
   };
 
   const completionPercentage =
@@ -74,7 +94,7 @@ export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-slate-800 rounded-lg max-w-4xl w-full border border-slate-700 max-h-[90vh] overflow-y-auto"
+        className="bg-slate-800 rounded-lg max-w-4xl w-full border border-slate-700 max-h-[90vh] overflow-y-auto relative"
       >
         {/* Header */}
         <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-6 z-10 flex items-center justify-between">
@@ -82,7 +102,12 @@ export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
             <h2 className="text-2xl font-bold text-white mb-1">Your Learning Progress</h2>
             <p className="text-slate-400 text-sm">Track your journey through distributed systems</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-slate-400 hover:text-white transition-colors"
+            aria-label="Close progress dashboard"
+          >
             ✕
           </button>
         </div>
@@ -231,6 +256,7 @@ export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
           {/* Actions */}
           <div className="flex flex-wrap gap-3">
             <button
+              type="button"
               onClick={handleExport}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
             >
@@ -238,6 +264,7 @@ export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
               Export Progress
             </button>
             <button
+              type="button"
               onClick={handleImport}
               className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
             >
@@ -245,7 +272,8 @@ export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
               Import Progress
             </button>
             <button
-              onClick={reset}
+              type="button"
+              onClick={() => setShowResetConfirm(true)}
               className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors ml-auto"
             >
               <RotateCcw className="w-4 h-4" />
@@ -253,6 +281,54 @@ export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
             </button>
           </div>
         </div>
+
+        {/* Reset Confirmation Modal */}
+        <AnimatePresence>
+          {showResetConfirm && (
+            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-slate-800 border border-slate-600 rounded-lg max-w-md w-full p-6 shadow-2xl space-y-4"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="reset-confirm-title"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-red-900/50 border border-red-600 flex items-center justify-center flex-shrink-0">
+                    <AlertTriangle className="w-5 h-5 text-red-400" />
+                  </div>
+                  <div>
+                    <h3 id="reset-confirm-title" className="text-lg font-semibold text-white">
+                      Reset all learning progress?
+                    </h3>
+                    <p className="text-sm text-slate-300 mt-1">
+                      This clears all completed concepts, completed scenarios, time tracked, and
+                      unlocked achievements. This action cannot be undone.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowResetConfirm(false)}
+                    className="px-4 py-2 text-sm bg-slate-700 text-slate-200 rounded hover:bg-slate-600 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmReset}
+                    className="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition-colors font-medium"
+                  >
+                    Yes, Reset Progress
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </div>
   );

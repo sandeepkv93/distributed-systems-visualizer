@@ -437,14 +437,12 @@ export function getProgressStats(): ProgressStats {
 }
 
 // Reset all progress
-export function resetProgress(skipConfirm: boolean = false): void {
+export function resetProgress(): void {
   if (typeof window === 'undefined') return;
 
-  if (skipConfirm || confirm('Are you sure you want to reset all progress? This cannot be undone.')) {
-    localStorage.removeItem(PROGRESS_KEY);
-    sessionStorage.removeItem(SESSION_START_KEY);
-    notifyProgressListeners();
-  }
+  localStorage.removeItem(PROGRESS_KEY);
+  sessionStorage.removeItem(SESSION_START_KEY);
+  notifyProgressListeners();
 }
 
 // Export progress as JSON

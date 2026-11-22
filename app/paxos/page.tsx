@@ -146,7 +146,7 @@ export default function PaxosPage() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-900">
+    <div className="flex flex-col md:flex-row min-h-screen md:h-screen bg-slate-900">
       {/* Control Panel */}
       <ControlPanel
         isPlaying={simulation.state.isPlaying}
@@ -223,8 +223,8 @@ export default function PaxosPage() {
         </div>
 
         {/* Visualization Canvas */}
-        <div className="flex-1 relative bg-slate-900 overflow-hidden">
-          <svg ref={svgRef} className="w-full h-full">
+        <div className="flex-1 relative bg-slate-900 overflow-hidden min-h-[420px]">
+          <svg ref={svgRef} viewBox="0 0 820 620" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
             {/* Draw messages */}
             <AnimatePresence>
               {messages.map((message) => {

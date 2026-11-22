@@ -162,7 +162,7 @@ export default function DistributedTransactionsPage() {
   const stats = transactions.getStats();
 
   return (
-    <div className="flex h-screen bg-slate-900">
+    <div className="flex flex-col md:flex-row min-h-screen md:h-screen bg-slate-900">
       <ControlPanel
         isPlaying={simulation.state.isPlaying}
         speed={simulation.state.speed}
@@ -220,7 +220,7 @@ export default function DistributedTransactionsPage() {
           </div>
         </div>
 
-        <div className="flex-1 relative bg-slate-900 overflow-hidden">
+        <div className="flex-1 relative bg-slate-900 overflow-hidden min-h-[420px]">
           <div className="absolute top-4 right-4 z-20">
             <ExportMenu
               svgRef={svgRef}

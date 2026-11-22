@@ -10,6 +10,7 @@ import {
   copyLinkToClipboard,
   copyStateToClipboard,
 } from '@/lib/export';
+import { showToast } from '@/lib/toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ExportMenuProps {
@@ -29,9 +30,10 @@ export default function ExportMenu({ svgRef, concept, currentState }: ExportMenu
     setIsExporting(true);
     try {
       await exportAsPNG(svgRef.current, `${concept.toLowerCase().replace(/\s+/g, '-')}.png`);
+      showToast('Exported visualization as PNG.', 'success');
     } catch (error) {
       console.error('Export failed:', error);
-      alert('Failed to export PNG. Please try again.');
+      showToast('Failed to export PNG. Please try again.', 'error');
     } finally {
       setIsExporting(false);
       setIsOpen(false);
@@ -44,9 +46,10 @@ export default function ExportMenu({ svgRef, concept, currentState }: ExportMenu
     setIsExporting(true);
     try {
       exportAsSVG(svgRef.current, `${concept.toLowerCase().replace(/\s+/g, '-')}.svg`);
+      showToast('Exported visualization as SVG.', 'success');
     } catch (error) {
       console.error('Export failed:', error);
-      alert('Failed to export SVG. Please try again.');
+      showToast('Failed to export SVG. Please try again.', 'error');
     } finally {
       setIsExporting(false);
       setIsOpen(false);
@@ -55,16 +58,17 @@ export default function ExportMenu({ svgRef, concept, currentState }: ExportMenu
 
   const handleExportJSON = () => {
     if (!currentState) {
-      alert('No state available to export');
+      showToast('No state available to export.', 'info');
       return;
     }
 
     setIsExporting(true);
     try {
       exportStateAsJSON(currentState, `${concept.toLowerCase().replace(/\s+/g, '-')}-state.json`);
+      showToast('Exported simulation state as JSON.', 'success');
     } catch (error) {
       console.error('Export failed:', error);
-      alert('Failed to export state. Please try again.');
+      showToast('Failed to export state. Please try again.', 'error');
     } finally {
       setIsExporting(false);
       setIsOpen(false);
@@ -80,11 +84,11 @@ export default function ExportMenu({ svgRef, concept, currentState }: ExportMenu
       setIsOpen(false);
     } catch (error: any) {
       if (error.message?.includes('not supported')) {
-        alert('Sharing is not supported in this browser. Try exporting as PNG instead.');
+        showToast('Sharing is not supported in this browser. Try exporting as PNG instead.', 'info');
       } else if (error.name !== 'AbortError') {
         // AbortError means user cancelled the share dialog
         console.error('Share failed:', error);
-        alert('Failed to share. Please try exporting instead.');
+        showToast('Failed to share. Please try exporting instead.', 'error');
       }
     } finally {
       setIsExporting(false);
@@ -95,24 +99,26 @@ export default function ExportMenu({ svgRef, concept, currentState }: ExportMenu
     try {
       await copyLinkToClipboard();
       showCopyFeedback('Link copied!');
+      showToast('Link copied to clipboard.', 'success');
     } catch (error) {
       console.error('Copy failed:', error);
-      alert('Failed to copy link');
+      showToast('Failed to copy link.', 'error');
     }
   };
 
   const handleCopyState = async () => {
     if (!currentState) {
-      alert('No state available to copy');
+      showToast('No state available to copy.', 'info');
       return;
     }
 
     try {
       await copyStateToClipboard(currentState, concept);
       showCopyFeedback('State copied!');
+      showToast('Simulation state copied to clipboard.', 'success');
     } catch (error) {
       console.error('Copy failed:', error);
-      alert('Failed to copy state');
+      showToast('Failed to copy state.', 'error');
     }
   };
 
@@ -125,6 +131,7 @@ export default function ExportMenu({ svgRef, concept, currentState }: ExportMenu
     <div className="relative">
       {/* Export Button */}
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
         disabled={isExporting}
@@ -145,6 +152,7 @@ export default function ExportMenu({ svgRef, concept, currentState }: ExportMenu
           >
             {/* PNG Export */}
             <button
+              type="button"
               onClick={handleExportPNG}
               disabled={isExporting}
               className="w-full px-4 py-2 flex items-center gap-3 hover:bg-slate-700 transition-colors text-left disabled:opacity-50"
@@ -158,6 +166,7 @@ export default function ExportMenu({ svgRef, concept, currentState }: ExportMenu
 
             {/* SVG Export */}
             <button
+              type="button"
               onClick={handleExportSVG}
               disabled={isExporting}
               className="w-full px-4 py-2 flex items-center gap-3 hover:bg-slate-700 transition-colors text-left disabled:opacity-50"
@@ -172,6 +181,7 @@ export default function ExportMenu({ svgRef, concept, currentState }: ExportMenu
             {/* JSON State Export */}
             {currentState && (
               <button
+                type="button"
                 onClick={handleExportJSON}
                 disabled={isExporting}
                 className="w-full px-4 py-2 flex items-center gap-3 hover:bg-slate-700 transition-colors text-left disabled:opacity-50"
@@ -188,6 +198,7 @@ export default function ExportMenu({ svgRef, concept, currentState }: ExportMenu
 
             {/* Share */}
             <button
+              type="button"
               onClick={handleShare}
               disabled={isExporting}
               className="w-full px-4 py-2 flex items-center gap-3 hover:bg-slate-700 transition-colors text-left disabled:opacity-50"
@@ -201,6 +212,7 @@ export default function ExportMenu({ svgRef, concept, currentState }: ExportMenu
 
             {/* Copy Link */}
             <button
+              type="button"
               onClick={handleCopyLink}
               className="w-full px-4 py-2 flex items-center gap-3 hover:bg-slate-700 transition-colors text-left relative"
             >
@@ -218,6 +230,7 @@ export default function ExportMenu({ svgRef, concept, currentState }: ExportMenu
             {/* Copy State */}
             {currentState && (
               <button
+                type="button"
                 onClick={handleCopyState}
                 className="w-full px-4 py-2 flex items-center gap-3 hover:bg-slate-700 transition-colors text-left relative"
               >

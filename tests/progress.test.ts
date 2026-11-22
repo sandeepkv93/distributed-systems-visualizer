@@ -45,7 +45,7 @@ function installMockStorage() {
 describe('Progress & Achievements system', () => {
   beforeEach(() => {
     installMockStorage();
-    resetProgress(true);
+    resetProgress();
   });
 
   it('never returns a shared mutable defaultProgress reference', () => {
@@ -149,7 +149,7 @@ describe('Progress & Achievements system', () => {
 
     markConceptCompleted('cap-theorem');
     const exported = exportProgress();
-    resetProgress(true);
+    resetProgress();
     assert.equal(getProgress().conceptsCompleted.length, 0);
 
     assert.equal(importProgress(exported), true);

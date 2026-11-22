@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import Navigation from '@/components/Navigation';
 import AchievementToast from '@/components/AchievementToast';
+import ToastContainer from '@/components/ToastContainer';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -24,6 +25,7 @@ export default function RootLayout({
       <body className={`${inter.variable} font-sans antialiased bg-slate-900 text-white`}>
         <Navigation />
         <main>{children}</main>
+        <ToastContainer />
         <AchievementToast />
       </body>
     </html>

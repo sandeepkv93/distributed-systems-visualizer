@@ -170,7 +170,7 @@ export default function VectorClocksPage() {
   const stats = vc.getStats();
 
   return (
-    <div className="flex h-screen bg-slate-900">
+    <div className="flex flex-col md:flex-row min-h-screen md:h-screen bg-slate-900">
       {/* Control Panel */}
       <ControlPanel
         isPlaying={simulation.state.isPlaying}

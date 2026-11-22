@@ -70,4 +70,42 @@ describe('Catalog and scenario event contracts', () => {
       );
     }
   });
+
+  it('sets responsive viewBox on every visualizer SVG and avoids blocking alert/confirm dialogs', () => {
+    for (const concept of CONCEPTS_CATALOG) {
+      const pagePath = path.join(repoRoot, 'app', concept.id, 'page.tsx');
+      const pageSource = fs.readFileSync(pagePath, 'utf8');
+      const svgMatch = pageSource.match(/<svg[^>]*ref=\{svgRef\}[^>]*>/);
+      assert.ok(svgMatch, `Expected <svg ref={svgRef}> in app/${concept.id}/page.tsx`);
+      assert.ok(
+        svgMatch[0].includes('viewBox='),
+        `Missing viewBox on <svg ref={svgRef}> in app/${concept.id}/page.tsx`
+      );
+    }
+
+    const dirsToCheck = ['app', 'components', 'hooks', 'lib'];
+    const walk = (dir: string): string[] => {
+      const files: string[] = [];
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          files.push(...walk(full));
+        } else if (entry.isFile() && /\.(ts|tsx)$/.test(entry.name)) {
+          files.push(full);
+        }
+      }
+      return files;
+    };
+
+    for (const relDir of dirsToCheck) {
+      for (const file of walk(path.join(repoRoot, relDir))) {
+        const source = fs.readFileSync(file, 'utf8');
+        assert.equal(
+          /\b(?:window\.)?(?:alert|confirm)\s*\(/.test(source),
+          false,
+          `Found blocking alert()/confirm() call in ${path.relative(repoRoot, file)}`
+        );
+      }
+    }
+  });
 });

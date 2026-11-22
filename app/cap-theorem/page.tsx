@@ -160,9 +160,9 @@ export default function CAPTheoremPage() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-900">
+    <div className="flex flex-col md:flex-row min-h-screen md:h-screen bg-slate-900">
       {/* Left Panel - Educational Content */}
-      <div className="w-96 bg-slate-800 border-r border-slate-700 p-6 overflow-y-auto">
+      <div className="w-full md:w-96 bg-slate-800 border-b md:border-b-0 md:border-r border-slate-700 p-6 max-h-[45vh] md:max-h-none overflow-y-auto">
         <h2 className="text-xl font-bold text-white mb-4">CAP Theorem</h2>
 
         <div className="space-y-4 text-sm">
@@ -282,8 +282,8 @@ export default function CAPTheoremPage() {
         </div>
 
         {/* Canvas */}
-        <div className="flex-1 relative bg-slate-900 flex items-center justify-center">
-          <svg ref={svgRef} className="w-full h-full">
+        <div className="flex-1 relative bg-slate-900 flex items-center justify-center min-h-[420px]">
+          <svg ref={svgRef} viewBox="0 0 800 660" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
             {/* Triangle */}
             <motion.polygon
               points={`${triangleVertices.C.x},${triangleVertices.C.y} ${triangleVertices.A.x},${triangleVertices.A.y} ${triangleVertices.P.x},${triangleVertices.P.y}`}
