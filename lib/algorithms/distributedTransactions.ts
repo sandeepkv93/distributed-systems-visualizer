@@ -2,7 +2,6 @@ import {
   SagaStep,
   TransactionMessage,
   TransactionParticipant,
-  TransactionPhase,
   SimulationEvent,
 } from '../types';
 import { Snapshotable, cloneSnapshot } from '../snapshot';

@@ -1,4 +1,4 @@
-import { PBFTLogEntry, PBFTMessage, PBFTNode, PBFTPhase, SimulationEvent } from '../types';
+import { PBFTLogEntry, PBFTMessage, PBFTNode, SimulationEvent } from '../types';
 import { Snapshotable, cloneSnapshot } from '../snapshot';
 
 export interface PBFTSnapshot {

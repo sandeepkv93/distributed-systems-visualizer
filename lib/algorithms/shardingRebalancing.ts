@@ -1,4 +1,4 @@
-import { ShardMessage, ShardMigration, ShardNode, ShardRange, ShardingStrategy, SimulationEvent } from '../types';
+import { ShardMessage, ShardMigration, ShardNode, ShardingStrategy, SimulationEvent } from '../types';
 import { Snapshotable, cloneSnapshot } from '../snapshot';
 
 const HASH_RING_SIZE = 100;

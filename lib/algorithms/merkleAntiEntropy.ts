@@ -134,7 +134,7 @@ export class MerkleAntiEntropyAlgorithm implements Snapshotable<MerkleAntiEntrop
     if (!message) return;
 
     if (message.type === 'CompareRoot') {
-      this.handleCompareRoot(message);
+      this.handleCompareRoot();
     } else if (message.type === 'CompareNode') {
       this.handleCompareNode(message);
     } else if (message.type === 'SyncLeaf') {
@@ -144,7 +144,7 @@ export class MerkleAntiEntropyAlgorithm implements Snapshotable<MerkleAntiEntrop
     message.status = 'success';
   }
 
-  private handleCompareRoot(message: MerkleMessage): void {
+  private handleCompareRoot(): void {
     const [a, b] = this.replicas;
     if (!a || !b) return;
     if (a.root?.hash === b.root?.hash) {

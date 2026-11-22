@@ -1,4 +1,4 @@
-import { FailureDetectorMessage, FailureDetectorNode, FDStatus, SimulationEvent } from '../types';
+import { FailureDetectorMessage, FailureDetectorNode, SimulationEvent } from '../types';
 import { Snapshotable, cloneSnapshot } from '../snapshot';
 
 const PHI_THRESHOLD = 8;

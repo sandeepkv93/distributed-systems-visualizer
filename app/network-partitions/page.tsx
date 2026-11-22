@@ -9,7 +9,7 @@ import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import { networkPartitionsScenarios } from '@/visualizers/network-partitions/scenarios';
-import { PartitionLink, PartitionMessage, PartitionNode } from '@/lib/types';
+import { PartitionLink, PartitionNode } from '@/lib/types';
 import { motion } from 'framer-motion';
 
 export default function NetworkPartitionsPage() {
@@ -17,14 +17,12 @@ export default function NetworkPartitionsPage() {
   const [np] = useState(() => new NetworkPartitionsAlgorithm(5));
   const [nodes, setNodes] = useState<PartitionNode[]>(np.getNodes());
   const [links, setLinks] = useState<PartitionLink[]>(np.getLinks());
-  const [messages, setMessages] = useState<PartitionMessage[]>(np.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
 
   const syncVisualization = useCallback(() => {
     setNodes([...np.getNodes()]);
     setLinks([...np.getLinks()]);
-    setMessages([...np.getMessages()]);
   }, [np]);
 
   const simulation = useSimulation([], {

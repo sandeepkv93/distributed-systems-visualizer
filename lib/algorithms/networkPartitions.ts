@@ -1,4 +1,4 @@
-import { PartitionLink, PartitionMessage, PartitionNode, PartitionRole, SimulationEvent } from '../types';
+import { PartitionLink, PartitionMessage, PartitionNode, SimulationEvent } from '../types';
 import { Snapshotable, cloneSnapshot } from '../snapshot';
 
 export interface NetworkPartitionsSnapshot {

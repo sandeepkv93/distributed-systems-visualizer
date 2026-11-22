@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, Share2, Copy, FileJson, Image, Link2, Check } from 'lucide-react';
+import { Download, Share2, Copy, FileJson, Image as ImageIcon, Link2, Check } from 'lucide-react';
 import {
   exportAsPNG,
   exportAsSVG,
@@ -149,7 +149,7 @@ export default function ExportMenu({ svgRef, concept, currentState }: ExportMenu
               disabled={isExporting}
               className="w-full px-4 py-2 flex items-center gap-3 hover:bg-slate-700 transition-colors text-left disabled:opacity-50"
             >
-              <Image className="w-4 h-4 text-blue-400" />
+              <ImageIcon className="w-4 h-4 text-blue-400" aria-hidden="true" />
               <div>
                 <div className="text-white text-sm font-medium">Export as PNG</div>
                 <div className="text-slate-400 text-xs">High-quality image</div>
@@ -162,7 +162,7 @@ export default function ExportMenu({ svgRef, concept, currentState }: ExportMenu
               disabled={isExporting}
               className="w-full px-4 py-2 flex items-center gap-3 hover:bg-slate-700 transition-colors text-left disabled:opacity-50"
             >
-              <Image className="w-4 h-4 text-purple-400" />
+              <ImageIcon className="w-4 h-4 text-purple-400" aria-hidden="true" />
               <div>
                 <div className="text-white text-sm font-medium">Export as SVG</div>
                 <div className="text-slate-400 text-xs">Scalable vector</div>

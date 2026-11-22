@@ -16,7 +16,6 @@ export default function VectorClocksPage() {
   const svgRef = useRef<SVGSVGElement>(null);
   const [vc] = useState(() => new VectorClocksAlgorithm(3));
   const [processes, setProcesses] = useState<VectorClockProcess[]>(vc.getProcesses());
-  const [allEvents, setAllEvents] = useState<VectorClockEvent[]>([]);
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set());
   const [showArticle, setShowArticle] = useState(false);
@@ -24,7 +23,6 @@ export default function VectorClocksPage() {
   // Update visualization
   const updateVisualization = useCallback(() => {
     setProcesses([...vc.getProcesses()]);
-    setAllEvents([...vc.getAllEvents()]);
   }, [vc]);
 
   const simulation = useSimulation([], {
