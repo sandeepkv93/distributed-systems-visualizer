@@ -6,7 +6,9 @@
     "dev": "bazelisk run //:dev -- \"$PWD\"",
     "build": "bazelisk build //:site_export",
     "start": "next start",
-    "lint": "bazelisk run //:lint"
+    "lint": "bazelisk run //:lint",
+    "test": "bazelisk test //:test --test_output=errors",
+    "test:node": "node scripts/run-tests.mjs"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",

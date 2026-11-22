@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "incremental": false,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "ES2020",
+    "rootDir": ".",
+    "outDir": ".test-dist",
+    "esModuleInterop": true
+  },
+  "include": [
+    "lib/**/*.ts",
+    "visualizers/**/*.ts",
+    "tests/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "bazel-*",
+    "bazel-bin",
+    "bazel-out",
+    "bazel-testlogs"
+  ]
+}

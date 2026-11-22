@@ -30,6 +30,9 @@ jobs:
       - name: Lint
         run: bazelisk run //:lint
 
+      - name: Test
+        run: bazelisk test //:test --test_output=errors
+
       - name: Build
         run: bazelisk build //:site_export
         env:

@@ -1,7 +1,7 @@
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("@npm//:eslint/package_json.bzl", eslint_bin = "bin")
 load("@npm//:next/package_json.bzl", next_bin = "bin")
-load("@aspect_rules_js//js:defs.bzl", "js_run_binary")
+load("@aspect_rules_js//js:defs.bzl", "js_run_binary", "js_test")
 
 npm_link_all_packages(name = "node_modules")
 
@@ -26,6 +26,18 @@ filegroup(
             "out/**",
             "package-lock.json",
             "pnpm-lock.yaml",
+        ],
+        allow_empty = True,
+    ),
+    visibility = ["//visibility:private"],
+)
+
+filegroup(
+    name = "test_srcs",
+    srcs = glob(
+        [
+            "scripts/**",
+            "tests/**",
         ],
         allow_empty = True,
     ),
@@ -90,7 +102,22 @@ eslint_bin.eslint_binary(
     data = [
         ":app_srcs",
         ":node_modules",
+        ":test_srcs",
         "eslint.config.mjs",
         "package.json",
+    ],
+)
+
+js_test(
+    name = "test",
+    entry_point = "scripts/run-tests.mjs",
+    chdir = package_name(),
+    data = [
+        ":app_srcs",
+        ":node_modules",
+        ":test_srcs",
+        "package.json",
+        "tsconfig.json",
+        "tsconfig.test.json",
     ],
 )
