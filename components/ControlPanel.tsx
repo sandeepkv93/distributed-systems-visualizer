@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import {
   Play,
@@ -14,6 +14,11 @@ import {
 } from 'lucide-react';
 import { Scenario, SimulationEvent } from '@/lib/types';
 import { getCheckpointForScenario } from '@/lib/checkpoints';
+import {
+  buildScenarioDeepLinkUrl,
+  clampDeepLinkStep,
+  parseScenarioDeepLink,
+} from '@/lib/deeplink';
 import PredictionCheckpoint from './PredictionCheckpoint';
 
 interface ControlPanelProps {
@@ -55,6 +60,9 @@ export default function ControlPanel({
 }: ControlPanelProps) {
   const pathname = usePathname();
   const [showObjectives, setShowObjectives] = useState(false);
+  const deepLinkInitializedRef = useRef(false);
+  const pendingDeepLinkStepRef = useRef<number | null>(null);
+  const pendingDeepLinkScenarioRef = useRef<string | null>(null);
 
   const activeScenario = useMemo(
     () => scenarios.find((s) => s.id === selectedScenario) ?? null,
@@ -79,6 +87,63 @@ export default function ControlPanel({
       : totalEvents > 0
       ? Math.round((progress / 100) * totalEvents)
       : 0;
+
+  // Hydrate `?scenario=<id>&step=<n>` once on mount (static-export safe)
+  useEffect(() => {
+    if (deepLinkInitializedRef.current || typeof window === 'undefined') return;
+    if (scenarios.length === 0 || !onScenarioChange) {
+      deepLinkInitializedRef.current = true;
+      return;
+    }
+
+    deepLinkInitializedRef.current = true;
+    const { scenarioId, step } = parseScenarioDeepLink(window.location.search);
+    if (!scenarioId) return;
+
+    const matched = scenarios.find((s) => s.id === scenarioId);
+    if (!matched) return;
+
+    pendingDeepLinkScenarioRef.current = matched.id;
+    pendingDeepLinkStepRef.current = step;
+    if (selectedScenario !== matched.id) {
+      onScenarioChange(matched.id);
+    }
+  }, [scenarios, selectedScenario, onScenarioChange]);
+
+  // Apply queued `?step=<n>` once the deep-linked scenario's events are mounted
+  useEffect(() => {
+    if (pendingDeepLinkStepRef.current === null) return;
+    if (
+      pendingDeepLinkScenarioRef.current &&
+      selectedScenario !== pendingDeepLinkScenarioRef.current
+    ) {
+      return;
+    }
+    if (totalEvents === 0 || !onJumpToStep) return;
+
+    const targetStep = clampDeepLinkStep(pendingDeepLinkStepRef.current, totalEvents);
+    pendingDeepLinkStepRef.current = null;
+    pendingDeepLinkScenarioRef.current = null;
+
+    if (targetStep > 0) {
+      onJumpToStep(targetStep);
+    }
+  }, [selectedScenario, totalEvents, onJumpToStep]);
+
+  // Keep URL query params synchronized with active scenario & step index for one-click sharing
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!deepLinkInitializedRef.current || pendingDeepLinkStepRef.current !== null) return;
+
+    const nextUrl = buildScenarioDeepLinkUrl(
+      window.location.href,
+      selectedScenario,
+      resolvedIndex
+    );
+    if (nextUrl !== window.location.href) {
+      window.history.replaceState(window.history.state, '', nextUrl);
+    }
+  }, [selectedScenario, resolvedIndex]);
 
   const canStepBackward = totalEvents > 0 && resolvedIndex > 0;
   const canStepForward = totalEvents > 0 && resolvedIndex < totalEvents;

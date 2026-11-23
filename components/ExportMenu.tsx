@@ -10,6 +10,7 @@ import {
   copyLinkToClipboard,
   copyStateToClipboard,
 } from '@/lib/export';
+import { parseScenarioDeepLink } from '@/lib/deeplink';
 import { showToast } from '@/lib/toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -99,7 +100,20 @@ export default function ExportMenu({ svgRef, concept, currentState }: ExportMenu
     try {
       await copyLinkToClipboard();
       showCopyFeedback('Link copied!');
-      showToast('Link copied to clipboard.', 'success');
+      const parsed =
+        typeof window !== 'undefined'
+          ? parseScenarioDeepLink(window.location.search)
+          : { scenarioId: null, step: null };
+      if (parsed.scenarioId && parsed.step && parsed.step > 0) {
+        showToast(
+          `Copied exact link (${parsed.scenarioId} · step ${parsed.step}).`,
+          'success'
+        );
+      } else if (parsed.scenarioId) {
+        showToast(`Copied scenario deep link (${parsed.scenarioId}).`, 'success');
+      } else {
+        showToast('Link copied to clipboard.', 'success');
+      }
     } catch (error) {
       console.error('Copy failed:', error);
       showToast('Failed to copy link.', 'error');
@@ -218,7 +232,9 @@ export default function ExportMenu({ svgRef, concept, currentState }: ExportMenu
               )}
               <div>
                 <div className="text-xs font-semibold text-[var(--ink)]">Copy Link</div>
-                <div className="font-mono text-[10px] text-[var(--ink-muted)]">Direct plate URL</div>
+                <div className="font-mono text-[10px] text-[var(--ink-muted)]">
+                  Scenario &amp; exact step URL
+                </div>
               </div>
             </button>
 
