@@ -12,6 +12,7 @@ import { lamportClocksScenarios } from '@/visualizers/lamport-clocks/scenarios';
 import { LamportNode, LamportMessage } from '@/lib/types';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
+import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 
 export default function LamportClocksPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -21,6 +22,7 @@ export default function LamportClocksPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
 
   const syncVisualization = useCallback(() => {
     setNodes([...lamport.getNodes()]);
@@ -163,69 +165,104 @@ export default function LamportClocksPage() {
             />
           </div>
 
-          <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            <ScopeDefs idPrefix="lamport" />
+          <ScopeModeToggle
+            mode={scopeMode}
+            onChange={setScopeMode}
+            frameCount={messages.length}
+          />
 
-            {/* Mesh connections */}
-            {nodes.map((a, i) =>
-              nodes.slice(i + 1).map((b) => (
-                <line
-                  key={`lm-${a.id}-${b.id}`}
-                  x1={a.position.x}
-                  y1={a.position.y}
-                  x2={b.position.x}
-                  y2={b.position.y}
-                  stroke={SCOPE_COLORS.hairlineSubtle}
-                  strokeWidth="1"
-                />
-              ))
-            )}
+          {scopeMode === 'topology' ? (
+            <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+              <ScopeDefs idPrefix="lamport" />
 
-            {messages
-              .filter((m) => m.status === 'in-flight')
-              .map((message) => {
-                const fromNode = nodes.find((n) => n.id === message.from);
-                const toNode = nodes.find((n) => n.id === message.to);
-                if (!fromNode || !toNode) return null;
-                const isBcast = message.type === 'Broadcast';
-                return (
-                  <ScopeEdge
-                    key={message.id}
-                    idPrefix="lamport"
-                    x1={fromNode.position.x}
-                    y1={fromNode.position.y}
-                    x2={toNode.position.x}
-                    y2={toNode.position.y}
-                    color={getMessageColor(message)}
-                    markerKey={isBcast ? 'cobalt' : 'signal'}
-                    inset={46}
-                    label={isBcast ? 'BCAST' : 'ACK'}
-                    dashed={!isBcast}
+              {/* Mesh connections */}
+              {nodes.map((a, i) =>
+                nodes.slice(i + 1).map((b) => (
+                  <line
+                    key={`lm-${a.id}-${b.id}`}
+                    x1={a.position.x}
+                    y1={a.position.y}
+                    x2={b.position.x}
+                    y2={b.position.y}
+                    stroke={SCOPE_COLORS.hairlineSubtle}
+                    strokeWidth="1"
                   />
-                );
+                ))
+              )}
+
+              {messages
+                .filter((m) => m.status === 'in-flight')
+                .map((message) => {
+                  const fromNode = nodes.find((n) => n.id === message.from);
+                  const toNode = nodes.find((n) => n.id === message.to);
+                  if (!fromNode || !toNode) return null;
+                  const isBcast = message.type === 'Broadcast';
+                  return (
+                    <ScopeEdge
+                      key={message.id}
+                      idPrefix="lamport"
+                      x1={fromNode.position.x}
+                      y1={fromNode.position.y}
+                      x2={toNode.position.x}
+                      y2={toNode.position.y}
+                      color={getMessageColor(message)}
+                      markerKey={isBcast ? 'cobalt' : 'signal'}
+                      inset={46}
+                      label={isBcast ? 'BCAST' : 'ACK'}
+                      dashed={!isBcast}
+                    />
+                  );
+                })}
+
+              {nodes.map((node) => (
+                <ScopeNode
+                  key={node.id}
+                  x={node.position.x}
+                  y={node.position.y}
+                  radius={42}
+                  label={node.id}
+                  sublabel={`L = ${node.clock}`}
+                  topTag={node.holdback.length > 0 ? 'HOLDBACK' : 'PROCESS'}
+                  bottomLine1={`QUEUE ${node.holdback.length} · DELIV ${node.delivered.length}`}
+                  accentColor={getNodeColor(node)}
+                  highlighted={node.holdback.length > 0}
+                  selected={selectedNodeId === node.id}
+                  onClick={() =>
+                    setSelectedNodeId((prev) => (prev === node.id ? null : node.id))
+                  }
+                />
+              ))}
+            </svg>
+          ) : (
+            <SpaceTimeScope
+              svgRef={svgRef}
+              idPrefix="lamport-st"
+              title="Lamport Clocks"
+              actors={nodes.map((n) => ({
+                id: n.id,
+                label: n.id,
+                sublabel: `L = ${n.clock}`,
+                color: getNodeColor(n),
+              }))}
+              frames={messages.map((m) => {
+                const ts = m.payload.timestamp ?? m.payload.ackTimestamp;
+                return {
+                  id: m.id,
+                  from: m.from,
+                  to: m.to,
+                  label: `${m.type === 'Broadcast' ? 'BCAST' : 'ACK'}${ts !== undefined ? `(L=${ts})` : ''}`,
+                  sublabel: m.payload.messageId,
+                  color: getMessageColor(m),
+                  status: m.status,
+                  dashed: m.type === 'Ack',
+                };
               })}
+            />
+          )}
 
-            {nodes.map((node) => (
-              <ScopeNode
-                key={node.id}
-                x={node.position.x}
-                y={node.position.y}
-                radius={42}
-                label={node.id}
-                sublabel={`L = ${node.clock}`}
-                topTag={node.holdback.length > 0 ? 'HOLDBACK' : 'PROCESS'}
-                bottomLine1={`QUEUE ${node.holdback.length} · DELIV ${node.delivered.length}`}
-                accentColor={getNodeColor(node)}
-                highlighted={node.holdback.length > 0}
-                selected={selectedNodeId === node.id}
-                onClick={() =>
-                  setSelectedNodeId((prev) => (prev === node.id ? null : node.id))
-                }
-              />
-            ))}
-          </svg>
-
-          {!inspectedNode && <WireTapHint text="Click any process to inspect holdback & deliveries" />}
+          {scopeMode === 'topology' && !inspectedNode && (
+            <WireTapHint text="Click any process to inspect holdback & deliveries" />
+          )}
 
           {inspectedNode && (
             <WireTapInspector

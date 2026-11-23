@@ -13,6 +13,7 @@ import { RaftNode as RaftNodeType, RaftMessage } from '@/lib/types';
 import { AnimatePresence } from 'framer-motion';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
+import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 
 export default function RaftPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -23,6 +24,7 @@ export default function RaftPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
 
   // Update visualization from algorithm state
   const updateVisualization = useCallback(() => {
@@ -217,116 +219,168 @@ export default function RaftPage() {
 
         {/* Visualization Canvas */}
         <div className="flex-1 relative bg-slate-900 overflow-hidden min-h-[420px]">
-          <svg ref={svgRef} viewBox="0 0 840 640" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            <ScopeDefs idPrefix="raft" />
+          <ScopeModeToggle
+            mode={scopeMode}
+            onChange={setScopeMode}
+            frameCount={messages.length}
+          />
 
-            {/* Subtle cluster topology mesh */}
-            {nodes.map((a, i) =>
-              nodes.slice(i + 1).map((b) => {
-                const aPart = partitions.findIndex((g) => g.includes(a.id));
-                const bPart = partitions.findIndex((g) => g.includes(b.id));
-                const severed = partitions.length > 0 && aPart !== bPart;
-                return (
-                  <line
-                    key={`mesh-${a.id}-${b.id}`}
-                    x1={a.position.x}
-                    y1={a.position.y}
-                    x2={b.position.x}
-                    y2={b.position.y}
-                    stroke={severed ? 'rgba(217, 68, 30, 0.16)' : SCOPE_COLORS.hairlineSubtle}
-                    strokeWidth="1"
-                    strokeDasharray={severed ? '4 6' : undefined}
-                  />
-                );
-              })
-            )}
+          {scopeMode === 'topology' ? (
+            <svg ref={svgRef} viewBox="0 0 840 640" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+              <ScopeDefs idPrefix="raft" />
 
-            {/* Draw animated directional messages */}
-            <AnimatePresence>
-              {messages.map((message) => {
-                const fromNode = nodes.find((n) => n.id === message.from);
-                const toNode = nodes.find((n) => n.id === message.to);
-                if (!fromNode || !toNode) return null;
+              {/* Subtle cluster topology mesh */}
+              {nodes.map((a, i) =>
+                nodes.slice(i + 1).map((b) => {
+                  const aPart = partitions.findIndex((g) => g.includes(a.id));
+                  const bPart = partitions.findIndex((g) => g.includes(b.id));
+                  const severed = partitions.length > 0 && aPart !== bPart;
+                  return (
+                    <line
+                      key={`mesh-${a.id}-${b.id}`}
+                      x1={a.position.x}
+                      y1={a.position.y}
+                      x2={b.position.x}
+                      y2={b.position.y}
+                      stroke={severed ? 'rgba(217, 68, 30, 0.16)' : SCOPE_COLORS.hairlineSubtle}
+                      strokeWidth="1"
+                      strokeDasharray={severed ? '4 6' : undefined}
+                    />
+                  );
+                })
+              )}
 
-                const isVote = message.type === 'RequestVote';
-                const isAppend = message.type === 'AppendEntries';
-                const color = isVote
+              {/* Draw animated directional messages */}
+              <AnimatePresence>
+                {messages.map((message) => {
+                  const fromNode = nodes.find((n) => n.id === message.from);
+                  const toNode = nodes.find((n) => n.id === message.to);
+                  if (!fromNode || !toNode) return null;
+
+                  const isVote = message.type === 'RequestVote';
+                  const isAppend = message.type === 'AppendEntries';
+                  const color = isVote
+                    ? SCOPE_COLORS.amber
+                    : isAppend
+                    ? SCOPE_COLORS.cobalt
+                    : SCOPE_COLORS.emerald;
+                  const markerKey = isVote ? 'amber' : isAppend ? 'cobalt' : 'emerald';
+                  const shortLabel = isVote ? 'RV' : isAppend ? 'AE' : 'ACK';
+
+                  return (
+                    <ScopeEdge
+                      key={message.id}
+                      idPrefix="raft"
+                      x1={fromNode.position.x}
+                      y1={fromNode.position.y}
+                      x2={toNode.position.x}
+                      y2={toNode.position.y}
+                      color={color}
+                      markerKey={markerKey}
+                      inset={44}
+                      label={shortLabel}
+                      dashed={isVote}
+                    />
+                  );
+                })}
+              </AnimatePresence>
+
+              {/* Draw double-ring oscilloscope nodes */}
+              {nodes.map((node) => {
+                const isFailed = node.status === 'failed';
+                const isLeader = !isFailed && node.state === 'leader';
+                const isCandidate = !isFailed && node.state === 'candidate';
+
+                const accentColor = isFailed
+                  ? SCOPE_COLORS.danger
+                  : isLeader
+                  ? SCOPE_COLORS.signal
+                  : isCandidate
                   ? SCOPE_COLORS.amber
-                  : isAppend
-                  ? SCOPE_COLORS.cobalt
                   : SCOPE_COLORS.emerald;
-                const markerKey = isVote ? 'amber' : isAppend ? 'cobalt' : 'emerald';
-                const shortLabel = isVote ? 'RV' : isAppend ? 'AE' : 'ACK';
+
+                const partitionIndex = partitions.findIndex((group) => group.includes(node.id));
+                const haloColor =
+                  partitionIndex === 0
+                    ? SCOPE_COLORS.amber
+                    : partitionIndex === 1
+                    ? SCOPE_COLORS.cobalt
+                    : undefined;
+
+                const nodeNum = node.id.replace('node-', '');
+                const bottomLine2 =
+                  isCandidate
+                    ? `LOG ${node.log.length} · VOTES ${node.votesReceived}`
+                    : `LOG ${node.log.length} · CMT ${node.commitIndex}`;
 
                 return (
-                  <ScopeEdge
-                    key={message.id}
-                    idPrefix="raft"
-                    x1={fromNode.position.x}
-                    y1={fromNode.position.y}
-                    x2={toNode.position.x}
-                    y2={toNode.position.y}
-                    color={color}
-                    markerKey={markerKey}
-                    inset={44}
-                    label={shortLabel}
-                    dashed={isVote}
+                  <ScopeNode
+                    key={node.id}
+                    x={node.position.x}
+                    y={node.position.y}
+                    radius={38}
+                    label={`N${nodeNum}`}
+                    sublabel={isFailed ? 'OFFLINE' : `T${node.term}`}
+                    topTag={isFailed ? 'FAILED' : node.state.toUpperCase()}
+                    bottomLine1={`TERM ${node.term}`}
+                    bottomLine2={bottomLine2}
+                    accentColor={accentColor}
+                    failed={isFailed}
+                    highlighted={isLeader}
+                    selected={selectedNodeId === node.id}
+                    haloColor={haloColor}
+                    onClick={() => handleNodeClick(node.id)}
                   />
                 );
               })}
-            </AnimatePresence>
+            </svg>
+          ) : (
+            <SpaceTimeScope
+              svgRef={svgRef}
+              idPrefix="raft-st"
+              title="Raft Consensus"
+              actors={nodes.map((n) => ({
+                id: n.id,
+                label: `N${n.id.replace('node-', '')}`,
+                sublabel: n.status === 'failed' ? 'OFFLINE' : `${n.state.slice(0, 4).toUpperCase()} T${n.term}`,
+                color:
+                  n.status === 'failed'
+                    ? SCOPE_COLORS.danger
+                    : n.state === 'leader'
+                    ? SCOPE_COLORS.signal
+                    : n.state === 'candidate'
+                    ? SCOPE_COLORS.amber
+                    : SCOPE_COLORS.emerald,
+                failed: n.status === 'failed',
+              }))}
+              frames={messages.map((m) => ({
+                id: m.id,
+                from: m.from,
+                to: m.to,
+                label:
+                  m.type === 'RequestVote'
+                    ? `RV(T${m.payload.term})`
+                    : m.type === 'AppendEntries'
+                    ? `AE(T${m.payload.term})`
+                    : m.type === 'RequestVoteResponse'
+                    ? 'VoteAck'
+                    : 'AppendAck',
+                sublabel: `term ${m.payload.term}`,
+                color:
+                  m.type === 'RequestVote'
+                    ? SCOPE_COLORS.amber
+                    : m.type === 'AppendEntries'
+                    ? SCOPE_COLORS.cobalt
+                    : SCOPE_COLORS.emerald,
+                status: m.status,
+                dashed: m.type === 'RequestVote',
+              }))}
+            />
+          )}
 
-            {/* Draw double-ring oscilloscope nodes */}
-            {nodes.map((node) => {
-              const isFailed = node.status === 'failed';
-              const isLeader = !isFailed && node.state === 'leader';
-              const isCandidate = !isFailed && node.state === 'candidate';
-
-              const accentColor = isFailed
-                ? SCOPE_COLORS.danger
-                : isLeader
-                ? SCOPE_COLORS.signal
-                : isCandidate
-                ? SCOPE_COLORS.amber
-                : SCOPE_COLORS.emerald;
-
-              const partitionIndex = partitions.findIndex((group) => group.includes(node.id));
-              const haloColor =
-                partitionIndex === 0
-                  ? SCOPE_COLORS.amber
-                  : partitionIndex === 1
-                  ? SCOPE_COLORS.cobalt
-                  : undefined;
-
-              const nodeNum = node.id.replace('node-', '');
-              const bottomLine2 =
-                isCandidate
-                  ? `LOG ${node.log.length} · VOTES ${node.votesReceived}`
-                  : `LOG ${node.log.length} · CMT ${node.commitIndex}`;
-
-              return (
-                <ScopeNode
-                  key={node.id}
-                  x={node.position.x}
-                  y={node.position.y}
-                  radius={38}
-                  label={`N${nodeNum}`}
-                  sublabel={isFailed ? 'OFFLINE' : `T${node.term}`}
-                  topTag={isFailed ? 'FAILED' : node.state.toUpperCase()}
-                  bottomLine1={`TERM ${node.term}`}
-                  bottomLine2={bottomLine2}
-                  accentColor={accentColor}
-                  failed={isFailed}
-                  highlighted={isLeader}
-                  selected={selectedNodeId === node.id}
-                  haloColor={haloColor}
-                  onClick={() => handleNodeClick(node.id)}
-                />
-              );
-            })}
-          </svg>
-
-          {!inspectedNode && <WireTapHint text="Click any node to inspect log & state" />}
+          {scopeMode === 'topology' && !inspectedNode && (
+            <WireTapHint text="Click any node to inspect log & state" />
+          )}
 
           {inspectedNode && (
             <WireTapInspector

@@ -12,6 +12,7 @@ import { twoPhaseCommitScenarios } from '@/visualizers/two-phase-commit/scenario
 import { TwoPhaseCommitNode, TwoPhaseCommitMessage } from '@/lib/types';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
+import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 
 export default function TwoPhaseCommitPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -22,6 +23,7 @@ export default function TwoPhaseCommitPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
 
   // Update visualization
   const updateVisualization = useCallback(() => {
@@ -334,97 +336,139 @@ export default function TwoPhaseCommitPage() {
             />
           </div>
 
-          <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            <ScopeDefs idPrefix="tpc" />
+          <ScopeModeToggle
+            mode={scopeMode}
+            onChange={setScopeMode}
+            frameCount={messages.length}
+          />
 
-            {/* Coordinator-to-participant topology links */}
-            {participants.map((p) => (
-              <line
-                key={`tpc-link-${p.id}`}
-                x1={coordinator.position.x}
-                y1={coordinator.position.y}
-                x2={p.position.x}
-                y2={p.position.y}
-                stroke={SCOPE_COLORS.hairlineSubtle}
-                strokeWidth="1.2"
+          {scopeMode === 'topology' ? (
+            <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+              <ScopeDefs idPrefix="tpc" />
+
+              {/* Coordinator-to-participant topology links */}
+              {participants.map((p) => (
+                <line
+                  key={`tpc-link-${p.id}`}
+                  x1={coordinator.position.x}
+                  y1={coordinator.position.y}
+                  x2={p.position.x}
+                  y2={p.position.y}
+                  stroke={SCOPE_COLORS.hairlineSubtle}
+                  strokeWidth="1.2"
+                />
+              ))}
+
+              {/* Animated directional messages */}
+              {messages
+                .filter((m) => m.status === 'in-flight')
+                .map((message) => {
+                  const fromNode =
+                    message.from === 'coordinator'
+                      ? coordinator
+                      : participants.find((p) => p.id === message.from);
+                  const toNode =
+                    message.to === 'coordinator'
+                      ? coordinator
+                      : participants.find((p) => p.id === message.to);
+                  if (!fromNode || !toNode) return null;
+
+                  return (
+                    <ScopeEdge
+                      key={message.id}
+                      idPrefix="tpc"
+                      x1={fromNode.position.x}
+                      y1={fromNode.position.y}
+                      x2={toNode.position.x}
+                      y2={toNode.position.y}
+                      color={getMessageColor(message)}
+                      markerKey={getMessageMarker(message)}
+                      inset={44}
+                      label={message.type}
+                      dashed={message.type === 'VoteRequest'}
+                    />
+                  );
+                })}
+
+              {/* Coordinator */}
+              <ScopeNode
+                x={coordinator.position.x}
+                y={coordinator.position.y}
+                radius={44}
+                label="COORD"
+                sublabel={coordinator.status === 'failed' ? 'OFFLINE' : coordinator.state.toUpperCase()}
+                topTag="COORDINATOR"
+                bottomLine1={`OUTCOME ${stats.transactionOutcome.toUpperCase()}`}
+                accentColor={getNodeColor(coordinator)}
+                failed={coordinator.status === 'failed'}
+                highlighted
+                selected={selectedNodeId === coordinator.id}
+                onClick={() =>
+                  setSelectedNodeId((prev) => (prev === coordinator.id ? null : coordinator.id))
+                }
               />
-            ))}
 
-            {/* Animated directional messages */}
-            {messages
-              .filter((m) => m.status === 'in-flight')
-              .map((message) => {
-                const fromNode =
-                  message.from === 'coordinator'
-                    ? coordinator
-                    : participants.find((p) => p.id === message.from);
-                const toNode =
-                  message.to === 'coordinator'
-                    ? coordinator
-                    : participants.find((p) => p.id === message.to);
-                if (!fromNode || !toNode) return null;
-
+              {/* Participants */}
+              {participants.map((participant) => {
+                const isFailed = participant.status === 'failed';
                 return (
-                  <ScopeEdge
-                    key={message.id}
-                    idPrefix="tpc"
-                    x1={fromNode.position.x}
-                    y1={fromNode.position.y}
-                    x2={toNode.position.x}
-                    y2={toNode.position.y}
-                    color={getMessageColor(message)}
-                    markerKey={getMessageMarker(message)}
-                    inset={44}
-                    label={message.type}
-                    dashed={message.type === 'VoteRequest'}
+                  <ScopeNode
+                    key={participant.id}
+                    x={participant.position.x}
+                    y={participant.position.y}
+                    radius={38}
+                    label={`P${participant.id.split('-')[1]}`}
+                    sublabel={isFailed ? 'OFFLINE' : participant.state.toUpperCase()}
+                    topTag={participant.vote ? `VOTE ${participant.vote.toUpperCase()}` : 'PARTICIPANT'}
+                    bottomLine1={participant.id}
+                    accentColor={getNodeColor(participant)}
+                    failed={isFailed}
+                    highlighted={participant.state === 'committed'}
+                    selected={selectedNodeId === participant.id}
+                    onClick={() =>
+                      setSelectedNodeId((prev) => (prev === participant.id ? null : participant.id))
+                    }
                   />
                 );
               })}
-
-            {/* Coordinator */}
-            <ScopeNode
-              x={coordinator.position.x}
-              y={coordinator.position.y}
-              radius={44}
-              label="COORD"
-              sublabel={coordinator.status === 'failed' ? 'OFFLINE' : coordinator.state.toUpperCase()}
-              topTag="COORDINATOR"
-              bottomLine1={`OUTCOME ${stats.transactionOutcome.toUpperCase()}`}
-              accentColor={getNodeColor(coordinator)}
-              failed={coordinator.status === 'failed'}
-              highlighted
-              selected={selectedNodeId === coordinator.id}
-              onClick={() =>
-                setSelectedNodeId((prev) => (prev === coordinator.id ? null : coordinator.id))
-              }
+            </svg>
+          ) : (
+            <SpaceTimeScope
+              svgRef={svgRef}
+              idPrefix="tpc-st"
+              title="Two-Phase Commit"
+              actors={[
+                {
+                  id: coordinator.id,
+                  label: 'COORD',
+                  sublabel: coordinator.status === 'failed' ? 'OFFLINE' : coordinator.state.toUpperCase(),
+                  color: getNodeColor(coordinator),
+                  failed: coordinator.status === 'failed',
+                },
+                ...participants.map((p) => ({
+                  id: p.id,
+                  label: `P${p.id.split('-')[1]}`,
+                  sublabel: p.status === 'failed' ? 'OFFLINE' : p.state.toUpperCase(),
+                  color: getNodeColor(p),
+                  failed: p.status === 'failed',
+                })),
+              ]}
+              frames={messages.map((m) => ({
+                id: m.id,
+                from: m.from,
+                to: m.to,
+                label: m.type,
+                sublabel: m.payload.transactionId,
+                color: getMessageColor(m),
+                status: m.status,
+                dashed: m.type === 'VoteRequest',
+              }))}
             />
+          )}
 
-            {/* Participants */}
-            {participants.map((participant) => {
-              const isFailed = participant.status === 'failed';
-              return (
-                <ScopeNode
-                  key={participant.id}
-                  x={participant.position.x}
-                  y={participant.position.y}
-                  radius={38}
-                  label={`P${participant.id.split('-')[1]}`}
-                  sublabel={isFailed ? 'OFFLINE' : participant.state.toUpperCase()}
-                  topTag={participant.vote ? `VOTE ${participant.vote.toUpperCase()}` : 'PARTICIPANT'}
-                  bottomLine1={participant.id}
-                  accentColor={getNodeColor(participant)}
-                  failed={isFailed}
-                  highlighted={participant.state === 'committed'}
-                  selected={selectedNodeId === participant.id}
-                  onClick={() =>
-                    setSelectedNodeId((prev) => (prev === participant.id ? null : participant.id))
-                  }
-                />
-              );
-            })}
-          </svg>
-
-          {!inspectedNode && <WireTapHint text="Click coordinator or participant to open Wire Tap" />}
+          {scopeMode === 'topology' && !inspectedNode && (
+            <WireTapHint text="Click coordinator or participant to open Wire Tap" />
+          )}
 
           {inspectedNode && (
             <WireTapInspector

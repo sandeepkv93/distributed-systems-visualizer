@@ -12,6 +12,7 @@ import { quorumReplicationScenarios } from '@/visualizers/quorum-replication/sce
 import { QuorumNode, QuorumMessage } from '@/lib/types';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
+import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 
 export default function QuorumReplicationPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -23,6 +24,7 @@ export default function QuorumReplicationPage() {
   const [quorumWrite, setQuorumWrite] = useState(2);
   const [quorumRead, setQuorumRead] = useState(2);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
 
   const syncVisualization = useCallback(() => {
     setNodes([...quorum.getNodes()]);
@@ -216,72 +218,109 @@ export default function QuorumReplicationPage() {
             />
           </div>
 
-          <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            <ScopeDefs idPrefix="quorum" />
+          <ScopeModeToggle
+            mode={scopeMode}
+            onChange={setScopeMode}
+            frameCount={messages.length}
+          />
 
-            {/* Mesh ring hairlines */}
-            {nodes.map((a, i) => {
-              const b = nodes[(i + 1) % nodes.length];
-              if (!b) return null;
-              return (
-                <line
-                  key={`q-ring-${a.id}-${b.id}`}
-                  x1={a.position.x}
-                  y1={a.position.y}
-                  x2={b.position.x}
-                  y2={b.position.y}
-                  stroke={SCOPE_COLORS.hairlineSubtle}
-                  strokeWidth="1"
-                />
-              );
-            })}
+          {scopeMode === 'topology' ? (
+            <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+              <ScopeDefs idPrefix="quorum" />
 
-            {messages
-              .filter((m) => m.status === 'in-flight')
-              .map((message) => {
-                const fromNode = nodes.find((n) => n.id === message.from);
-                const toNode = nodes.find((n) => n.id === message.to);
-                if (!fromNode || !toNode) return null;
-                const style = getMessageStyle(message);
+              {/* Mesh ring hairlines */}
+              {nodes.map((a, i) => {
+                const b = nodes[(i + 1) % nodes.length];
+                if (!b) return null;
                 return (
-                  <ScopeEdge
-                    key={message.id}
-                    idPrefix="quorum"
-                    x1={fromNode.position.x}
-                    y1={fromNode.position.y}
-                    x2={toNode.position.x}
-                    y2={toNode.position.y}
-                    color={style.color}
-                    markerKey={style.markerKey}
-                    inset={46}
-                    label={style.label}
-                    dashed={message.type === 'Repair'}
+                  <line
+                    key={`q-ring-${a.id}-${b.id}`}
+                    x1={a.position.x}
+                    y1={a.position.y}
+                    x2={b.position.x}
+                    y2={b.position.y}
+                    stroke={SCOPE_COLORS.hairlineSubtle}
+                    strokeWidth="1"
                   />
                 );
               })}
 
-            {nodes.map((node) => (
-              <ScopeNode
-                key={node.id}
-                x={node.position.x}
-                y={node.position.y}
-                radius={42}
-                label={node.id}
-                sublabel={`v${node.version}`}
-                topTag={node.status === 'failed' ? 'FAILED' : node.data.size > 0 ? 'REPLICA' : 'EMPTY'}
-                bottomLine1={`${node.data.size} ${node.data.size === 1 ? 'KEY' : 'KEYS'}`}
-                accentColor={getNodeColor(node)}
-                failed={node.status === 'failed'}
-                highlighted={node.status === 'healthy' && node.data.size > 0}
-                selected={selectedNodeId === node.id}
-                onClick={() =>
-                  setSelectedNodeId((prev) => (prev === node.id ? null : node.id))
-                }
-              />
-            ))}
-          </svg>
+              {messages
+                .filter((m) => m.status === 'in-flight')
+                .map((message) => {
+                  const fromNode = nodes.find((n) => n.id === message.from);
+                  const toNode = nodes.find((n) => n.id === message.to);
+                  if (!fromNode || !toNode) return null;
+                  const style = getMessageStyle(message);
+                  return (
+                    <ScopeEdge
+                      key={message.id}
+                      idPrefix="quorum"
+                      x1={fromNode.position.x}
+                      y1={fromNode.position.y}
+                      x2={toNode.position.x}
+                      y2={toNode.position.y}
+                      color={style.color}
+                      markerKey={style.markerKey}
+                      inset={46}
+                      label={style.label}
+                      dashed={message.type === 'Repair'}
+                    />
+                  );
+                })}
 
-          {!inspectedNode && <WireTapHint text="Click any replica to inspect versions & inject faults" />}
+              {nodes.map((node) => (
+                <ScopeNode
+                  key={node.id}
+                  x={node.position.x}
+                  y={node.position.y}
+                  radius={42}
+                  label={node.id}
+                  sublabel={`v${node.version}`}
+                  topTag={node.status === 'failed' ? 'FAILED' : node.data.size > 0 ? 'REPLICA' : 'EMPTY'}
+                  bottomLine1={`${node.data.size} ${node.data.size === 1 ? 'KEY' : 'KEYS'}`}
+                  accentColor={getNodeColor(node)}
+                  failed={node.status === 'failed'}
+                  highlighted={node.status === 'healthy' && node.data.size > 0}
+                  selected={selectedNodeId === node.id}
+                  onClick={() =>
+                    setSelectedNodeId((prev) => (prev === node.id ? null : node.id))
+                  }
+                />
+              ))}
+            </svg>
+          ) : (
+            <SpaceTimeScope
+              svgRef={svgRef}
+              idPrefix="quorum-st"
+              title="Quorum Replication"
+              actors={nodes.map((n) => ({
+                id: n.id,
+                label: n.id,
+                sublabel: n.status === 'failed' ? 'OFFLINE' : `v${n.version}`,
+                color: getNodeColor(n),
+                failed: n.status === 'failed',
+              }))}
+              frames={messages.map((m) => {
+                const style = getMessageStyle(m);
+                return {
+                  id: m.id,
+                  from: m.from,
+                  to: m.to,
+                  label: `${style.label}(${m.payload.key})`,
+                  sublabel:
+                    m.payload.version !== undefined ? `v${m.payload.version}` : undefined,
+                  color: style.color,
+                  status: m.status,
+                  dashed: m.type === 'Repair',
+                };
+              })}
+            />
+          )}
+
+          {scopeMode === 'topology' && !inspectedNode && (
+            <WireTapHint text="Click any replica to inspect versions & inject faults" />
+          )}
 
           {inspectedNode && (
             <WireTapInspector

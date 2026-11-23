@@ -13,6 +13,7 @@ import { PaxosNode, PaxosMessage } from '@/lib/types';
 import { AnimatePresence } from 'framer-motion';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
+import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 
 export default function PaxosPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -24,6 +25,7 @@ export default function PaxosPage() {
   const [decidedValue, setDecidedValue] = useState<any>(null);
   const [decidedValues, setDecidedValues] = useState<any[]>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
 
   // Update visualization from algorithm state
   const updateVisualization = useCallback(() => {
@@ -245,116 +247,161 @@ export default function PaxosPage() {
 
         {/* Visualization Canvas */}
         <div className="flex-1 relative bg-slate-900 overflow-hidden min-h-[420px]">
-          <svg ref={svgRef} viewBox="0 0 820 620" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            <ScopeDefs idPrefix="paxos" />
+          <ScopeModeToggle
+            mode={scopeMode}
+            onChange={setScopeMode}
+            frameCount={messages.length}
+          />
 
-            {/* Architectural role swimlanes */}
-            {[
-              { y: 100, label: 'PROPOSERS' },
-              { y: 300, label: 'ACCEPTORS' },
-              { y: 500, label: 'LEARNERS' },
-            ].map((lane) => (
-              <g key={lane.label} className="pointer-events-none">
-                <line
-                  x1="18"
-                  y1={lane.y}
-                  x2="802"
-                  y2={lane.y}
-                  stroke={SCOPE_COLORS.hairlineSubtle}
-                  strokeWidth="1"
-                  strokeDasharray="3 5"
-                />
-                <text
-                  x="22"
-                  y={lane.y - 10}
-                  fill={SCOPE_COLORS.inkMuted}
-                  fontSize="10"
-                  fontWeight="600"
-                  letterSpacing="0.14em"
-                >
-                  {lane.label}
-                </text>
-              </g>
-            ))}
+          {scopeMode === 'topology' ? (
+            <svg ref={svgRef} viewBox="0 0 820 620" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+              <ScopeDefs idPrefix="paxos" />
 
-            {/* Draw animated directional messages */}
-            <AnimatePresence>
-              {messages.map((message) => {
-                const fromNode = nodes.find((n) => n.id === message.from);
-                let toNodes: PaxosNode[] = [];
-
-                if (message.to === 'learners') {
-                  toNodes = paxos.getLearners();
-                } else {
-                  const toNode = nodes.find((n) => n.id === message.to);
-                  if (toNode) toNodes = [toNode];
-                }
-
-                if (!fromNode || toNodes.length === 0) return null;
-
-                const isPhase1 = message.type === 'Prepare' || message.type === 'Promise';
-                const color = isPhase1 ? SCOPE_COLORS.cobalt : SCOPE_COLORS.amber;
-                const markerKey = isPhase1 ? 'cobalt' : 'amber';
-
-                return toNodes.map((toNode) => (
-                  <ScopeEdge
-                    key={`${message.id}-${toNode.id}`}
-                    idPrefix="paxos"
-                    x1={fromNode.position.x}
-                    y1={fromNode.position.y}
-                    x2={toNode.position.x}
-                    y2={toNode.position.y}
-                    color={color}
-                    markerKey={markerKey}
-                    inset={39}
-                    dashed={isPhase1}
+              {/* Architectural role swimlanes */}
+              {[
+                { y: 100, label: 'PROPOSERS' },
+                { y: 300, label: 'ACCEPTORS' },
+                { y: 500, label: 'LEARNERS' },
+              ].map((lane) => (
+                <g key={lane.label} className="pointer-events-none">
+                  <line
+                    x1="18"
+                    y1={lane.y}
+                    x2="802"
+                    y2={lane.y}
+                    stroke={SCOPE_COLORS.hairlineSubtle}
+                    strokeWidth="1"
+                    strokeDasharray="3 5"
                   />
-                ));
+                  <text
+                    x="22"
+                    y={lane.y - 10}
+                    fill={SCOPE_COLORS.inkMuted}
+                    fontSize="10"
+                    fontWeight="600"
+                    letterSpacing="0.14em"
+                  >
+                    {lane.label}
+                  </text>
+                </g>
+              ))}
+
+              {/* Draw animated directional messages */}
+              <AnimatePresence>
+                {messages.map((message) => {
+                  const fromNode = nodes.find((n) => n.id === message.from);
+                  let toNodes: PaxosNode[] = [];
+
+                  if (message.to === 'learners') {
+                    toNodes = paxos.getLearners();
+                  } else {
+                    const toNode = nodes.find((n) => n.id === message.to);
+                    if (toNode) toNodes = [toNode];
+                  }
+
+                  if (!fromNode || toNodes.length === 0) return null;
+
+                  const isPhase1 = message.type === 'Prepare' || message.type === 'Promise';
+                  const color = isPhase1 ? SCOPE_COLORS.cobalt : SCOPE_COLORS.amber;
+                  const markerKey = isPhase1 ? 'cobalt' : 'amber';
+
+                  return toNodes.map((toNode) => (
+                    <ScopeEdge
+                      key={`${message.id}-${toNode.id}`}
+                      idPrefix="paxos"
+                      x1={fromNode.position.x}
+                      y1={fromNode.position.y}
+                      x2={toNode.position.x}
+                      y2={toNode.position.y}
+                      color={color}
+                      markerKey={markerKey}
+                      inset={39}
+                      dashed={isPhase1}
+                    />
+                  ));
+                })}
+              </AnimatePresence>
+
+              {/* Draw double-ring oscilloscope nodes */}
+              {nodes.map((node) => {
+                const nodeColor = getNodeColor(node);
+                const isFailed = node.status === 'failed';
+                const shortId = `${node.id.split('-')[0][0].toUpperCase()}${node.id.split('-')[1]}`;
+
+                let bottomLine1: string | undefined;
+                let bottomLine2: string | undefined;
+
+                if (node.role === 'proposer' && node.proposalNumber !== undefined && node.proposalNumber > 0) {
+                  bottomLine1 = `PROP #${node.proposalNumber}`;
+                } else if (node.role === 'acceptor') {
+                  if (node.promisedProposal !== undefined && node.promisedProposal > 0) {
+                    bottomLine1 = `PROM #${node.promisedProposal}`;
+                  }
+                  if (node.acceptedValue) {
+                    bottomLine2 = `✓ ${node.acceptedValue}`;
+                  }
+                }
+
+                return (
+                  <ScopeNode
+                    key={node.id}
+                    x={node.position.x}
+                    y={node.position.y}
+                    radius={33}
+                    label={shortId}
+                    sublabel={isFailed ? 'DOWN' : node.role.slice(0, 3).toUpperCase()}
+                    topTag={isFailed ? 'FAILED' : node.role.toUpperCase()}
+                    bottomLine1={bottomLine1}
+                    bottomLine2={bottomLine2}
+                    accentColor={nodeColor}
+                    failed={isFailed}
+                    highlighted={Boolean(node.acceptedValue)}
+                    selected={selectedNodeId === node.id}
+                    onClick={() => handleNodeClick(node.id)}
+                  />
+                );
               })}
-            </AnimatePresence>
+            </svg>
+          ) : (
+            <SpaceTimeScope
+              svgRef={svgRef}
+              idPrefix="paxos-st"
+              title="Paxos Consensus"
+              actors={nodes.map((n) => ({
+                id: n.id,
+                label: `${n.id.split('-')[0][0].toUpperCase()}${n.id.split('-')[1]}`,
+                sublabel: n.status === 'failed' ? 'OFFLINE' : n.role.slice(0, 4).toUpperCase(),
+                color: getNodeColor(n),
+                failed: n.status === 'failed',
+              }))}
+              frames={messages.flatMap((m) => {
+                const targets =
+                  m.to === 'learners'
+                    ? [paxos.getLearners()[0]?.id].filter((id): id is string => Boolean(id))
+                    : [m.to];
+                const isPhase1 = m.type === 'Prepare' || m.type === 'Promise';
+                const isNack = m.type === 'Nack';
+                return targets.map((targetId) => ({
+                  id: `${m.id}-${targetId}`,
+                  from: m.from,
+                  to: targetId,
+                  label: `${m.type}(#${m.payload.proposalNumber})`,
+                  sublabel: m.payload.value !== undefined ? String(m.payload.value) : undefined,
+                  color: isNack
+                    ? SCOPE_COLORS.danger
+                    : isPhase1
+                    ? SCOPE_COLORS.cobalt
+                    : SCOPE_COLORS.amber,
+                  status: m.status,
+                  dashed: isPhase1,
+                }));
+              })}
+            />
+          )}
 
-            {/* Draw double-ring oscilloscope nodes */}
-            {nodes.map((node) => {
-              const nodeColor = getNodeColor(node);
-              const isFailed = node.status === 'failed';
-              const shortId = `${node.id.split('-')[0][0].toUpperCase()}${node.id.split('-')[1]}`;
-
-              let bottomLine1: string | undefined;
-              let bottomLine2: string | undefined;
-
-              if (node.role === 'proposer' && node.proposalNumber !== undefined && node.proposalNumber > 0) {
-                bottomLine1 = `PROP #${node.proposalNumber}`;
-              } else if (node.role === 'acceptor') {
-                if (node.promisedProposal !== undefined && node.promisedProposal > 0) {
-                  bottomLine1 = `PROM #${node.promisedProposal}`;
-                }
-                if (node.acceptedValue) {
-                  bottomLine2 = `✓ ${node.acceptedValue}`;
-                }
-              }
-
-              return (
-                <ScopeNode
-                  key={node.id}
-                  x={node.position.x}
-                  y={node.position.y}
-                  radius={33}
-                  label={shortId}
-                  sublabel={isFailed ? 'DOWN' : node.role.slice(0, 3).toUpperCase()}
-                  topTag={isFailed ? 'FAILED' : node.role.toUpperCase()}
-                  bottomLine1={bottomLine1}
-                  bottomLine2={bottomLine2}
-                  accentColor={nodeColor}
-                  failed={isFailed}
-                  highlighted={Boolean(node.acceptedValue)}
-                  selected={selectedNodeId === node.id}
-                  onClick={() => handleNodeClick(node.id)}
-                />
-              );
-            })}
-          </svg>
-
-          {!inspectedNode && <WireTapHint text="Click any node to inspect Paxos tuples" />}
+          {scopeMode === 'topology' && !inspectedNode && (
+            <WireTapHint text="Click any node to inspect Paxos tuples" />
+          )}
 
           {inspectedNode && (
             <WireTapInspector

@@ -12,6 +12,7 @@ import { pbftScenarios } from '@/visualizers/pbft/scenarios';
 import { PBFTNode, PBFTMessage } from '@/lib/types';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
+import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 
 export default function PBFTPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -21,6 +22,7 @@ export default function PBFTPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
 
   const syncVisualization = useCallback(() => {
     setNodes([...pbft.getNodes()]);
@@ -209,85 +211,118 @@ export default function PBFTPage() {
             />
           </div>
 
-          <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            <ScopeDefs idPrefix="pbft" />
+          <ScopeModeToggle
+            mode={scopeMode}
+            onChange={setScopeMode}
+            frameCount={messages.length}
+          />
 
-            {/* Full Byzantine all-to-all mesh */}
-            {nodes.map((a, i) =>
-              nodes.slice(i + 1).map((b) => (
-                <line
-                  key={`pbft-mesh-${a.id}-${b.id}`}
-                  x1={a.position.x}
-                  y1={a.position.y}
-                  x2={b.position.x}
-                  y2={b.position.y}
-                  stroke={SCOPE_COLORS.hairlineSubtle}
-                  strokeWidth="1"
-                />
-              ))
-            )}
+          {scopeMode === 'topology' ? (
+            <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+              <ScopeDefs idPrefix="pbft" />
 
-            {/* Animated directional in-flight messages */}
-            {messages
-              .filter((m) => m.status === 'in-flight')
-              .map((message) => {
-                const fromNode = nodes.find((n) => n.id === message.from);
-                const toNode = nodes.find((n) => n.id === message.to);
-                if (!fromNode || !toNode) return null;
+              {/* Full Byzantine all-to-all mesh */}
+              {nodes.map((a, i) =>
+                nodes.slice(i + 1).map((b) => (
+                  <line
+                    key={`pbft-mesh-${a.id}-${b.id}`}
+                    x1={a.position.x}
+                    y1={a.position.y}
+                    x2={b.position.x}
+                    y2={b.position.y}
+                    stroke={SCOPE_COLORS.hairlineSubtle}
+                    strokeWidth="1"
+                  />
+                ))
+              )}
 
-                const tag =
-                  message.type === 'PrePrepare'
-                    ? 'PP'
-                    : message.type === 'Prepare'
-                    ? 'PR'
-                    : message.type === 'Commit'
-                    ? 'CM'
-                    : 'VC';
+              {/* Animated directional in-flight messages */}
+              {messages
+                .filter((m) => m.status === 'in-flight')
+                .map((message) => {
+                  const fromNode = nodes.find((n) => n.id === message.from);
+                  const toNode = nodes.find((n) => n.id === message.to);
+                  if (!fromNode || !toNode) return null;
 
+                  const tag =
+                    message.type === 'PrePrepare'
+                      ? 'PP'
+                      : message.type === 'Prepare'
+                      ? 'PR'
+                      : message.type === 'Commit'
+                      ? 'CM'
+                      : 'VC';
+
+                  return (
+                    <ScopeEdge
+                      key={message.id}
+                      idPrefix="pbft"
+                      x1={fromNode.position.x}
+                      y1={fromNode.position.y}
+                      x2={toNode.position.x}
+                      y2={toNode.position.y}
+                      color={getMessageColor(message)}
+                      markerKey={getMessageMarker(message)}
+                      inset={46}
+                      label={tag}
+                      dashed={message.type === 'ViewChange'}
+                    />
+                  );
+                })}
+
+              {/* Double-ring Byzantine replicas */}
+              {nodes.map((node) => {
+                const isFailed = node.status === 'failed';
+                const isPrimary = !isFailed && node.role === 'primary';
                 return (
-                  <ScopeEdge
-                    key={message.id}
-                    idPrefix="pbft"
-                    x1={fromNode.position.x}
-                    y1={fromNode.position.y}
-                    x2={toNode.position.x}
-                    y2={toNode.position.y}
-                    color={getMessageColor(message)}
-                    markerKey={getMessageMarker(message)}
-                    inset={46}
-                    label={tag}
-                    dashed={message.type === 'ViewChange'}
+                  <ScopeNode
+                    key={node.id}
+                    x={node.position.x}
+                    y={node.position.y}
+                    radius={42}
+                    label={node.id.toUpperCase()}
+                    sublabel={isFailed ? 'OFFLINE' : `LOG ${node.log.size}`}
+                    topTag={isFailed ? 'FAILED' : node.role.toUpperCase()}
+                    bottomLine1={isPrimary ? `VIEW v${stats.view}` : `QUORUM 2f+1=${stats.quorum}`}
+                    accentColor={getNodeColor(node)}
+                    failed={isFailed}
+                    highlighted={isPrimary}
+                    selected={selectedNodeId === node.id}
+                    onClick={() =>
+                      setSelectedNodeId((prev) => (prev === node.id ? null : node.id))
+                    }
                   />
                 );
               })}
+            </svg>
+          ) : (
+            <SpaceTimeScope
+              svgRef={svgRef}
+              idPrefix="pbft-st"
+              title="PBFT Consensus"
+              actors={nodes.map((n) => ({
+                id: n.id,
+                label: n.id.toUpperCase(),
+                sublabel: n.status === 'failed' ? 'OFFLINE' : n.role.toUpperCase(),
+                color: getNodeColor(n),
+                failed: n.status === 'failed',
+              }))}
+              frames={messages.map((m) => ({
+                id: m.id,
+                from: m.from,
+                to: m.to,
+                label: `${m.type}(v${m.payload.view})`,
+                sublabel: m.payload.seq !== undefined ? `seq ${m.payload.seq}` : undefined,
+                color: getMessageColor(m),
+                status: m.status,
+                dashed: m.type === 'ViewChange',
+              }))}
+            />
+          )}
 
-            {/* Double-ring Byzantine replicas */}
-            {nodes.map((node) => {
-              const isFailed = node.status === 'failed';
-              const isPrimary = !isFailed && node.role === 'primary';
-              return (
-                <ScopeNode
-                  key={node.id}
-                  x={node.position.x}
-                  y={node.position.y}
-                  radius={42}
-                  label={node.id.toUpperCase()}
-                  sublabel={isFailed ? 'OFFLINE' : `LOG ${node.log.size}`}
-                  topTag={isFailed ? 'FAILED' : node.role.toUpperCase()}
-                  bottomLine1={isPrimary ? `VIEW v${stats.view}` : `QUORUM 2f+1=${stats.quorum}`}
-                  accentColor={getNodeColor(node)}
-                  failed={isFailed}
-                  highlighted={isPrimary}
-                  selected={selectedNodeId === node.id}
-                  onClick={() =>
-                    setSelectedNodeId((prev) => (prev === node.id ? null : node.id))
-                  }
-                />
-              );
-            })}
-          </svg>
-
-          {!selectedNodeId && <WireTapHint text="Click any replica to open Wire Tap" />}
+          {scopeMode === 'topology' && !selectedNodeId && (
+            <WireTapHint text="Click any replica to open Wire Tap" />
+          )}
 
           {(() => {
             const inspected = selectedNodeId
