@@ -391,4 +391,44 @@ main[data-view="visualizer"] svg text {
   font-variant-numeric: tabular-nums;
 }
 
+/* ==========================================================================
+   ARCHIVAL PRINT MONOGRAPH MODE
+   Produces clean ink-on-paper study printouts with chrome stripped out.
+   ========================================================================== */
+@media print {
+  @page {
+    margin: 14mm;
+  }
 
+  html,
+  body {
+    background: #ffffff !important;
+    color: #161614 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body::before {
+    display: none !important;
+  }
+
+  header,
+  .print-hide,
+  [role="status"] {
+    display: none !important;
+  }
+
+  [role="dialog"] {
+    position: static !important;
+    max-height: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border-color: #161614 !important;
+  }
+
+  .plate-card,
+  section {
+    break-inside: avoid;
+    box-shadow: none !important;
+  }
+}

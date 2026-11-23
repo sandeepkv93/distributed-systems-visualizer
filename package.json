@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "bazelisk run //:lint",
     "test": "bazelisk test //:test --test_output=errors",
-    "test:node": "node scripts/run-tests.mjs"
+    "test:node": "node scripts/run-tests.mjs",
+    "test:smoke": "node scripts/smoke-export.mjs ./out"
   },
   "dependencies": {
     "framer-motion": "^12.23.26",

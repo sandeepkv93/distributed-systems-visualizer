@@ -41,6 +41,9 @@ jobs:
       - name: Verify export artifact
         run: test -f ./bazel-bin/out/index.html
 
+      - name: Smoke test exported routes
+        run: node scripts/smoke-export.mjs ./bazel-bin/out
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5
         with:

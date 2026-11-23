@@ -9,10 +9,13 @@ import {
   AlertTriangle,
   X,
   Check,
+  FileText,
+  Printer,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { exportProgress, importProgress } from '@/lib/progress';
 import { CONCEPTS_CATALOG, CONCEPT_DOMAINS } from '@/lib/catalog';
+import { generateFieldSheetSvg } from '@/lib/field-sheet';
 import { showToast } from '@/lib/toast';
 
 interface ProgressDashboardProps {
@@ -64,6 +67,32 @@ export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
     a.click();
     URL.revokeObjectURL(url);
     showToast('Progress exported as JSON.', 'success');
+  };
+
+  const handleDownloadFieldSheet = () => {
+    const svg = generateFieldSheetSvg({
+      completedConceptIds: progress.conceptsCompleted,
+      completedScenarioKeys: progress.scenariosCompleted,
+      checkpointsSolved: stats.checkpointsSolved,
+      totalCheckpoints: stats.totalCheckpoints,
+      achievementsUnlocked: stats.achievementsUnlocked,
+      totalAchievements: stats.totalAchievements,
+      totalTimeSpentMs: stats.totalTimeSpent,
+    });
+    const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'distributed-systems-field-sheet.svg';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Archival Field Sheet SVG downloaded.', 'success');
+  };
+
+  const handlePrintLedger = () => {
+    if (typeof window !== 'undefined') {
+      window.print();
+    }
   };
 
   const handleImport = () => {
@@ -128,7 +157,7 @@ export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--paper-elevated)] border border-[var(--rule)] hover:border-[var(--ink)] font-mono text-[11px] uppercase tracking-wider text-[var(--ink)] transition-colors cursor-pointer"
+            className="print-hide inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--paper-elevated)] border border-[var(--rule)] hover:border-[var(--ink)] font-mono text-[11px] uppercase tracking-wider text-[var(--ink)] transition-colors cursor-pointer"
             aria-label="Close study ledger"
           >
             <span>Close</span>
@@ -317,8 +346,24 @@ export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
             </div>
           </div>
 
-          {/* Data Management Actions */}
-          <div className="pt-4 border-t border-[var(--rule)] flex flex-wrap gap-2.5">
+          {/* Data Management & Archival Export Actions */}
+          <div className="print-hide pt-4 border-t border-[var(--rule)] flex flex-wrap gap-2.5">
+            <button
+              type="button"
+              onClick={handleDownloadFieldSheet}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--signal)] hover:bg-[var(--signal-hover)] text-[#FAF7F1] font-mono text-xs uppercase tracking-wider transition-colors cursor-pointer"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              Field Sheet (SVG)
+            </button>
+            <button
+              type="button"
+              onClick={handlePrintLedger}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--paper)] hover:bg-[var(--chassis)] text-[var(--ink)] border border-[var(--ink)]/35 hover:border-[var(--ink)] font-mono text-xs uppercase tracking-wider transition-colors cursor-pointer"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              Print Ledger
+            </button>
             <button
               type="button"
               onClick={handleExport}
