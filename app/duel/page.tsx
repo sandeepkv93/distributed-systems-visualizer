@@ -1,205 +1,67 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
-import { Play, Pause, SkipForward, RotateCcw, ArrowUpRight, Scale } from 'lucide-react';
+import {
+  Play,
+  Pause,
+  SkipForward,
+  RotateCcw,
+  ArrowUpRight,
+  Scale,
+  Link2,
+  Check,
+} from 'lucide-react';
 import { RaftAlgorithm } from '@/lib/algorithms/raft';
 import { PaxosAlgorithm } from '@/lib/algorithms/paxos';
 import { TwoPhaseCommitAlgorithm } from '@/lib/algorithms/twoPhaseCommit';
 import { DistributedTransactionsAlgorithm } from '@/lib/algorithms/distributedTransactions';
 import { LamportClocksAlgorithm } from '@/lib/algorithms/lamportClocks';
 import { VectorClocksAlgorithm } from '@/lib/algorithms/vectorClocks';
+import { QuorumReplicationAlgorithm } from '@/lib/algorithms/quorumReplication';
+import { CRDTAlgorithm } from '@/lib/algorithms/crdts';
+import { ConsistentHashingAlgorithm } from '@/lib/algorithms/consistentHashing';
+import { ShardingRebalancingAlgorithm } from '@/lib/algorithms/shardingRebalancing';
+import { PBFTAlgorithm } from '@/lib/algorithms/pbft';
+import {
+  DUELS,
+  DuelId,
+  parseDuelDeepLink,
+  clampDuelStep,
+  buildDuelDeepLinkUrl,
+} from '@/lib/duels';
+import { showToast } from '@/lib/toast';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 
-type DuelId = 'raft-vs-paxos' | '2pc-vs-saga' | 'lamport-vs-vector';
+const INITIAL_HASH_KEYS = [
+  'user-01',
+  'user-02',
+  'user-03',
+  'acct-10',
+  'acct-11',
+  'acct-12',
+  'sess-20',
+  'sess-21',
+  'sess-22',
+  'cart-30',
+  'cart-31',
+  'cart-32',
+];
 
-interface DuelSpec {
-  id: DuelId;
-  number: string;
-  title: string;
-  subtitle: string;
-  leftName: string;
-  leftPath: string;
-  leftPaper: string;
-  rightName: string;
-  rightPath: string;
-  rightPaper: string;
-  steps: Array<{
-    title: string;
-    leftNote: string;
-    rightNote: string;
-    insight: string;
-  }>;
-  comparison: Array<{
-    axis: string;
-    left: string;
-    right: string;
-  }>;
-}
-
-const DUELS: readonly DuelSpec[] = [
-  {
-    id: 'raft-vs-paxos',
-    number: '01',
-    title: 'Raft vs. Paxos',
-    subtitle: 'Strong-leader log replication vs. symmetric proposer/acceptor consensus rounds',
-    leftName: 'Raft Consensus',
-    leftPath: '/raft',
-    leftPaper: 'Ongaro & Ousterhout, 2014',
-    rightName: 'Paxos Consensus',
-    rightPath: '/paxos',
-    rightPaper: 'Lamport, 1998',
-    steps: [
-      {
-        title: 'Initiate Agreement',
-        leftNote: 'N0 increments term to 1 and broadcasts RequestVote to all peers.',
-        rightNote: 'Proposer P0 broadcasts Phase 1 Prepare(#1) to all 5 acceptors.',
-        insight: 'Both begin with a majority-seeking round, but Raft elects a durable leader while Paxos seeks permission for a single proposal number.',
-      },
-      {
-        title: 'Quorum Responses',
-        leftNote: 'Followers grant votes once per term; N0 collects majority.',
-        rightNote: 'Acceptors promise not to accept proposals < #1 and reply Promise(#1).',
-        insight: 'Both require ⌊N/2⌋ + 1 = 3 replies so any two quorums intersect at ≥ 1 node.',
-      },
-      {
-        title: 'Establish Authority / Propose',
-        leftNote: 'N0 becomes Term 1 Leader — all future writes flow directly through N0.',
-        rightNote: 'P0 sends Phase 2 Accept(#1, "SET x=42") to the acceptor quorum.',
-        insight: 'Once elected, Raft skips Phase 1 for subsequent entries; basic Paxos runs Prepare+Accept per value.',
-      },
-      {
-        title: 'Commit Value',
-        leftNote: 'Leader N0 appends "SET x=42" and replicates via AppendEntries.',
-        rightNote: 'Acceptors accept "SET x=42" and notify Learners — consensus reached.',
-        insight: 'Both commit durably once a majority persists the entry.',
-      },
-      {
-        title: 'Fault Injection: Crash Primary',
-        leftNote: 'Leader N0 crashes! Cluster stalls until an election timeout triggers Term 2.',
-        rightNote: 'P0 and Acceptor A0 crash — 4/5 acceptors remain healthy for P1.',
-        insight: 'Raft must elect a new leader before serving writes; Paxos allows any backup proposer to step in immediately.',
-      },
-      {
-        title: 'Recovery & Next Write',
-        leftNote: 'N1 wins Term 2 election and replicates "SET y=99" across remaining 4 nodes.',
-        rightNote: 'Proposer P1 runs Prepare/Accept for "SET y=99" and commits on 4/5 acceptors.',
-        insight: 'Both survive minority failures (f < N/2) without losing previously committed state.',
-      },
-    ],
-    comparison: [
-      { axis: 'Leadership', left: 'Strong single leader per term', right: 'Leaderless in basic Paxos (any proposer)' },
-      { axis: 'Steady-State RTT', left: '1 RTT (AppendEntries)', right: '2 RTTs (Prepare + Accept)' },
-      { axis: 'Log Continuity', left: 'Strictly sequential, no holes', right: 'Out-of-order slots allowed' },
-      { axis: 'Fault Tolerance', left: 'Tolerates f < N/2 crashes', right: 'Tolerates f < N/2 crashes' },
-    ],
-  },
-  {
-    id: '2pc-vs-saga',
-    number: '02',
-    title: 'Two-Phase Commit vs. Saga',
-    subtitle: 'Blocking atomic locking vs. non-blocking local commits with compensating rollbacks',
-    leftName: 'Two-Phase Commit',
-    leftPath: '/two-phase-commit',
-    leftPaper: 'Gray, 1978',
-    rightName: 'Compensating Saga',
-    rightPath: '/distributed-transactions',
-    rightPaper: 'Garcia-Molina, 1987',
-    steps: [
-      {
-        title: 'Start Distributed Order',
-        leftNote: 'Coordinator broadcasts VoteRequest; participants acquire locks.',
-        rightNote: 'Saga starts pipeline — no global locks acquired across services.',
-        insight: '2PC coordinates all participants up front; Saga breaks work into independent local transactions.',
-      },
-      {
-        title: 'Partial Progress',
-        leftNote: 'P0 and P1 vote YES and enter PREPARED (locked, waiting on coordinator).',
-        rightNote: 'Step 1 (Inventory) & Step 2 (Payment) commit locally and release locks.',
-        insight: '2PC preserves full isolation while waiting; Saga exposes intermediate committed state immediately.',
-      },
-      {
-        title: 'Downstream Failure',
-        leftNote: 'P2 fails / votes NO — atomic invariant forbids partial commit.',
-        rightNote: 'Step 3 (Shipping) fails after Steps 1 & 2 already committed locally.',
-        insight: '2PC detects failure before any commit; Saga discovers failure mid-flight.',
-      },
-      {
-        title: 'Abort vs. Compensate',
-        leftNote: 'Coordinator broadcasts ABORT to roll back P0 & P1 cleanly.',
-        rightNote: 'Saga executes compensating transaction for Step 2 (Refund Payment).',
-        insight: '2PC aborts cleanly via undo logs; Saga requires custom semantic undo actions.',
-      },
-      {
-        title: 'Final Convergence',
-        leftNote: 'All participants ABORTED and locks released (atomic all-or-nothing).',
-        rightNote: 'Step 1 compensated (Release Inventory) — system eventually consistent.',
-        insight: 'Use 2PC for strict ACID within a tight boundary; use Sagas across loosely-coupled microservices.',
-      },
-    ],
-    comparison: [
-      { axis: 'Isolation', left: 'Strict ACID (locks held across phases)', right: 'Eventual (intermediate states visible)' },
-      { axis: 'Blocking Risk', left: 'Blocks if coordinator crashes mid-phase', right: 'Non-blocking (local commits proceed)' },
-      { axis: 'Failure Undo', left: 'Automatic database rollback (ABORT)', right: 'Explicit compensating transactions' },
-      { axis: 'Best Fit', left: 'Single-region sharded DB / XA', right: 'Cross-service workflows & workflows' },
-    ],
-  },
-  {
-    id: 'lamport-vs-vector',
-    number: '03',
-    title: 'Lamport vs. Vector Clocks',
-    subtitle: 'Scalar logical clocks (1 integer) vs. exact causal partial-order vectors (N integers)',
-    leftName: 'Lamport Clocks',
-    leftPath: '/lamport-clocks',
-    leftPaper: 'Lamport, 1978',
-    rightName: 'Vector Clocks',
-    rightPath: '/vector-clocks',
-    rightPaper: 'Fidge & Mattern, 1988',
-    steps: [
-      {
-        title: 'Independent Event on P0',
-        leftNote: 'P0 executes local event → scalar clock ticks to 1.',
-        rightNote: 'P0 executes local event → vector clock becomes [1, 0, 0].',
-        insight: 'At a single process, both clocks simply increment their own counter.',
-      },
-      {
-        title: 'Concurrent Event on P2',
-        leftNote: 'P2 executes local event → scalar clock ticks to 1 (ties with P0).',
-        rightNote: 'P2 executes local event → vector clock becomes [0, 0, 1].',
-        insight: 'Vector clocks immediately prove [1,0,0] ∥ [0,0,1] are concurrent (neither ≤ the other).',
-      },
-      {
-        title: 'Divergent Ticks on P0',
-        leftNote: 'P0 ticks again → P0=2 > P2=1. Scalar comparison hides concurrency!',
-        rightNote: 'P0=[2, 0, 0] vs P2=[0, 0, 1] → still provably CONCURRENT!',
-        insight: 'Key theorem: Lamport gives (a→b ⇒ L(a)<L(b)), NOT the converse. Vector clocks give ⇔.',
-      },
-      {
-        title: 'Causal Message P0 → P1',
-        leftNote: 'P0 broadcasts (t=3); P1 updates its scalar clock past 3.',
-        rightNote: 'P0 sends [3,0,0] to P1; P1 takes element-wise max → [3, 1, 0].',
-        insight: 'Vector merge captures the entire causal ancestry known to P0 at send time.',
-      },
-      {
-        title: 'Transitive Chain P1 → P2',
-        leftNote: 'P1 broadcasts; P2 advances scalar clock into total order.',
-        rightNote: 'P1 sends [3,2,0] to P2; P2 merges → [3, 2, 2], proving P0 → P1 → P2.',
-        insight: 'Vector clocks detect exact causality at the cost of O(N) metadata per message.',
-      },
-    ],
-    comparison: [
-      { axis: 'Metadata Size', left: 'O(1) — single integer', right: 'O(N) — vector of N process counters' },
-      { axis: 'Causal Guarantee', left: 'a → b ⇒ L(a) < L(b) (one-way)', right: 'a → b ⇔ V(a) < V(b) (if and only if)' },
-      { axis: 'Concurrency Detection', left: 'Cannot distinguish concurrent vs causal', right: 'Exact concurrency detection (V(a) ∥ V(b))' },
-      { axis: 'Total Order', left: 'Easy tie-break with (clock, nodeId)', right: 'Partial order by design' },
-    ],
-  },
+const BURST_HASH_KEYS = [
+  'order-100',
+  'order-101',
+  'order-102',
+  'order-103',
+  'order-104',
+  'order-105',
 ];
 
 export default function ProtocolDuelPage() {
   const [duelId, setDuelId] = useState<DuelId>('raft-vs-paxos');
   const [step, setStep] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   // Real algorithm engine instances
   const [raft] = useState(() => new RaftAlgorithm(5));
@@ -208,9 +70,15 @@ export default function ProtocolDuelPage() {
   const [saga] = useState(() => new DistributedTransactionsAlgorithm(3));
   const [lamport] = useState(() => new LamportClocksAlgorithm(3));
   const [vector] = useState(() => new VectorClocksAlgorithm(3));
+  const [quorum] = useState(() => new QuorumReplicationAlgorithm(5, 3));
+  const [crdt] = useState(() => new CRDTAlgorithm(3));
+  const [hashing] = useState(() => new ConsistentHashingAlgorithm(3, 3));
+  const [sharding] = useState(() => new ShardingRebalancingAlgorithm(3, 'range'));
+  const [pbft] = useState(() => new PBFTAlgorithm(4));
 
   // Tick counter to force React re-render after mutating algorithm engines
   const [, setVersion] = useState(0);
+  const hasHydratedRef = useRef(false);
 
   const activeDuel = useMemo(
     () => DUELS.find((d) => d.id === duelId) ?? DUELS[0],
@@ -218,6 +86,16 @@ export default function ProtocolDuelPage() {
   );
 
   const totalSteps = activeDuel.steps.length;
+
+  const syncUrl = useCallback((nextDuel: DuelId, nextStep: number) => {
+    if (typeof window === 'undefined') return;
+    try {
+      const nextUrl = buildDuelDeepLinkUrl(window.location.href, nextDuel, nextStep);
+      window.history.replaceState(null, '', nextUrl);
+    } catch {
+      // Ignore history API restrictions
+    }
+  }, []);
 
   // Deterministically reconstruct both engines at exact step `targetStep`
   const applyDuelState = useCallback(
@@ -311,7 +189,7 @@ export default function ProtocolDuelPage() {
           tpc.coordinatorComplete();
           saga.compensateSaga('S0');
         }
-      } else {
+      } else if (targetDuel === 'lamport-vs-vector') {
         lamport.reset();
         vector.reset();
 
@@ -349,20 +227,159 @@ export default function ProtocolDuelPage() {
             vector.receiveMessage('P2', sent.vectorClock, sent.id, 'P1→P2');
           }
         }
+      } else if (targetDuel === 'quorum-vs-crdts') {
+        quorum.reset();
+        crdt.reset();
+
+        if (targetStep >= 1) {
+          quorum.write('cart', 1, 'N0', 3);
+          quorum
+            .getMessages()
+            .filter((m) => m.status === 'in-flight')
+            .forEach((m) => quorum.deliverMessage(m.id));
+          crdt.increment('R0');
+          crdt.orSetAdd('R0', 'cart');
+        }
+        if (targetStep >= 2) {
+          quorum.failNode('N2');
+          quorum.write('cart', 2, 'N3', 3);
+          crdt.increment('R1');
+          crdt.increment('R2');
+          crdt.orSetAdd('R1', 'promo');
+        }
+        if (targetStep >= 3) {
+          quorum
+            .getMessages()
+            .filter((m) => m.type === 'Write' && m.status === 'in-flight')
+            .forEach((m) => quorum.deliverMessage(m.id));
+          quorum.read('cart', 'N0', 3);
+        }
+        if (targetStep >= 4) {
+          quorum
+            .getMessages()
+            .filter((m) => m.type === 'Repair' && m.status === 'in-flight')
+            .forEach((m) => quorum.deliverMessage(m.id));
+          crdt.syncAll();
+        }
+        if (targetStep >= 5) {
+          quorum.recoverNode('N2');
+          quorum.read('cart', 'N2', 3);
+          quorum
+            .getMessages()
+            .filter((m) => m.status === 'in-flight')
+            .forEach((m) => quorum.deliverMessage(m.id));
+          crdt
+            .getMessages()
+            .filter((m) => m.status === 'in-flight')
+            .forEach((m) => crdt.deliverMessage(m.id));
+        }
+      } else if (targetDuel === 'hashing-vs-sharding') {
+        hashing.reset();
+        hashing.addServer('server-0');
+        hashing.addServer('server-1');
+        hashing.addServer('server-2');
+        sharding.reset();
+        sharding.setStrategy('range');
+
+        if (targetStep >= 1) {
+          INITIAL_HASH_KEYS.forEach((k) => hashing.addKey(k));
+        }
+        if (targetStep >= 2) {
+          BURST_HASH_KEYS.forEach((k) => hashing.addKey(k));
+        }
+        if (targetStep >= 3) {
+          hashing.addServer('server-3');
+          sharding.addNode();
+        }
+        if (targetStep >= 4) {
+          hashing.removeServer('server-1');
+          sharding.removeNode('N1');
+        }
+        if (targetStep >= 5) {
+          sharding
+            .getMessages()
+            .filter((m) => m.status === 'in-flight')
+            .forEach((m) => sharding.deliverMessage(m.id));
+          hashing.recordDistributionSnapshot('Post-rebalance');
+        }
+      } else if (targetDuel === 'raft-vs-pbft') {
+        raft.reset();
+        pbft.reset();
+
+        if (targetStep >= 1) {
+          raft.startElection('node-0');
+          raft.processRequestVotes();
+          raft.processVoteResponses();
+          raft.finalizeElection();
+          raft.addClientRequest('node-0', 'TX #7');
+
+          pbft.clientRequest('TX #7');
+          pbft
+            .getMessages()
+            .filter((m) => m.type === 'ClientRequest' && m.status === 'in-flight')
+            .forEach((m) => pbft.deliverMessage(m.id));
+        }
+        if (targetStep >= 2) {
+          pbft
+            .getMessages()
+            .filter((m) => m.type === 'PrePrepare' && m.status === 'in-flight')
+            .forEach((m) => pbft.deliverMessage(m.id));
+        }
+        if (targetStep >= 3) {
+          raft.replicatePendingLogs();
+          pbft
+            .getMessages()
+            .filter((m) => m.type === 'Prepare' && m.status === 'in-flight')
+            .forEach((m) => pbft.deliverMessage(m.id));
+        }
+        if (targetStep >= 4) {
+          pbft
+            .getMessages()
+            .filter((m) => m.type === 'Commit' && m.status === 'in-flight')
+            .forEach((m) => pbft.deliverMessage(m.id));
+        }
+        if (targetStep >= 5) {
+          raft.failNode('node-0');
+          raft.startElection('node-1');
+          raft.processRequestVotes();
+          raft.processVoteResponses();
+          raft.finalizeElection();
+
+          pbft.failNode('N0');
+          pbft.triggerViewChange();
+        }
       }
 
       setVersion((v) => v + 1);
     },
-    [raft, paxos, tpc, saga, lamport, vector]
+    [raft, paxos, tpc, saga, lamport, vector, quorum, crdt, hashing, sharding, pbft]
   );
+
+  // Hydrate initial ?duel=<id>&step=<n> deep-link once on mount
+  useEffect(() => {
+    if (hasHydratedRef.current || typeof window === 'undefined') return;
+    hasHydratedRef.current = true;
+    const { duelId: linkedDuel, step: linkedStep } = parseDuelDeepLink(window.location.search);
+    if (!linkedDuel && linkedStep === null) return;
+
+    const timer = setTimeout(() => {
+      const targetDuel = linkedDuel ?? 'raft-vs-paxos';
+      const targetStep = linkedStep !== null ? clampDuelStep(targetDuel, linkedStep) : 0;
+      setDuelId(targetDuel);
+      setStep(targetStep);
+      applyDuelState(targetDuel, targetStep);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [applyDuelState]);
 
   const jumpToStep = useCallback(
     (nextStep: number) => {
       const clamped = Math.max(0, Math.min(totalSteps, nextStep));
       setStep(clamped);
       applyDuelState(duelId, clamped);
+      syncUrl(duelId, clamped);
     },
-    [applyDuelState, duelId, totalSteps]
+    [applyDuelState, duelId, totalSteps, syncUrl]
   );
 
   const selectDuel = (nextId: DuelId) => {
@@ -370,6 +387,20 @@ export default function ProtocolDuelPage() {
     setDuelId(nextId);
     setStep(0);
     applyDuelState(nextId, 0);
+    syncUrl(nextId, 0);
+  };
+
+  const handleCopyLink = async () => {
+    if (typeof window === 'undefined') return;
+    const shareUrl = buildDuelDeepLinkUrl(window.location.href, duelId, step);
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopiedLink(true);
+      showToast('Duel deep-link copied to clipboard', 'success');
+      setTimeout(() => setCopiedLink(false), 1800);
+    } catch {
+      showToast('Unable to copy link in this browser context', 'error');
+    }
   };
 
   useEffect(() => {
@@ -378,12 +409,13 @@ export default function ProtocolDuelPage() {
       const next = step + 1;
       setStep(next);
       applyDuelState(duelId, next);
+      syncUrl(duelId, next);
       if (next >= totalSteps) {
         setIsPlaying(false);
       }
     }, 1550);
     return () => clearTimeout(timer);
-  }, [isPlaying, step, totalSteps, duelId, applyDuelState]);
+  }, [isPlaying, step, totalSteps, duelId, applyDuelState, syncUrl]);
 
   const currentStepInfo = step > 0 ? activeDuel.steps[step - 1] : null;
 
@@ -394,14 +426,14 @@ export default function ProtocolDuelPage() {
         <div className="flex flex-wrap items-center justify-between gap-2 pb-4 mb-8 border-b border-[var(--rule)] font-mono text-[11px] tracking-[0.1em] uppercase text-[var(--ink-muted)]">
           <span className="inline-flex items-center gap-2 text-[var(--signal)] font-semibold">
             <Scale className="w-3.5 h-3.5" />
-            COMPARATIVE LABORATORY · DUAL OSCILLOSCOPE
+            COMPARATIVE LABORATORY · 06 DUAL OSCILLOSCOPES
           </span>
           <Link href="/" className="hover:text-[var(--ink)] transition-colors">
             ← Return to Protocol Atlas
           </Link>
         </div>
 
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-8">
+        <div className="flex flex-col gap-6 mb-8">
           <div>
             <h1 className="font-editorial text-4xl sm:text-5xl tracking-[-0.025em] text-[var(--ink)] leading-tight">
               Protocol <em className="italic text-[var(--signal)] font-normal">Duel</em> Bench
@@ -413,8 +445,8 @@ export default function ProtocolDuelPage() {
             </p>
           </div>
 
-          {/* Duel Selector Tabs */}
-          <div className="flex flex-wrap gap-2">
+          {/* Duel Selector Grid (6 Matchups) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {DUELS.map((d) => {
               const active = d.id === duelId;
               return (
@@ -422,16 +454,25 @@ export default function ProtocolDuelPage() {
                   key={d.id}
                   type="button"
                   onClick={() => selectDuel(d.id)}
-                  className={`px-3.5 py-2 border font-mono text-xs uppercase tracking-wider transition-colors cursor-pointer ${
+                  className={`px-3.5 py-2.5 border text-left transition-colors cursor-pointer ${
                     active
                       ? 'bg-[var(--ink)] text-[var(--paper-elevated)] border-[var(--ink)]'
                       : 'bg-[var(--paper-elevated)] text-[var(--ink-secondary)] border-[var(--rule)] hover:border-[var(--ink)] hover:text-[var(--ink)]'
                   }`}
                 >
-                  <span className={active ? 'text-[#FB923C] mr-1.5' : 'text-[var(--signal)] mr-1.5'}>
-                    {d.number}
-                  </span>
-                  {d.title}
+                  <div className="font-mono text-xs uppercase tracking-wider font-medium">
+                    <span className={active ? 'text-[#FB923C] mr-1.5' : 'text-[var(--signal)] mr-1.5'}>
+                      {d.number}
+                    </span>
+                    {d.title}
+                  </div>
+                  <div
+                    className={`text-[11px] mt-0.5 line-clamp-1 ${
+                      active ? 'text-[#C8C3B8]' : 'text-[var(--ink-muted)]'
+                    }`}
+                  >
+                    {d.subtitle}
+                  </div>
                 </button>
               );
             })}
@@ -439,8 +480,8 @@ export default function ProtocolDuelPage() {
         </div>
 
         {/* Synchronized Hardware Control Rail */}
-        <div className="border border-[var(--ink)] bg-[var(--chassis)] p-4 mb-6 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
+        <div className="border border-[var(--ink)] bg-[var(--chassis)] p-4 mb-6 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-2">
             {isPlaying ? (
               <button
                 type="button"
@@ -487,6 +528,20 @@ export default function ProtocolDuelPage() {
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Reset</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-[var(--paper-elevated)] border border-[var(--rule)] hover:border-[var(--ink)] text-[var(--ink)] font-mono text-xs uppercase tracking-wider cursor-pointer"
+              title="Copy shareable deep-link to this duel and step"
+            >
+              {copiedLink ? (
+                <Check className="w-3.5 h-3.5 text-[var(--emerald)]" />
+              ) : (
+                <Link2 className="w-3.5 h-3.5 text-[var(--signal)]" />
+              )}
+              <span>{copiedLink ? 'Copied' : 'Copy Duel Link'}</span>
             </button>
           </div>
 
@@ -574,9 +629,13 @@ export default function ProtocolDuelPage() {
             </div>
 
             <div className="scope-viewport h-[340px] relative">
-              {duelId === 'raft-vs-paxos' && <RaftMiniScope raft={raft} />}
+              {(duelId === 'raft-vs-paxos' || duelId === 'raft-vs-pbft') && (
+                <RaftMiniScope raft={raft} />
+              )}
               {duelId === '2pc-vs-saga' && <TwoPhaseMiniScope tpc={tpc} />}
               {duelId === 'lamport-vs-vector' && <LamportMiniScope lamport={lamport} />}
+              {duelId === 'quorum-vs-crdts' && <QuorumMiniScope quorum={quorum} />}
+              {duelId === 'hashing-vs-sharding' && <ConsistentHashingMiniScope hashing={hashing} />}
             </div>
 
             <div className="px-4 py-3 border-t border-[var(--rule)] bg-[var(--paper)] font-mono text-xs text-[var(--ink-secondary)] min-h-[56px]">
@@ -606,6 +665,9 @@ export default function ProtocolDuelPage() {
               {duelId === 'raft-vs-paxos' && <PaxosMiniScope paxos={paxos} />}
               {duelId === '2pc-vs-saga' && <SagaMiniScope saga={saga} />}
               {duelId === 'lamport-vs-vector' && <VectorMiniScope vector={vector} />}
+              {duelId === 'quorum-vs-crdts' && <CRDTMiniScope crdt={crdt} />}
+              {duelId === 'hashing-vs-sharding' && <ShardingMiniScope sharding={sharding} />}
+              {duelId === 'raft-vs-pbft' && <PBFTMiniScope pbft={pbft} />}
             </div>
 
             <div className="px-4 py-3 border-t border-[var(--rule)] bg-[var(--paper)] font-mono text-xs text-[var(--ink-secondary)] min-h-[56px]">
@@ -1056,3 +1118,418 @@ function VectorMiniScope({ vector }: { vector: VectorClocksAlgorithm }) {
     </svg>
   );
 }
+
+function QuorumMiniScope({ quorum }: { quorum: QuorumReplicationAlgorithm }) {
+  const nodes = quorum.getNodes();
+  const messages = quorum.getMessages();
+
+  return (
+    <svg viewBox="0 0 840 640" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+      <ScopeDefs idPrefix="duel-quorum" />
+      <text x="28" y="38" fill={SCOPE_COLORS.inkMuted} fontSize="12" letterSpacing="0.1em">
+        N=5 · W=3 · R=3 (W+R &gt; N) · HEALTHY {nodes.filter((n) => n.status === 'healthy').length}/5
+      </text>
+      {nodes.map((a, i) =>
+        nodes.slice(i + 1).map((b) => (
+          <line
+            key={`dq-${a.id}-${b.id}`}
+            x1={a.position.x}
+            y1={a.position.y}
+            x2={b.position.x}
+            y2={b.position.y}
+            stroke={SCOPE_COLORS.hairlineSubtle}
+            strokeWidth="1"
+          />
+        ))
+      )}
+      {messages.slice(-8).map((msg) => {
+        const from =
+          msg.from === 'repair'
+            ? { position: { x: 420, y: 340 } }
+            : nodes.find((n) => n.id === msg.from);
+        const to = nodes.find((n) => n.id === msg.to);
+        if (!from || !to) return null;
+        const isRepair = msg.type === 'Repair';
+        return (
+          <ScopeEdge
+            key={msg.id}
+            idPrefix="duel-quorum"
+            x1={from.position.x}
+            y1={from.position.y}
+            x2={to.position.x}
+            y2={to.position.y}
+            color={isRepair ? SCOPE_COLORS.amber : SCOPE_COLORS.cobalt}
+            markerKey={isRepair ? 'amber' : 'cobalt'}
+            inset={40}
+            dashed={isRepair}
+          />
+        );
+      })}
+      {nodes.map((node) => {
+        const isFailed = node.status === 'failed';
+        const cart = node.data.get('cart');
+        const accent = isFailed
+          ? SCOPE_COLORS.danger
+          : cart?.version && cart.version >= 2
+          ? SCOPE_COLORS.emerald
+          : cart
+          ? SCOPE_COLORS.cobalt
+          : SCOPE_COLORS.inkMuted;
+        return (
+          <ScopeNode
+            key={node.id}
+            x={node.position.x}
+            y={node.position.y}
+            radius={38}
+            label={node.id}
+            sublabel={isFailed ? 'DOWN' : cart ? `v${cart.version} = ${cart.value}` : 'EMPTY'}
+            topTag={isFailed ? 'FAILED' : 'REPLICA'}
+            bottomLine1={cart ? `KEY cart` : undefined}
+            accentColor={accent}
+            failed={isFailed}
+            highlighted={Boolean(cart && cart.version >= 2)}
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
+function CRDTMiniScope({ crdt }: { crdt: CRDTAlgorithm }) {
+  const replicas = crdt.getReplicas();
+  const messages = crdt.getMessages();
+  const stats = crdt.getStats();
+  const coords = [
+    { x: 420, y: 170 },
+    { x: 610, y: 440 },
+    { x: 230, y: 440 },
+  ];
+
+  const converged = stats.divergentGCounter === 0 && stats.divergentORSet === 0;
+
+  return (
+    <svg viewBox="0 0 840 620" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+      <ScopeDefs idPrefix="duel-crdt" />
+      <text
+        x="28"
+        y="38"
+        fill={converged ? SCOPE_COLORS.emerald : SCOPE_COLORS.amber}
+        fontSize="12"
+        letterSpacing="0.1em"
+      >
+        {converged
+          ? 'STRONG EVENTUAL CONVERGENCE · ALL REPLICAS IDENTICAL'
+          : `LOCAL DIVERGENCE ACTIVE · 0-RTT WRITES · ${stats.divergentGCounter} SKEWED`}
+      </text>
+      {coords.map((a, i) =>
+        coords.slice(i + 1).map((b, j) => (
+          <line
+            key={`dc-${i}-${j}`}
+            x1={a.x}
+            y1={a.y}
+            x2={b.x}
+            y2={b.y}
+            stroke={SCOPE_COLORS.hairlineSubtle}
+            strokeWidth="1"
+          />
+        ))
+      )}
+      {messages.slice(-6).map((msg) => {
+        const fromIdx = replicas.findIndex((r) => r.id === msg.from);
+        const toIdx = replicas.findIndex((r) => r.id === msg.to);
+        if (fromIdx < 0 || toIdx < 0) return null;
+        return (
+          <ScopeEdge
+            key={msg.id}
+            idPrefix="duel-crdt"
+            x1={coords[fromIdx].x}
+            y1={coords[fromIdx].y}
+            x2={coords[toIdx].x}
+            y2={coords[toIdx].y}
+            color={msg.status === 'success' ? SCOPE_COLORS.emerald : SCOPE_COLORS.amber}
+            markerKey={msg.status === 'success' ? 'emerald' : 'amber'}
+            inset={48}
+            dashed={msg.status === 'in-flight'}
+            label="MERGE"
+          />
+        );
+      })}
+      {replicas.map((replica, idx) => {
+        const total = crdt.getGCounterTotal(replica);
+        const orSet = crdt.getORSetValues(replica);
+        const vec = Object.keys(replica.gCounter)
+          .sort()
+          .map((k) => replica.gCounter[k])
+          .join(',');
+        return (
+          <ScopeNode
+            key={replica.id}
+            x={coords[idx].x}
+            y={coords[idx].y}
+            radius={46}
+            label={replica.id}
+            sublabel={`SUM=${total} [${vec}]`}
+            topTag="CRDT REPLICA"
+            bottomLine1={orSet.length > 0 ? `{${orSet.join(', ')}}` : '{}'}
+            accentColor={total > 0 ? (converged ? SCOPE_COLORS.emerald : SCOPE_COLORS.cobalt) : SCOPE_COLORS.inkMuted}
+            highlighted={converged && total > 0}
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
+function ConsistentHashingMiniScope({ hashing }: { hashing: ConsistentHashingAlgorithm }) {
+  const ring = hashing.getRing();
+  const stats = hashing.getStats();
+  const servers = hashing.getPhysicalServers();
+  const cx = 420;
+  const cy = 325;
+  const radius = 195;
+  const hashSpace = 2 ** 32;
+
+  const palette = [
+    SCOPE_COLORS.signal,
+    SCOPE_COLORS.cobalt,
+    SCOPE_COLORS.emerald,
+    SCOPE_COLORS.amber,
+  ];
+  const colorForServer = (serverId?: string) => {
+    const idx = servers.indexOf(serverId ?? '');
+    return palette[(idx >= 0 ? idx : 0) % palette.length];
+  };
+
+  return (
+    <svg viewBox="0 0 840 620" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+      <ScopeDefs idPrefix="duel-ch" />
+      <text x="28" y="38" fill={SCOPE_COLORS.inkMuted} fontSize="12" letterSpacing="0.1em">
+        SERVERS: {stats.physicalServers} · VNODES: {stats.totalNodes} · KEYS: {stats.totalKeys} ·
+        IMBALANCE: {stats.loadStats.imbalance.toFixed(2)}×
+      </text>
+
+      {/* Main Hash Ring */}
+      <circle
+        cx={cx}
+        cy={cy}
+        r={radius}
+        fill="none"
+        stroke={SCOPE_COLORS.hairline}
+        strokeWidth="2"
+        strokeDasharray="6 4"
+      />
+
+      {/* Keys on Ring */}
+      {ring.keys.map((k) => {
+        const angle = (k.hashValue / hashSpace) * Math.PI * 2 - Math.PI / 2;
+        const owner = ring.nodes.find((n) => n.id === k.nodeId);
+        const kx = cx + (radius - 26) * Math.cos(angle);
+        const ky = cy + (radius - 26) * Math.sin(angle);
+        return (
+          <circle
+            key={k.key}
+            cx={kx}
+            cy={ky}
+            r={5}
+            fill={colorForServer(owner?.physicalNodeId)}
+            opacity={0.9}
+          />
+        );
+      })}
+
+      {/* Virtual Nodes on Ring */}
+      {ring.nodes.map((node) => {
+        const angle = (node.hashValue / hashSpace) * Math.PI * 2 - Math.PI / 2;
+        const nx = cx + radius * Math.cos(angle);
+        const ny = cy + radius * Math.sin(angle);
+        const color = colorForServer(node.physicalNodeId);
+        return (
+          <g key={node.id}>
+            <circle cx={nx} cy={ny} r={11} fill="#161918" stroke={color} strokeWidth="2.5" />
+            <text
+              x={cx + (radius + 32) * Math.cos(angle)}
+              y={cy + (radius + 32) * Math.sin(angle) + 4}
+              textAnchor="middle"
+              fill={color}
+              fontSize="10"
+              fontFamily="var(--font-ibm-plex-mono), monospace"
+            >
+              {node.id.replace('server-', 'S')}
+            </text>
+          </g>
+        );
+      })}
+
+      {/* Center Load Summary */}
+      <text
+        x={cx}
+        y={cy - 18}
+        textAnchor="middle"
+        fill={SCOPE_COLORS.inkMuted}
+        fontSize="11"
+        fontFamily="var(--font-ibm-plex-mono), monospace"
+      >
+        PHYSICAL LOAD
+      </text>
+      {servers.map((srv, idx) => (
+        <text
+          key={srv}
+          x={cx}
+          y={cy + 6 + idx * 20}
+          textAnchor="middle"
+          fill={colorForServer(srv)}
+          fontSize="12"
+          fontWeight="600"
+          fontFamily="var(--font-ibm-plex-mono), monospace"
+        >
+          {srv.toUpperCase()}: {stats.loadDistribution.get(srv) ?? 0} keys
+        </text>
+      ))}
+    </svg>
+  );
+}
+
+function ShardingMiniScope({ sharding }: { sharding: ShardingRebalancingAlgorithm }) {
+  const nodes = sharding.getNodes();
+  const messages = sharding.getMessages();
+  const stats = sharding.getStats();
+
+  return (
+    <svg viewBox="0 0 840 620" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+      <ScopeDefs idPrefix="duel-shard" />
+      <text x="28" y="38" fill={SCOPE_COLORS.inkMuted} fontSize="12" letterSpacing="0.1em">
+        STRATEGY: {stats.strategy.toUpperCase()} · NODES: {stats.totalNodes} · KEYS:{' '}
+        {stats.totalKeys} · AVG {stats.avgLoad.toFixed(1)}/NODE
+      </text>
+      {messages.slice(-8).map((msg) => {
+        const from = nodes.find((n) => n.id === msg.from);
+        const to = nodes.find((n) => n.id === msg.to);
+        if (!from || !to) return null;
+        return (
+          <ScopeEdge
+            key={msg.id}
+            idPrefix="duel-shard"
+            x1={from.position.x}
+            y1={from.position.y}
+            x2={to.position.x}
+            y2={to.position.y}
+            color={SCOPE_COLORS.amber}
+            markerKey="amber"
+            inset={44}
+            dashed={msg.status === 'in-flight'}
+            label="MOVE"
+          />
+        );
+      })}
+      {nodes.map((node, idx) => {
+        const range = node.shards[0];
+        const hot = node.load > stats.avgLoad * 1.15;
+        const accent = hot
+          ? SCOPE_COLORS.signal
+          : idx % 2 === 0
+          ? SCOPE_COLORS.cobalt
+          : SCOPE_COLORS.emerald;
+        return (
+          <ScopeNode
+            key={node.id}
+            x={node.position.x}
+            y={node.position.y}
+            radius={42}
+            label={node.id}
+            sublabel={range ? `[${range.start}–${range.end}]` : 'IDLE'}
+            topTag={hot ? 'HOT SHARD' : 'RANGE SHARD'}
+            bottomLine1={`LOAD ${node.load} KEYS`}
+            accentColor={accent}
+            highlighted={hot}
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
+function PBFTMiniScope({ pbft }: { pbft: PBFTAlgorithm }) {
+  const nodes = pbft.getNodes();
+  const messages = pbft.getMessages();
+  const stats = pbft.getStats();
+
+  return (
+    <svg viewBox="0 0 840 640" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+      <ScopeDefs idPrefix="duel-pbft" />
+      <text x="28" y="38" fill={SCOPE_COLORS.inkMuted} fontSize="12" letterSpacing="0.1em">
+        VIEW v{stats.view} · 3f+1=4 (f=1) · QUORUM {stats.quorum} · EXECUTED {stats.executed}
+      </text>
+      {nodes.map((a, i) =>
+        nodes.slice(i + 1).map((b) => (
+          <line
+            key={`dpb-${a.id}-${b.id}`}
+            x1={a.position.x}
+            y1={a.position.y}
+            x2={b.position.x}
+            y2={b.position.y}
+            stroke={SCOPE_COLORS.hairlineSubtle}
+            strokeWidth="1"
+          />
+        ))
+      )}
+      {messages.slice(-10).map((msg) => {
+        const from = nodes.find((n) => n.id === msg.from);
+        const to = nodes.find((n) => n.id === msg.to);
+        if (!from || !to) return null;
+        const color =
+          msg.type === 'Commit'
+            ? SCOPE_COLORS.emerald
+            : msg.type === 'Prepare'
+            ? SCOPE_COLORS.amber
+            : SCOPE_COLORS.cobalt;
+        const markerKey =
+          msg.type === 'Commit' ? 'emerald' : msg.type === 'Prepare' ? 'amber' : 'cobalt';
+        return (
+          <ScopeEdge
+            key={msg.id}
+            idPrefix="duel-pbft"
+            x1={from.position.x}
+            y1={from.position.y}
+            x2={to.position.x}
+            y2={to.position.y}
+            color={color}
+            markerKey={markerKey}
+            inset={42}
+            dashed={msg.type === 'PrePrepare'}
+          />
+        );
+      })}
+      {nodes.map((node) => {
+        const isFailed = node.status === 'failed';
+        const isPrimary = !isFailed && node.role === 'primary';
+        const hasExecuted = node.executed.length > 0;
+        const latestPhase = Array.from(node.log.values()).at(-1)?.phase ?? 'idle';
+        const accent = isFailed
+          ? SCOPE_COLORS.danger
+          : isPrimary
+          ? SCOPE_COLORS.signal
+          : hasExecuted
+          ? SCOPE_COLORS.emerald
+          : latestPhase === 'commit'
+          ? SCOPE_COLORS.amber
+          : SCOPE_COLORS.cobalt;
+        return (
+          <ScopeNode
+            key={node.id}
+            x={node.position.x}
+            y={node.position.y}
+            radius={40}
+            label={node.id}
+            sublabel={isFailed ? 'BYZ/DOWN' : latestPhase.toUpperCase()}
+            topTag={isFailed ? 'FAULTY' : isPrimary ? `PRIMARY v${node.view}` : `REPLICA v${node.view}`}
+            bottomLine1={`EXEC ${node.executed.length}`}
+            accentColor={accent}
+            failed={isFailed}
+            highlighted={isPrimary || hasExecuted}
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
