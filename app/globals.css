@@ -115,13 +115,13 @@ body::before {
 
 main[data-view="visualizer"] > div.bg-slate-900 {
   background-color: var(--paper) !important;
-  min-height: calc(100vh - 56px);
+  min-height: calc(100vh - 96px);
 }
 
 @media (min-width: 768px) {
   main[data-view="visualizer"] > div.md\:h-screen {
-    height: calc(100vh - 56px) !important;
-    min-height: calc(100vh - 56px) !important;
+    height: calc(100vh - 96px) !important;
+    min-height: calc(100vh - 96px) !important;
   }
 }
 

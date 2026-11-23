@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import ConceptGrid from '@/components/ConceptGrid';
 import HeroSimulation from '@/components/HeroSimulation';
+import LearningTracks from '@/components/LearningTracks';
 import { TOTAL_CONCEPTS, TOTAL_SCENARIOS } from '@/lib/catalog';
 import { ArrowDown, ArrowUpRight } from 'lucide-react';
 
@@ -86,6 +87,9 @@ export default function Home() {
             <HeroSimulation />
           </div>
         </section>
+
+        {/* Guided Curriculum Tracks */}
+        <LearningTracks />
 
         {/* Full Protocol Atlas */}
         <ConceptGrid />
