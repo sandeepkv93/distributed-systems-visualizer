@@ -171,6 +171,15 @@ export default function Navigation() {
                   Diagnose the Outage
                 </span>
               </div>
+            ) : normalizedPath === '/bibliography' ? (
+              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
+                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--cobalt)] text-[#FAF7F1] flex-shrink-0">
+                  BIBLIOGRAPHY
+                </span>
+                <span className="font-editorial text-base text-[var(--ink)] truncate">
+                  Foundational Papers (1978–2014)
+                </span>
+              </div>
             ) : null}
           </div>
 
@@ -256,17 +265,26 @@ export default function Navigation() {
                     onClick={() => setShowIndexMenu(false)}
                   />
                   <div className="fixed sm:absolute right-4 sm:right-0 left-4 sm:left-auto mt-2 sm:w-[680px] max-w-[calc(100vw-2rem)] bg-[var(--paper-elevated)] border border-[var(--ink)] shadow-[6px_6px_0_0_var(--ink)] z-50 max-h-[75vh] overflow-y-auto">
-                    <div className="px-4 py-2.5 border-b border-[var(--rule)] bg-[var(--chassis)] flex items-center justify-between">
+                    <div className="px-4 py-2.5 border-b border-[var(--rule)] bg-[var(--chassis)] flex flex-wrap items-center justify-between gap-2">
                       <span className="font-mono text-[10px] tracking-[0.12em] uppercase text-[var(--ink-secondary)]">
                         Complete Protocol Index · 22 Plates
                       </span>
-                      <Link
-                        href="/"
-                        onClick={() => setShowIndexMenu(false)}
-                        className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--signal)] hover:underline"
-                      >
-                        Atlas Home →
-                      </Link>
+                      <div className="flex items-center gap-3">
+                        <Link
+                          href="/bibliography"
+                          onClick={() => setShowIndexMenu(false)}
+                          className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--cobalt)] hover:underline"
+                        >
+                          Bibliography (1978–2014) →
+                        </Link>
+                        <Link
+                          href="/"
+                          onClick={() => setShowIndexMenu(false)}
+                          className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--signal)] hover:underline"
+                        >
+                          Atlas Home →
+                        </Link>
+                      </div>
                     </div>
                     <div className="p-4 grid sm:grid-cols-2 gap-x-6 gap-y-5">
                       {CONCEPT_DOMAINS.map((domain) => {

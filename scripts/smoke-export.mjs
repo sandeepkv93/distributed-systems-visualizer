@@ -9,6 +9,7 @@ const EXPECTED_ROUTES = [
   '/map',
   '/bench',
   '/incidents',
+  '/bibliography',
   '/cap-theorem',
   '/chandy-lamport',
   '/consensus-variants',

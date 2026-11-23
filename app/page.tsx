@@ -103,14 +103,14 @@ export default function Home() {
                   Crashes &amp; splits
                 </div>
               </div>
-              <div>
-                <div className="font-mono text-[10px] tracking-[0.1em] uppercase text-[var(--ink-muted)]">
-                  Primary Sources
+              <Link href="/bibliography" className="group block">
+                <div className="font-mono text-[10px] tracking-[0.1em] uppercase text-[var(--cobalt)] group-hover:text-[var(--signal)] transition-colors">
+                  Primary Sources →
                 </div>
-                <div className="font-editorial text-lg text-[var(--ink)] mt-0.5">
+                <div className="font-editorial text-lg text-[var(--ink)] group-hover:underline mt-0.5">
                   1978 – 2014 papers
                 </div>
-              </div>
+              </Link>
             </div>
           </div>
 
@@ -137,6 +137,10 @@ export default function Home() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3 uppercase tracking-wider">
+            <Link href="/bibliography" className="text-[var(--cobalt)] hover:underline">
+              Bibliography
+            </Link>
+            <span>·</span>
             <span>⌘K Jump</span>
             <span>·</span>
             <span>Space Play</span>

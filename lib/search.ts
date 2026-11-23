@@ -52,6 +52,15 @@ const CORE_LABS: readonly AtlasSearchItem[] = [
     href: '/incidents',
     keywords: 'incidents outages postmortem sev-1 debug root cause split brain stale read',
   },
+  {
+    id: 'lab:bibliography',
+    kind: 'lab',
+    badge: 'LAB',
+    title: 'Primary Literature & Citation Monograph',
+    subtitle: '18 foundational distributed systems papers (1978–2014) linked to all 22 plates',
+    href: '/bibliography',
+    keywords: 'bibliography papers literature citations reading list syllabus lamport gray dynamo raft paxos',
+  },
 ];
 
 export function buildAtlasSearchIndex(): AtlasSearchItem[] {
