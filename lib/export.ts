@@ -6,7 +6,7 @@
 export async function exportAsPNG(
   svgElement: SVGSVGElement,
   filename: string = 'visualization.png',
-  backgroundColor: string = '#0f172a'
+  backgroundColor: string = '#111413'
 ): Promise<void> {
   try {
     // Get SVG dimensions

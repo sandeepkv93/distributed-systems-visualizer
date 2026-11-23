@@ -1,21 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useProgress } from '@/hooks/useProgress';
 import {
-  Trophy,
-  Award,
-  Clock,
-  BookOpen,
-  Target,
   RotateCcw,
   Download,
   Upload,
   AlertTriangle,
+  X,
+  Check,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { exportProgress, importProgress } from '@/lib/progress';
-import { CONCEPTS_CATALOG } from '@/lib/catalog';
+import { CONCEPTS_CATALOG, CONCEPT_DOMAINS } from '@/lib/catalog';
 import { showToast } from '@/lib/toast';
 
 interface ProgressDashboardProps {
@@ -25,6 +22,20 @@ interface ProgressDashboardProps {
 export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
   const { progress, achievements, stats, reset, refresh } = useProgress();
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showResetConfirm) {
+          setShowResetConfirm(false);
+        } else {
+          onClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onClose, showResetConfirm]);
 
   const formatTime = (milliseconds: number): string => {
     const hours = Math.floor(milliseconds / 3600000);
@@ -90,194 +101,238 @@ export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
       : 0;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div
+      className="fixed inset-0 bg-[#161614]/55 backdrop-blur-[2px] flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-slate-800 rounded-lg max-w-4xl w-full border border-slate-700 max-h-[90vh] overflow-y-auto relative"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.18 }}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-[var(--paper-elevated)] border border-[var(--ink)] shadow-[8px_8px_0_0_var(--ink)] max-w-4xl w-full max-h-[88vh] overflow-y-auto relative text-[var(--ink)]"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Study Ledger"
       >
-        {/* Header */}
-        <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-6 z-10 flex items-center justify-between">
+        {/* Archival Ledger Header */}
+        <div className="sticky top-0 bg-[var(--paper)] border-b border-[var(--ink)] px-6 py-4 z-10 flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-white mb-1">Your Learning Progress</h2>
-            <p className="text-slate-400 text-sm">Track your journey through distributed systems</p>
+            <div className="font-mono text-[10px] tracking-[0.14em] uppercase text-[var(--signal)]">
+              Field Study Ledger
+            </div>
+            <h2 className="font-editorial text-2xl text-[var(--ink)] mt-0.5">
+              Mastery &amp; Scenario Record
+            </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors"
-            aria-label="Close progress dashboard"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--paper-elevated)] border border-[var(--rule)] hover:border-[var(--ink)] font-mono text-[11px] uppercase tracking-wider text-[var(--ink)] transition-colors cursor-pointer"
+            aria-label="Close study ledger"
           >
-            ✕
+            <span>Close</span>
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
-          {/* Overall Progress */}
-          <div className="bg-slate-700/50 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-white">Overall Progress</h3>
-              <span className="text-3xl font-bold text-blue-400">{completionPercentage}%</span>
+        <div className="p-6 space-y-8">
+          {/* Summary Spec Row */}
+          <div className="grid grid-cols-1 md:grid-cols-4 border border-[var(--ink)] divide-y md:divide-y-0 md:divide-x divide-[var(--rule)] bg-[var(--paper)]">
+            <div className="p-4">
+              <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">
+                Completion
+              </div>
+              <div className="font-editorial text-3xl text-[var(--signal)] mt-1 tabular-nums">
+                {completionPercentage}%
+              </div>
             </div>
-            <div className="w-full bg-slate-700 rounded-full h-4 mb-2">
+            <div className="p-4">
+              <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">
+                Plates Mastered
+              </div>
+              <div className="font-editorial text-3xl text-[var(--ink)] mt-1 tabular-nums">
+                {stats.completedConcepts}
+                <span className="text-lg text-[var(--ink-muted)]">/{stats.totalConcepts}</span>
+              </div>
+            </div>
+            <div className="p-4">
+              <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">
+                Scenarios Run
+              </div>
+              <div className="font-editorial text-3xl text-[var(--ink)] mt-1 tabular-nums">
+                {stats.completedScenarios}
+                <span className="text-lg text-[var(--ink-muted)]">/{stats.totalScenarios}</span>
+              </div>
+            </div>
+            <div className="p-4">
+              <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">
+                Bench Time
+              </div>
+              <div className="font-editorial text-3xl text-[var(--ink)] mt-1 tabular-nums">
+                {formatTime(stats.totalTimeSpent)}
+              </div>
+            </div>
+          </div>
+
+          {/* Calibrated Completion Bar */}
+          <div>
+            <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--ink-secondary)] mb-1.5">
+              <span>Overall Monograph Progress</span>
+              <span className="tabular-nums">
+                {stats.completedScenarios} of {stats.totalScenarios} scenarios verified
+              </span>
+            </div>
+            <div className="w-full bg-[var(--chassis)] border border-[var(--rule)] h-2.5 overflow-hidden">
               <motion.div
-                className="bg-gradient-to-r from-blue-500 to-purple-500 h-4 rounded-full"
+                className="bg-[var(--signal)] h-full"
                 initial={{ width: 0 }}
                 animate={{ width: `${completionPercentage}%` }}
-                transition={{ duration: 0.8, ease: 'easeOut' }}
+                transition={{ duration: 0.6, ease: 'easeOut' }}
               />
             </div>
-            <p className="text-slate-300 text-sm">
-              {stats.completedScenarios} of {stats.totalScenarios} scenarios completed
-            </p>
           </div>
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="bg-slate-700/50 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <BookOpen className="w-5 h-5 text-blue-400" />
-                <span className="text-slate-400 text-sm">Concepts</span>
-              </div>
-              <p className="text-2xl font-bold text-white">
-                {stats.completedConcepts}/{stats.totalConcepts}
-              </p>
-            </div>
-
-            <div className="bg-slate-700/50 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Target className="w-5 h-5 text-green-400" />
-                <span className="text-slate-400 text-sm">Scenarios</span>
-              </div>
-              <p className="text-2xl font-bold text-white">
-                {stats.completedScenarios}/{stats.totalScenarios}
-              </p>
-            </div>
-
-            <div className="bg-slate-700/50 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Clock className="w-5 h-5 text-purple-400" />
-                <span className="text-slate-400 text-sm">Time Spent</span>
-              </div>
-              <p className="text-2xl font-bold text-white">{formatTime(stats.totalTimeSpent)}</p>
-            </div>
-          </div>
-
-          {/* Achievements */}
-          <div className="bg-slate-700/50 rounded-lg p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Award className="w-6 h-6 text-yellow-400" />
-              <h3 className="text-xl font-semibold text-white">Achievements</h3>
-              <span className="text-slate-400 text-sm">
-                ({stats.achievementsUnlocked}/{stats.totalAchievements})
+          {/* Achievements — Archival Verification Seals */}
+          <div>
+            <div className="flex items-baseline justify-between pb-2 mb-3 border-b border-[var(--ink)]">
+              <h3 className="font-editorial text-xl text-[var(--ink)]">Verification Seals</h3>
+              <span className="font-mono text-[11px] text-[var(--ink-muted)] tabular-nums uppercase">
+                {stats.achievementsUnlocked} / {stats.totalAchievements} unlocked
               </span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {achievements.map((achievement) => (
-                <motion.div
+                <div
                   key={achievement.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`p-4 rounded-lg border-2 ${
+                  className={`p-3.5 border flex items-start gap-3 ${
                     achievement.unlocked
-                      ? 'bg-yellow-900/20 border-yellow-600'
-                      : 'bg-slate-700/30 border-slate-600'
+                      ? 'bg-[var(--paper)] border-[var(--ink)]'
+                      : 'bg-[var(--chassis)]/45 border-[var(--rule)] opacity-70'
                   }`}
                 >
-                  <div className="flex items-start gap-3">
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        achievement.unlocked ? 'bg-yellow-600' : 'bg-slate-600'
-                      }`}
-                    >
-                      <Trophy className={`w-5 h-5 ${achievement.unlocked ? 'text-white' : 'text-slate-400'}`} />
-                    </div>
-                    <div className="flex-1">
-                      <h4
-                        className={`font-semibold ${
-                          achievement.unlocked ? 'text-yellow-400' : 'text-slate-400'
-                        }`}
-                      >
-                        {achievement.name}
-                      </h4>
-                      <p className="text-sm text-slate-300 mt-1">{achievement.description}</p>
-                    </div>
+                  <div
+                    className={`w-8 h-8 border flex items-center justify-center flex-shrink-0 font-mono text-xs font-semibold ${
+                      achievement.unlocked
+                        ? 'bg-[var(--emerald)] border-[var(--emerald)] text-[#FAF7F1]'
+                        : 'bg-[var(--paper-elevated)] border-[var(--rule)] text-[var(--ink-muted)]'
+                    }`}
+                  >
+                    {achievement.unlocked ? <Check className="w-4 h-4 stroke-[2.5]" /> : '—'}
                   </div>
-                </motion.div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-medium text-sm text-[var(--ink)]">{achievement.name}</h4>
+                      {achievement.unlocked && (
+                        <span className="font-mono text-[9px] uppercase tracking-widest px-1.5 py-0.5 bg-[var(--emerald)]/12 text-[var(--emerald)]">
+                          EARNED
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-[var(--ink-secondary)] mt-0.5">
+                      {achievement.description}
+                    </p>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
 
-          {/* Concept Progress */}
-          <div className="bg-slate-700/50 rounded-lg p-6">
-            <h3 className="text-xl font-semibold text-white mb-4">
-              Concepts Progress ({stats.completedConcepts}/{stats.totalConcepts})
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {CONCEPTS_CATALOG.map((concept) => {
-                const isCompleted = progress.conceptsCompleted.includes(concept.id);
-                const completedCount = concept.scenarioKeys.filter((key) =>
-                  progress.scenariosCompleted.includes(key)
-                ).length;
-                const totalCount = concept.scenarioKeys.length;
+          {/* Domain-by-Domain Checklist */}
+          <div>
+            <div className="flex items-baseline justify-between pb-2 mb-4 border-b border-[var(--ink)]">
+              <h3 className="font-editorial text-xl text-[var(--ink)]">Plate Checklist</h3>
+              <span className="font-mono text-[11px] text-[var(--ink-muted)] tabular-nums uppercase">
+                {stats.completedConcepts} / {stats.totalConcepts} completed
+              </span>
+            </div>
 
+            <div className="space-y-5">
+              {CONCEPT_DOMAINS.map((domain) => {
+                const domainConcepts = CONCEPTS_CATALOG.filter((c) => c.domainId === domain.id);
                 return (
-                  <div
-                    key={concept.id}
-                    className="flex items-center justify-between gap-3 py-1.5 px-2 rounded bg-slate-800/40"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div
-                        className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          isCompleted ? 'bg-green-500' : 'bg-slate-600'
-                        }`}
-                      >
-                        {isCompleted && <span className="text-white text-xs">✓</span>}
-                      </div>
-                      <span
-                        className={`truncate text-sm ${isCompleted ? 'text-white font-medium' : 'text-slate-400'}`}
-                      >
-                        {concept.name}
-                      </span>
+                  <div key={domain.id}>
+                    <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--ink-muted)] mb-2">
+                      § {domain.index} · {domain.label}
                     </div>
-                    <span className="text-xs text-slate-400 flex-shrink-0">
-                      {totalCount > 0
-                        ? `${completedCount}/${totalCount}`
-                        : isCompleted
-                        ? 'Explored'
-                        : 'Interactive'}
-                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {domainConcepts.map((concept) => {
+                        const isCompleted = progress.conceptsCompleted.includes(concept.id);
+                        const completedCount = concept.scenarioKeys.filter((key) =>
+                          progress.scenariosCompleted.includes(key)
+                        ).length;
+                        const totalCount = concept.scenarioKeys.length;
+
+                        return (
+                          <div
+                            key={concept.id}
+                            className="flex items-center justify-between gap-3 py-2 px-3 border border-[var(--rule)] bg-[var(--paper)]"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span
+                                className={`w-4 h-4 border flex items-center justify-center flex-shrink-0 ${
+                                  isCompleted
+                                    ? 'bg-[var(--emerald)] border-[var(--emerald)] text-[#FAF7F1]'
+                                    : 'border-[var(--ink)]/30 bg-[var(--paper-elevated)]'
+                                }`}
+                              >
+                                {isCompleted && <Check className="w-3 h-3 stroke-[2.5]" />}
+                              </span>
+                              <span className="font-mono text-[10px] text-[var(--ink-muted)] tabular-nums">
+                                {concept.plateNumber}
+                              </span>
+                              <span
+                                className={`truncate text-sm ${
+                                  isCompleted
+                                    ? 'text-[var(--ink)] font-medium'
+                                    : 'text-[var(--ink-secondary)]'
+                                }`}
+                              >
+                                {concept.name}
+                              </span>
+                            </div>
+                            <span className="font-mono text-[11px] text-[var(--ink-muted)] tabular-nums flex-shrink-0">
+                              {totalCount > 0
+                                ? `${completedCount}/${totalCount}`
+                                : isCompleted
+                                ? 'DONE'
+                                : 'LIVE'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 );
               })}
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex flex-wrap gap-3">
+          {/* Data Management Actions */}
+          <div className="pt-4 border-t border-[var(--rule)] flex flex-wrap gap-2.5">
             <button
               type="button"
               onClick={handleExport}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--ink)] hover:bg-[var(--cobalt)] text-[var(--paper-elevated)] font-mono text-xs uppercase tracking-wider transition-colors cursor-pointer"
             >
-              <Download className="w-4 h-4" />
-              Export Progress
+              <Download className="w-3.5 h-3.5" />
+              Export JSON
             </button>
             <button
               type="button"
               onClick={handleImport}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--paper)] hover:bg-[var(--chassis)] text-[var(--ink)] border border-[var(--ink)]/35 hover:border-[var(--ink)] font-mono text-xs uppercase tracking-wider transition-colors cursor-pointer"
             >
-              <Upload className="w-4 h-4" />
-              Import Progress
+              <Upload className="w-3.5 h-3.5" />
+              Import JSON
             </button>
             <button
               type="button"
               onClick={() => setShowResetConfirm(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors ml-auto"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--paper)] hover:bg-[var(--signal)] text-[var(--signal)] hover:text-[#FAF7F1] border border-[var(--signal)] font-mono text-xs uppercase tracking-wider transition-colors ml-auto cursor-pointer"
             >
-              <RotateCcw className="w-4 h-4" />
-              Reset Progress
+              <RotateCcw className="w-3.5 h-3.5" />
+              Reset Ledger
             </button>
           </div>
         </div>
@@ -285,27 +340,30 @@ export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
         {/* Reset Confirmation Modal */}
         <AnimatePresence>
           {showResetConfirm && (
-            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
+            <div className="fixed inset-0 bg-[#161614]/65 flex items-center justify-center z-[60] p-4">
               <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
+                initial={{ opacity: 0, scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-slate-800 border border-slate-600 rounded-lg max-w-md w-full p-6 shadow-2xl space-y-4"
+                exit={{ opacity: 0, scale: 0.96 }}
+                className="bg-[var(--paper-elevated)] border border-[var(--ink)] shadow-[6px_6px_0_0_var(--ink)] max-w-md w-full p-6 space-y-4"
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="reset-confirm-title"
               >
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-full bg-red-900/50 border border-red-600 flex items-center justify-center flex-shrink-0">
-                    <AlertTriangle className="w-5 h-5 text-red-400" />
+                  <div className="w-9 h-9 border border-[var(--signal)] bg-[var(--signal)]/10 flex items-center justify-center flex-shrink-0">
+                    <AlertTriangle className="w-4 h-4 text-[var(--signal)]" />
                   </div>
                   <div>
-                    <h3 id="reset-confirm-title" className="text-lg font-semibold text-white">
+                    <h3
+                      id="reset-confirm-title"
+                      className="font-editorial text-xl text-[var(--ink)]"
+                    >
                       Reset all learning progress?
                     </h3>
-                    <p className="text-sm text-slate-300 mt-1">
-                      This clears all completed concepts, completed scenarios, time tracked, and
-                      unlocked achievements. This action cannot be undone.
+                    <p className="text-sm text-[var(--ink-secondary)] mt-1 leading-relaxed">
+                      This clears all completed plates, scenario runs, bench time, and verification
+                      seals. This action cannot be undone.
                     </p>
                   </div>
                 </div>
@@ -313,16 +371,16 @@ export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
                   <button
                     type="button"
                     onClick={() => setShowResetConfirm(false)}
-                    className="px-4 py-2 text-sm bg-slate-700 text-slate-200 rounded hover:bg-slate-600 transition-colors"
+                    className="px-4 py-2 font-mono text-xs uppercase tracking-wider bg-[var(--paper)] border border-[var(--rule)] hover:border-[var(--ink)] text-[var(--ink)] transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
                     onClick={handleConfirmReset}
-                    className="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition-colors font-medium"
+                    className="px-4 py-2 font-mono text-xs uppercase tracking-wider bg-[var(--signal)] hover:bg-[var(--signal-hover)] text-[#FAF7F1] transition-colors cursor-pointer"
                   >
-                    Yes, Reset Progress
+                    Yes, Reset
                   </button>
                 </div>
               </motion.div>

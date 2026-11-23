@@ -7,10 +7,9 @@ import {
   SkipForward,
   SkipBack,
   RotateCcw,
-  CheckCircle2,
+  Check,
   ChevronDown,
   ChevronUp,
-  Keyboard,
 } from 'lucide-react';
 import { Scenario, SimulationEvent } from '@/lib/types';
 
@@ -121,288 +120,372 @@ export default function ControlPanel({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isPlaying, canPlay, canStepForward, canStepBackward, onPlay, onPause, onStepForward, onStepBackward, onReset]);
+  }, [
+    isPlaying,
+    canPlay,
+    canStepForward,
+    canStepBackward,
+    onPlay,
+    onPause,
+    onStepForward,
+    onStepBackward,
+    onReset,
+  ]);
 
   return (
-    <aside className="bg-slate-800 border-b md:border-b-0 md:border-r border-slate-700 p-4 space-y-5 w-full md:w-80 flex-shrink-0 flex flex-col max-h-[45vh] md:max-h-none md:h-full overflow-y-auto">
-      {/* Scenario Selector */}
-      {scenarios.length > 0 && (
-        <div>
-          <label htmlFor="scenario-select" className="block text-sm font-medium text-slate-300 mb-2">
-            Scenario
-          </label>
-          <select
-            id="scenario-select"
-            value={selectedScenario || ''}
-            onChange={(e) => onScenarioChange?.(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:outline-none focus:border-blue-500 text-sm"
-          >
-            <option value="">Select a scenario...</option>
-            {scenarios.map((scenario) => (
-              <option key={scenario.id} value={scenario.id}>
-                {scenario.name}
-              </option>
-            ))}
-          </select>
-
-          {activeScenario && (
-            <div className="mt-2.5 bg-slate-900/60 border border-slate-700 rounded-lg p-3 space-y-2">
-              <p className="text-xs text-slate-300 leading-relaxed">{activeScenario.description}</p>
-
-              {activeScenario.learningObjectives.length > 0 && (
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => setShowObjectives((prev) => !prev)}
-                    className="flex items-center justify-between w-full text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors"
-                  >
-                    <span>Learning objectives ({activeScenario.learningObjectives.length})</span>
-                    {showObjectives ? (
-                      <ChevronUp className="w-3.5 h-3.5" />
-                    ) : (
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    )}
-                  </button>
-                  {showObjectives && (
-                    <ul className="mt-1.5 space-y-1 text-xs text-slate-300 list-disc list-inside">
-                      {activeScenario.learningObjectives.map((objective) => (
-                        <li key={objective}>{objective}</li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              )}
-
-              {activeScenario.expectedOutcome && (
-                <div
-                  className={`text-xs rounded px-2 py-1.5 border ${
-                    isComplete
-                      ? 'bg-green-900/30 border-green-600/70 text-green-300'
-                      : 'bg-slate-800/80 border-slate-700 text-slate-400'
-                  }`}
-                >
-                  <span className="font-semibold">Expected outcome:</span>{' '}
-                  {activeScenario.expectedOutcome}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Speed Control */}
-      <div>
-        <label className="block text-sm font-medium text-slate-300 mb-2">
-          Speed: {speed}x
-        </label>
-        <div className="flex gap-2">
-          {SPEED_OPTIONS.map((speedOption) => (
-            <button
-              key={speedOption}
-              type="button"
-              onClick={() => onSpeedChange(speedOption)}
-              className={`flex-1 px-2 py-1 rounded text-sm transition-colors ${
-                speed === speedOption
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-              }`}
-            >
-              {speedOption}x
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Playback Controls */}
-      <div>
-        <label className="block text-sm font-medium text-slate-300 mb-2">Controls</label>
-        <div className="grid grid-cols-3 gap-2">
-          <button
-            type="button"
-            onClick={onStepBackward}
-            disabled={!canStepBackward}
-            className="p-2 bg-slate-700 text-white rounded hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-            title="Step Backward (←)"
-            aria-label="Step Backward"
-          >
-            <SkipBack className="w-5 h-5" />
-          </button>
-
-          {isPlaying ? (
-            <button
-              type="button"
-              onClick={onPause}
-              className="p-2 bg-red-600 text-white rounded hover:bg-red-700 flex items-center justify-center transition-colors"
-              title="Pause (Space)"
-              aria-label="Pause"
-            >
-              <Pause className="w-5 h-5" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={onPlay}
-              disabled={!canPlay}
-              className="p-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-              title="Play (Space)"
-              aria-label="Play"
-            >
-              <Play className="w-5 h-5" />
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={onStepForward}
-            disabled={!canStepForward}
-            className="p-2 bg-slate-700 text-white rounded hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-            title="Step Forward (→)"
-            aria-label="Step Forward"
-          >
-            <SkipForward className="w-5 h-5" />
-          </button>
-        </div>
-
-        <button
-          type="button"
-          onClick={onReset}
-          className="w-full mt-2 p-2 bg-slate-700 text-white rounded hover:bg-slate-600 flex items-center justify-center gap-2 text-sm transition-colors"
-          title="Reset (R)"
-        >
-          <RotateCcw className="w-4 h-4" />
-          Reset
-        </button>
-      </div>
-
-      {/* Progress Bar & Current Step */}
-      <div>
-        <div className="flex items-center justify-between text-sm font-medium text-slate-300 mb-2">
-          <span>
-            Progress: {Math.round(progress)}%
-          </span>
-          {totalEvents > 0 && (
-            <span className="text-xs text-slate-400">
-              Step {resolvedIndex}/{totalEvents}
-            </span>
-          )}
-        </div>
-        <div className="w-full bg-slate-700 rounded-full h-2">
-          <div
-            className={`h-2 rounded-full transition-all duration-300 ${
-              isComplete ? 'bg-green-500' : 'bg-blue-600'
+    <aside className="bg-[var(--chassis)] text-[var(--ink)] border-b md:border-b-0 md:border-r border-[var(--rule)] w-full md:w-[328px] flex-shrink-0 flex flex-col max-h-[48vh] md:max-h-none md:h-full overflow-y-auto">
+      {/* Instrument Deck Header Strip */}
+      <div className="px-4 py-2.5 border-b border-[var(--rule)] bg-[var(--chassis-deep)]/65 flex items-center justify-between font-mono text-[10px] tracking-[0.12em] uppercase text-[var(--ink-secondary)]">
+        <span className="flex items-center gap-2">
+          <span
+            className={`w-2 h-2 rounded-full ${
+              isPlaying
+                ? 'bg-[var(--signal)]'
+                : isComplete
+                ? 'bg-[var(--emerald)]'
+                : 'bg-[var(--ink)]/35'
             }`}
-            style={{ width: `${progress}%` }}
           />
-        </div>
+          <span>Instrument Deck</span>
+        </span>
+        <span className="tabular-nums text-[var(--ink)] font-semibold">
+          {isPlaying ? 'RUNNING' : isComplete ? 'VERIFIED' : totalEvents > 0 ? 'ARMED' : 'MANUAL'}
+        </span>
+      </div>
 
-        {totalEvents > 0 && (
-          <div className="mt-2.5 bg-slate-900/70 border border-slate-700 rounded-lg p-2.5 text-xs">
-            {lastExecutedEvent ? (
-              <div>
-                <div className="flex items-center justify-between text-slate-400 mb-0.5">
-                  <span className="font-semibold text-blue-400">
-                    {isComplete ? 'Completed' : `Step ${resolvedIndex}`}
-                  </span>
-                  <span className="font-mono text-[10px] text-slate-500">
-                    {lastExecutedEvent.type}
-                  </span>
-                </div>
-                <p className="text-slate-200">{lastExecutedEvent.description}</p>
-              </div>
-            ) : (
-              <div>
-                <span className="font-semibold text-slate-300">Ready to start</span>
-                {nextEvent && (
-                  <p className="text-slate-400 mt-0.5">Next: {nextEvent.description}</p>
+      <div className="p-4 space-y-5 flex-1 flex flex-col">
+        {/* Scenario Cartridge Selector */}
+        {scenarios.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label
+                htmlFor="scenario-select"
+                className="font-mono text-[10px] font-semibold tracking-[0.12em] uppercase text-[var(--ink-secondary)]"
+              >
+                01 · Scenario Cartridge
+              </label>
+              <span className="font-mono text-[10px] text-[var(--ink-muted)] tabular-nums">
+                {scenarios.length} presets
+              </span>
+            </div>
+            <select
+              id="scenario-select"
+              value={selectedScenario || ''}
+              onChange={(e) => onScenarioChange?.(e.target.value)}
+              className="w-full px-3 py-2 bg-[var(--paper-elevated)] text-[var(--ink)] border border-[rgba(22,22,20,0.3)] focus:border-[var(--ink)] focus:outline-none text-sm font-medium cursor-pointer"
+            >
+              <option value="">Select a scenario...</option>
+              {scenarios.map((scenario, idx) => (
+                <option key={scenario.id} value={scenario.id}>
+                  {String(idx + 1).padStart(2, '0')} — {scenario.name}
+                </option>
+              ))}
+            </select>
+
+            {activeScenario && (
+              <div className="mt-2.5 bg-[var(--paper-elevated)] border border-[var(--rule)] p-3 space-y-2.5">
+                <p className="text-xs text-[var(--ink-secondary)] leading-relaxed">
+                  {activeScenario.description}
+                </p>
+
+                {activeScenario.learningObjectives.length > 0 && (
+                  <div className="pt-1 border-t border-[var(--rule)]">
+                    <button
+                      type="button"
+                      onClick={() => setShowObjectives((prev) => !prev)}
+                      className="flex items-center justify-between w-full font-mono text-[10px] uppercase tracking-wider font-semibold text-[var(--cobalt)] hover:text-[var(--ink)] transition-colors cursor-pointer"
+                    >
+                      <span>Objectives ({activeScenario.learningObjectives.length})</span>
+                      {showObjectives ? (
+                        <ChevronUp className="w-3.5 h-3.5" />
+                      ) : (
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                    {showObjectives && (
+                      <ul className="mt-2 space-y-1.5 text-xs text-[var(--ink-secondary)] list-disc list-inside">
+                        {activeScenario.learningObjectives.map((objective) => (
+                          <li key={objective} className="leading-snug">
+                            {objective}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+
+                {activeScenario.expectedOutcome && (
+                  <div
+                    className={`text-xs px-2.5 py-2 border-l-2 ${
+                      isComplete
+                        ? 'bg-[#0F6B50]/10 border-[var(--emerald)] text-[var(--emerald)]'
+                        : 'bg-[var(--paper)] border-[var(--ink)]/35 text-[var(--ink-secondary)]'
+                    }`}
+                  >
+                    <span className="font-mono text-[10px] uppercase tracking-wider font-semibold block mb-0.5">
+                      {isComplete ? '✓ Outcome Verified' : 'Expected Outcome'}
+                    </span>
+                    <span className="leading-snug">{activeScenario.expectedOutcome}</span>
+                  </div>
                 )}
               </div>
             )}
           </div>
         )}
-      </div>
 
-      {/* Interactive Event Timeline */}
-      {totalEvents > 0 && (
-        <div className="flex-1 min-h-0 flex flex-col">
-          <label className="block text-sm font-medium text-slate-300 mb-2">
-            Event Timeline
-          </label>
-          <div className="space-y-1 max-h-48 md:max-h-56 overflow-y-auto pr-1">
+        {/* Tactile Hardware Transport Deck */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="font-mono text-[10px] font-semibold tracking-[0.12em] uppercase text-[var(--ink-secondary)]">
+              02 · Transport &amp; Clock
+            </span>
+            <span className="font-mono text-[10px] text-[var(--ink-muted)] tabular-nums">
+              {speed}× RATE
+            </span>
+          </div>
+
+          <div className="grid grid-cols-4 border border-[var(--ink)] bg-[var(--paper-elevated)] divide-x divide-[var(--ink)]">
             <button
               type="button"
-              onClick={() => onJumpToStep?.(0)}
-              disabled={!onJumpToStep}
-              className={`w-full text-left px-2.5 py-1.5 rounded text-xs flex items-center gap-2 transition-colors ${
-                resolvedIndex === 0
-                  ? 'bg-blue-600/30 border border-blue-500 text-white'
-                  : 'bg-slate-700/40 text-slate-300 hover:bg-slate-700 border border-transparent'
-              }`}
+              onClick={onStepBackward}
+              disabled={!canStepBackward}
+              className="py-2.5 flex items-center justify-center text-[var(--ink)] hover:bg-[var(--chassis)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer active:translate-y-px"
+              title="Step Backward (←)"
+              aria-label="Step Backward"
             >
-              <span className="w-4 text-center font-mono text-[10px] text-slate-400">0</span>
-              <span className="truncate">Initial State</span>
+              <SkipBack className="w-4 h-4" />
             </button>
 
-            {timelineEvents.map((event, idx) => {
-              const stepNumber = idx + 1;
-              const isCurrent = resolvedIndex === stepNumber;
-              const isDone = resolvedIndex > stepNumber;
+            {isPlaying ? (
+              <button
+                type="button"
+                onClick={onPause}
+                className="col-span-2 py-2.5 bg-[var(--ink)] hover:bg-[#2C2B27] text-[var(--paper-elevated)] flex items-center justify-center gap-1.5 font-mono text-xs uppercase tracking-wider transition-colors cursor-pointer active:translate-y-px"
+                title="Pause (Space)"
+                aria-label="Pause"
+              >
+                <Pause className="w-4 h-4" />
+                <span>Pause</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onPlay}
+                disabled={!canPlay}
+                className="col-span-2 py-2.5 bg-[var(--signal)] hover:bg-[var(--signal-hover)] text-[#FAF7F1] disabled:opacity-35 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 font-mono text-xs uppercase tracking-wider font-medium transition-colors cursor-pointer active:translate-y-px"
+                title="Play (Space)"
+                aria-label="Play"
+              >
+                <Play className="w-4 h-4" />
+                <span>Run</span>
+              </button>
+            )}
 
-              return (
+            <button
+              type="button"
+              onClick={onStepForward}
+              disabled={!canStepForward}
+              className="py-2.5 flex items-center justify-center text-[var(--ink)] hover:bg-[var(--chassis)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer active:translate-y-px"
+              title="Step Forward (→)"
+              aria-label="Step Forward"
+            >
+              <SkipForward className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Speed Selector + Reset Row */}
+          <div className="mt-2 flex items-center gap-2">
+            <div className="flex-1 grid grid-cols-4 border border-[var(--rule)] bg-[var(--paper-elevated)] divide-x divide-[var(--rule)]">
+              {SPEED_OPTIONS.map((speedOption) => (
                 <button
-                  key={`${event.id}-${idx}`}
+                  key={speedOption}
                   type="button"
-                  onClick={() => onJumpToStep?.(stepNumber)}
-                  disabled={!onJumpToStep}
-                  className={`w-full text-left px-2.5 py-1.5 rounded text-xs flex items-start gap-2 transition-colors ${
-                    isCurrent
-                      ? 'bg-blue-600/30 border border-blue-500 text-white'
-                      : isDone
-                      ? 'bg-slate-700/60 text-slate-200 hover:bg-slate-700 border border-transparent'
-                      : 'bg-slate-900/40 text-slate-400 hover:bg-slate-700/50 hover:text-slate-200 border border-transparent'
+                  onClick={() => onSpeedChange(speedOption)}
+                  className={`py-1.5 font-mono text-[11px] tabular-nums transition-colors cursor-pointer ${
+                    speed === speedOption
+                      ? 'bg-[var(--ink)] text-[var(--paper-elevated)] font-semibold'
+                      : 'text-[var(--ink-secondary)] hover:bg-[var(--chassis)] hover:text-[var(--ink)]'
                   }`}
                 >
-                  <span className="w-4 flex-shrink-0 flex items-center justify-center mt-0.5">
-                    {isDone ? (
-                      <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
-                    ) : (
-                      <span className="font-mono text-[10px]">{stepNumber}</span>
-                    )}
-                  </span>
-                  <span className="leading-snug">{event.description}</span>
+                  {speedOption}×
                 </button>
-              );
-            })}
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={onReset}
+              className="px-2.5 py-1.5 bg-[var(--paper-elevated)] text-[var(--ink)] border border-[var(--rule)] hover:border-[var(--ink)] flex items-center gap-1 font-mono text-[11px] uppercase tracking-wider transition-colors cursor-pointer active:translate-y-px"
+              title="Reset (R)"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset</span>
+            </button>
           </div>
         </div>
-      )}
 
-      {/* Legend */}
-      <div>
-        <label className="block text-sm font-medium text-slate-300 mb-2">Legend</label>
-        <div className="grid grid-cols-2 gap-1.5 text-xs">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-green-500" />
-            <span className="text-slate-400">Healthy</span>
+        {/* Calibrated Progress Ruler & Live Step Telemetry */}
+        <div>
+          <div className="flex items-center justify-between font-mono text-[10px] tracking-[0.1em] uppercase text-[var(--ink-secondary)] mb-1.5">
+            <span>03 · Progress · {Math.round(progress)}%</span>
+            {totalEvents > 0 && (
+              <span className="tabular-nums font-semibold text-[var(--ink)]">
+                STEP {String(resolvedIndex).padStart(2, '0')}/{String(totalEvents).padStart(2, '0')}
+              </span>
+            )}
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-red-500" />
-            <span className="text-slate-400">Failed</span>
+          <div className="w-full bg-[var(--paper-elevated)] border border-[var(--rule)] h-2 overflow-hidden">
+            <div
+              className={`h-full transition-all duration-300 ${
+                isComplete ? 'bg-[var(--emerald)]' : 'bg-[var(--signal)]'
+              }`}
+              style={{ width: `${progress}%` }}
+            />
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-amber-500" />
-            <span className="text-slate-400">Processing</span>
+
+          {totalEvents > 0 && (
+            <div className="mt-2.5 bg-[var(--paper-elevated)] border border-[var(--rule)] p-2.5 text-xs">
+              {lastExecutedEvent ? (
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-1 font-mono text-[10px]">
+                    <span
+                      className={`font-semibold uppercase tracking-wider ${
+                        isComplete ? 'text-[var(--emerald)]' : 'text-[var(--signal)]'
+                      }`}
+                    >
+                      {isComplete ? 'Sequence Complete' : `Step ${String(resolvedIndex).padStart(2, '0')}`}
+                    </span>
+                    <span className="text-[var(--ink-muted)] truncate">
+                      {lastExecutedEvent.type}
+                    </span>
+                  </div>
+                  <p className="text-[var(--ink)] leading-snug">{lastExecutedEvent.description}</p>
+                </div>
+              ) : (
+                <div>
+                  <span className="font-mono text-[10px] uppercase tracking-wider font-semibold text-[var(--ink-secondary)]">
+                    Standby · Initial State
+                  </span>
+                  {nextEvent && (
+                    <p className="text-[var(--ink-muted)] mt-1 leading-snug">
+                      Next: {nextEvent.description}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Interactive Event Tape Sequencer */}
+        {totalEvents > 0 && (
+          <div className="flex-1 min-h-0 flex flex-col">
+            <div className="font-mono text-[10px] font-semibold tracking-[0.12em] uppercase text-[var(--ink-secondary)] mb-1.5">
+              04 · Event Tape
+            </div>
+            <div className="border border-[var(--rule)] bg-[var(--paper-elevated)] divide-y divide-[var(--rule)] max-h-48 md:max-h-56 overflow-y-auto">
+              <button
+                type="button"
+                onClick={() => onJumpToStep?.(0)}
+                disabled={!onJumpToStep}
+                className={`w-full text-left px-2.5 py-2 text-xs flex items-center gap-2.5 transition-colors cursor-pointer ${
+                  resolvedIndex === 0
+                    ? 'bg-[var(--ink)] text-[var(--paper-elevated)]'
+                    : 'text-[var(--ink-secondary)] hover:bg-[var(--chassis)]'
+                }`}
+              >
+                <span
+                  className={`w-5 font-mono text-[10px] tabular-nums ${
+                    resolvedIndex === 0 ? 'text-[#FB923C]' : 'text-[var(--ink-muted)]'
+                  }`}
+                >
+                  00
+                </span>
+                <span className="truncate font-medium">Initial State</span>
+              </button>
+
+              {timelineEvents.map((event, idx) => {
+                const stepNumber = idx + 1;
+                const isCurrent = resolvedIndex === stepNumber;
+                const isDone = resolvedIndex > stepNumber;
+
+                return (
+                  <button
+                    key={`${event.id}-${idx}`}
+                    type="button"
+                    onClick={() => onJumpToStep?.(stepNumber)}
+                    disabled={!onJumpToStep}
+                    className={`w-full text-left px-2.5 py-2 text-xs flex items-start gap-2.5 transition-colors cursor-pointer ${
+                      isCurrent
+                        ? 'bg-[var(--ink)] text-[var(--paper-elevated)]'
+                        : isDone
+                        ? 'bg-[var(--paper)]/70 text-[var(--ink)] hover:bg-[var(--chassis)]'
+                        : 'text-[var(--ink-muted)] hover:bg-[var(--chassis)] hover:text-[var(--ink)]'
+                    }`}
+                  >
+                    <span className="w-5 flex-shrink-0 flex items-center mt-0.5 font-mono text-[10px] tabular-nums">
+                      {isDone ? (
+                        <Check className="w-3.5 h-3.5 text-[var(--emerald)] stroke-[2.5]" />
+                      ) : (
+                        <span className={isCurrent ? 'text-[#FB923C] font-semibold' : ''}>
+                          {String(stepNumber).padStart(2, '0')}
+                        </span>
+                      )}
+                    </span>
+                    <span className="leading-snug">{event.description}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-blue-500" />
-            <span className="text-slate-400">Leader</span>
+        )}
+
+        {/* Signal Legend */}
+        <div className="pt-3 border-t border-[var(--rule)]">
+          <div className="font-mono text-[10px] font-semibold tracking-[0.12em] uppercase text-[var(--ink-muted)] mb-2">
+            Signal Legend
+          </div>
+          <div className="grid grid-cols-2 gap-y-1.5 gap-x-3 font-mono text-[11px] text-[var(--ink-secondary)]">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#10B981] ring-1 ring-black/15" />
+              <span>Healthy</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#EF4444] ring-1 ring-black/15" />
+              <span>Failed</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B] ring-1 ring-black/15" />
+              <span>Active / Msg</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#3B82F6] ring-1 ring-black/15" />
+              <span>Leader</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Keyboard Shortcuts Hint */}
-      <div className="pt-2 border-t border-slate-700 text-[11px] text-slate-400 flex items-center gap-1.5">
-        <Keyboard className="w-3.5 h-3.5 flex-shrink-0 text-slate-500" />
-        <span>Space: Play/Pause · ←/→: Step · R: Reset</span>
+        {/* Physical Keycap Shortcuts Hint */}
+        <div className="pt-2.5 border-t border-[var(--rule)] flex flex-wrap items-center gap-x-3 gap-y-1.5 font-mono text-[10px] text-[var(--ink-muted)]">
+          <span className="inline-flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 bg-[var(--paper-elevated)] border border-[var(--rule)] text-[var(--ink)]">
+              SPACE
+            </kbd>
+            Play
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 bg-[var(--paper-elevated)] border border-[var(--rule)] text-[var(--ink)]">
+              ←/→
+            </kbd>
+            Step
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 bg-[var(--paper-elevated)] border border-[var(--rule)] text-[var(--ink)]">
+              R
+            </kbd>
+            Reset
+          </span>
+        </div>
       </div>
     </aside>
   );

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
+import { Check, AlertCircle, Info, X } from 'lucide-react';
 import { subscribeToasts, ToastMessage } from '@/lib/toast';
 
 const TOAST_DURATION_MS = 4000;
@@ -37,25 +37,25 @@ export default function ToastContainer() {
     switch (variant) {
       case 'success':
         return {
-          border: 'border-green-500/80',
-          icon: <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />,
+          accent: 'border-l-[var(--emerald)]',
+          icon: <Check className="w-4 h-4 text-[var(--emerald)] flex-shrink-0 stroke-[2.5]" />,
         };
       case 'error':
         return {
-          border: 'border-red-500/80',
-          icon: <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />,
+          accent: 'border-l-[var(--signal)]',
+          icon: <AlertCircle className="w-4 h-4 text-[var(--signal)] flex-shrink-0" />,
         };
       default:
         return {
-          border: 'border-blue-500/80',
-          icon: <Info className="w-5 h-5 text-blue-400 flex-shrink-0" />,
+          accent: 'border-l-[var(--cobalt)]',
+          icon: <Info className="w-4 h-4 text-[var(--cobalt)] flex-shrink-0" />,
         };
     }
   };
 
   return (
     <div
-      className="fixed top-20 right-4 z-[60] flex flex-col gap-2 max-w-sm pointer-events-none"
+      className="fixed top-[68px] right-4 z-[60] flex flex-col gap-2 max-w-sm pointer-events-none"
       aria-live="polite"
       role="status"
     >
@@ -65,24 +65,28 @@ export default function ToastContainer() {
           return (
             <motion.div
               key={toast.id}
-              initial={{ opacity: 0, x: 24, scale: 0.96 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, x: 24, scale: 0.96 }}
-              transition={{ duration: 0.2 }}
-              className={`pointer-events-auto bg-slate-800 border ${styles.border} rounded-lg shadow-xl px-4 py-3 flex items-start gap-3`}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.18 }}
+              className={`pointer-events-auto bg-[var(--paper-elevated)] text-[var(--ink)] border border-[var(--ink)] border-l-4 ${styles.accent} shadow-[4px_4px_0_0_var(--ink)] px-3.5 py-2.5 flex items-start gap-3`}
             >
               <div className="mt-0.5">{styles.icon}</div>
               <div className="flex-1 min-w-0">
-                {toast.title && <p className="text-sm font-semibold text-white">{toast.title}</p>}
-                <p className="text-sm text-slate-200">{toast.message}</p>
+                {toast.title && (
+                  <p className="font-mono text-[11px] uppercase tracking-wider font-semibold text-[var(--ink)]">
+                    {toast.title}
+                  </p>
+                )}
+                <p className="text-xs text-[var(--ink-secondary)] leading-snug">{toast.message}</p>
               </div>
               <button
                 type="button"
                 onClick={() => dismiss(toast.id)}
-                className="text-slate-400 hover:text-white transition-colors"
+                className="text-[var(--ink-muted)] hover:text-[var(--ink)] transition-colors cursor-pointer"
                 aria-label="Dismiss notification"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               </button>
             </motion.div>
           );

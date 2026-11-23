@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Trophy, X } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { subscribeAchievements, UnlockedAchievement } from '@/lib/progress';
 
 interface ToastItem extends UnlockedAchievement {
@@ -54,26 +54,28 @@ export default function AchievementToast() {
         {toasts.map((toast) => (
           <motion.div
             key={toast.toastKey}
-            initial={{ opacity: 0, y: 24, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 12, scale: 0.95 }}
-            transition={{ duration: 0.25 }}
-            className="pointer-events-auto bg-slate-800 border-2 border-yellow-500/80 rounded-lg shadow-xl p-4 flex items-start gap-3"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 12 }}
+            transition={{ duration: 0.2 }}
+            className="pointer-events-auto bg-[var(--ink)] text-[var(--paper-elevated)] border border-[var(--ink)] shadow-[5px_5px_0_0_var(--signal)] p-4 flex items-start gap-3"
           >
-            <div className="w-10 h-10 rounded-full bg-yellow-500/20 border border-yellow-500 flex items-center justify-center flex-shrink-0">
-              <Trophy className="w-5 h-5 text-yellow-400" />
+            <div className="w-8 h-8 bg-[var(--signal)] text-[#FAF7F1] flex items-center justify-center flex-shrink-0">
+              <Check className="w-4 h-4 stroke-[2.5]" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wider text-yellow-400">
-                Achievement Unlocked
+              <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[#FB923C]">
+                Verification Seal Unlocked
               </p>
-              <p className="text-sm font-bold text-white mt-0.5">{toast.name}</p>
-              <p className="text-xs text-slate-300 mt-0.5">{toast.description}</p>
+              <p className="font-editorial text-lg leading-tight text-[#FAF7F1] mt-0.5">
+                {toast.name}
+              </p>
+              <p className="text-xs text-[#D6D2C7] mt-1">{toast.description}</p>
             </div>
             <button
               type="button"
               onClick={() => dismiss(toast.toastKey)}
-              className="text-slate-400 hover:text-white transition-colors"
+              className="text-[#9E9B90] hover:text-[#FAF7F1] transition-colors cursor-pointer"
               aria-label="Dismiss achievement notification"
             >
               <X className="w-4 h-4" />

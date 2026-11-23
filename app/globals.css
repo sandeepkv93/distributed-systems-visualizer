@@ -1,26 +1,353 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --paper: #f4f0e8;
+  --paper-elevated: #faf7f1;
+  --chassis: #eae4d8;
+  --chassis-deep: #dfd8c9;
+  --ink: #161614;
+  --ink-secondary: #4a4842;
+  --ink-muted: #6e6b62;
+  --rule: rgba(22, 22, 20, 0.14);
+  --rule-strong: rgba(22, 22, 20, 0.78);
+  --signal: #d9441e;
+  --signal-hover: #b83412;
+  --cobalt: #1d4b8f;
+  --emerald: #0f6b50;
+  --ochre: #a8640b;
+  --scope-bg: #111413;
+  --scope-panel: #181c1a;
+  --scope-border: rgba(244, 240, 232, 0.14);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--paper);
+  --color-foreground: var(--ink);
+  --font-sans: var(--font-sans), "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: var(--font-serif), "Newsreader", Georgia, serif;
+  --font-mono: var(--font-mono), "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background-color: var(--paper);
+  color: var(--ink);
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--paper);
+  color: var(--ink);
+  position: relative;
+  min-height: 100vh;
 }
+
+/* Tactile archival paper grain overlay (subtle cotton stock materiality) */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+  opacity: 0.032;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Precision editorial serif utility */
+.font-editorial {
+  font-family: var(--font-serif), Georgia, serif;
+  font-feature-settings: "liga" 1, "kern" 1, "onum" 0;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tactile card offset lift (Swiss technical plate feel) */
+.plate-card {
+  background-color: var(--paper-elevated);
+  border: 1px solid var(--rule);
+  transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 180ms ease,
+    box-shadow 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.plate-card:hover {
+  border-color: var(--ink);
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 0 var(--ink);
+}
+
+/* Recessed oscilloscope / telemetry viewport */
+.scope-viewport {
+  background-color: var(--scope-bg);
+  background-image:
+    radial-gradient(circle at 50% 42%, rgba(255, 252, 242, 0.03) 0%, transparent 66%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 10px 28px rgba(0, 0, 0, 0.45);
+}
+
+/* Subtle custom scrollbars for archival & instrument panels */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(22, 22, 20, 0.2);
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(22, 22, 20, 0.42);
+}
+
+/* ==========================================================================
+   VISUALIZER WORKBENCH HARMONIZATION
+   Seamlessly wraps all 22 visualizer pages in our Warm Paper Header +
+   Stone Instrument Deck + Recessed Obsidian Oscilloscope Viewport system
+   without modifying any simulation logic or SVG coordinate systems.
+   ========================================================================== */
+
+main[data-view="visualizer"] > div.bg-slate-900 {
+  background-color: var(--paper) !important;
+  min-height: calc(100vh - 56px);
+}
+
+@media (min-width: 768px) {
+  main[data-view="visualizer"] > div.md\:h-screen {
+    height: calc(100vh - 56px) !important;
+    min-height: calc(100vh - 56px) !important;
+  }
+}
+
+/* Top protocol header bar inside every visualizer page */
+main[data-view="visualizer"] > div > div.flex-1.flex.flex-col > div.bg-slate-800.border-b {
+  background-color: var(--paper-elevated) !important;
+  border-bottom: 1px solid var(--rule) !important;
+  color: var(--ink) !important;
+  padding: 0.9rem 1.25rem !important;
+}
+
+main[data-view="visualizer"] > div > div.flex-1.flex.flex-col > div.bg-slate-800.border-b h1 {
+  font-family: var(--font-serif), Georgia, serif !important;
+  color: var(--ink) !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.02em !important;
+  font-size: 1.65rem !important;
+  line-height: 1.15 !important;
+}
+
+main[data-view="visualizer"] > div > div.flex-1.flex.flex-col > div.bg-slate-800.border-b p.text-slate-400 {
+  color: var(--ink-muted) !important;
+  font-size: 0.85rem !important;
+}
+
+/* "Read the theory" button inside visualizer headers */
+main[data-view="visualizer"]
+  > div
+  > div.flex-1.flex.flex-col
+  > div.bg-slate-800.border-b
+  button.bg-slate-700 {
+  background-color: var(--paper) !important;
+  color: var(--ink) !important;
+  border: 1px solid rgba(22, 22, 20, 0.28) !important;
+  border-radius: 2px !important;
+  font-family: var(--font-mono), monospace !important;
+  font-size: 0.72rem !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  padding: 0.35rem 0.7rem !important;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease !important;
+}
+
+main[data-view="visualizer"]
+  > div
+  > div.flex-1.flex.flex-col
+  > div.bg-slate-800.border-b
+  button.bg-slate-700:hover {
+  background-color: var(--ink) !important;
+  color: var(--paper-elevated) !important;
+  border-color: var(--ink) !important;
+}
+
+/* Status chips inside visualizer headers (e.g., Partition Active / Explored / Consensus Reached) */
+main[data-view="visualizer"]
+  > div
+  > div.flex-1.flex.flex-col
+  > div.bg-slate-800.border-b
+  span.bg-slate-700\/70 {
+  background-color: var(--chassis) !important;
+  color: var(--ink-secondary) !important;
+  border: 1px solid var(--rule) !important;
+  border-radius: 2px !important;
+  font-family: var(--font-mono), monospace !important;
+}
+
+main[data-view="visualizer"]
+  > div
+  > div.flex-1.flex.flex-col
+  > div.bg-slate-800.border-b
+  span.bg-amber-900\/50 {
+  background-color: rgba(217, 68, 30, 0.1) !important;
+  border-color: var(--signal) !important;
+  color: var(--signal) !important;
+  border-radius: 2px !important;
+  font-family: var(--font-mono), monospace !important;
+}
+
+/* Recessed obsidian oscilloscope viewport wrapping every visualizer's SVG canvas */
+main[data-view="visualizer"] div.flex-1.relative.bg-slate-900 {
+  background-color: var(--scope-bg) !important;
+  background-image:
+    radial-gradient(circle at 50% 45%, rgba(255, 250, 238, 0.032) 0%, transparent 65%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+/* Subtle optical corner calibration marks on the recessed oscilloscope */
+main[data-view="visualizer"] div.flex-1.relative.bg-slate-900::before {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    linear-gradient(to right, rgba(244, 240, 232, 0.22) 10px, transparent 10px) 0 0 / 100% 1px no-repeat,
+    linear-gradient(to bottom, rgba(244, 240, 232, 0.22) 10px, transparent 10px) 0 0 / 1px 100% no-repeat,
+    linear-gradient(to left, rgba(244, 240, 232, 0.22) 10px, transparent 10px) 100% 0 / 100% 1px no-repeat,
+    linear-gradient(to bottom, rgba(244, 240, 232, 0.22) 10px, transparent 10px) 100% 0 / 1px 100% no-repeat,
+    linear-gradient(to right, rgba(244, 240, 232, 0.22) 10px, transparent 10px) 0 100% / 100% 1px no-repeat,
+    linear-gradient(to top, rgba(244, 240, 232, 0.22) 10px, transparent 10px) 0 100% / 1px 100% no-repeat,
+    linear-gradient(to left, rgba(244, 240, 232, 0.22) 10px, transparent 10px) 100% 100% / 100% 1px no-repeat,
+    linear-gradient(to top, rgba(244, 240, 232, 0.22) 10px, transparent 10px) 100% 100% / 1px 100% no-repeat;
+}
+
+/* Floating manual control & telemetry cards inside the dark oscilloscope viewport */
+main[data-view="visualizer"] div.flex-1.relative.bg-slate-900 > div.bg-slate-800,
+main[data-view="visualizer"] div.flex-1.relative.bg-slate-900 > div.bg-slate-800\/95 {
+  background-color: rgba(22, 26, 24, 0.92) !important;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(244, 240, 232, 0.16) !important;
+  border-radius: 2px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45) !important;
+}
+
+main[data-view="visualizer"] div.flex-1.relative.bg-slate-900 > div.bg-slate-800 h3,
+main[data-view="visualizer"] div.flex-1.relative.bg-slate-900 > div.bg-slate-800\/95 h3 {
+  font-family: var(--font-mono), monospace !important;
+  font-size: 0.7rem !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  color: #e6e0d2 !important;
+}
+
+main[data-view="visualizer"] div.flex-1.relative.bg-slate-900 > div.bg-slate-800 button.rounded,
+main[data-view="visualizer"] div.flex-1.relative.bg-slate-900 > div.bg-slate-800\/95 button.rounded {
+  border-radius: 2px !important;
+  font-family: var(--font-mono), monospace !important;
+  font-size: 0.72rem !important;
+}
+
+/* Dark oscilloscope scrollbars */
+main[data-view="visualizer"] div.flex-1.relative.bg-slate-900 ::-webkit-scrollbar-thumb {
+  background: rgba(244, 240, 232, 0.22);
+}
+
+/* CAP Theorem left educational panel (the only visualizer without ControlPanel) */
+main[data-view="visualizer"] > div > div.w-full.md\:w-96.bg-slate-800 {
+  background-color: var(--chassis) !important;
+  border-color: var(--rule) !important;
+  color: var(--ink) !important;
+}
+
+main[data-view="visualizer"] > div > div.w-full.md\:w-96.bg-slate-800 h2 {
+  font-family: var(--font-serif), Georgia, serif !important;
+  color: var(--ink) !important;
+  font-size: 1.5rem !important;
+  font-weight: 500 !important;
+}
+
+main[data-view="visualizer"] > div > div.w-full.md\:w-96.bg-slate-800 .bg-slate-700 {
+  background-color: var(--paper-elevated) !important;
+  border: 1px solid var(--rule) !important;
+  border-radius: 2px !important;
+}
+
+main[data-view="visualizer"] > div > div.w-full.md\:w-96.bg-slate-800 h3,
+main[data-view="visualizer"] > div > div.w-full.md\:w-96.bg-slate-800 h4 {
+  color: var(--ink) !important;
+}
+
+main[data-view="visualizer"] > div > div.w-full.md\:w-96.bg-slate-800 p.text-slate-300 {
+  color: var(--ink-secondary) !important;
+}
+
+main[data-view="visualizer"] > div > div.w-full.md\:w-96.bg-slate-800 .bg-amber-900\/30 {
+  background-color: rgba(217, 68, 30, 0.08) !important;
+  border-color: var(--signal) !important;
+  border-radius: 2px !important;
+}
+
+main[data-view="visualizer"] > div > div.w-full.md\:w-96.bg-slate-800 .text-amber-400 {
+  color: var(--signal) !important;
+}
+
+main[data-view="visualizer"] > div > div.w-full.md\:w-96.bg-slate-800 .bg-blue-900\/30 {
+  background-color: rgba(29, 75, 143, 0.08) !important;
+  border-color: var(--cobalt) !important;
+  border-radius: 2px !important;
+}
+
+main[data-view="visualizer"] > div > div.w-full.md\:w-96.bg-slate-800 .text-blue-400 {
+  color: var(--cobalt) !important;
+}
+
+main[data-view="visualizer"] > div > div.w-full.md\:w-96.bg-slate-800 .text-slate-300 {
+  color: var(--ink-secondary) !important;
+}
+
+/* Harmonize purple buttons inside floating oscilloscope controls to crisp instrument vermilion/amber */
+main[data-view="visualizer"] div.flex-1.relative.bg-slate-900 button.bg-purple-600 {
+  background-color: var(--signal) !important;
+  color: #faf7f1 !important;
+}
+
+main[data-view="visualizer"] div.flex-1.relative.bg-slate-900 button.bg-purple-600:hover {
+  background-color: var(--signal-hover) !important;
+}
+
+/* Editorial Monograph Reader typography (overrides legacy dark-mode text classes in all 22 drawers) */
+.monograph-reader > div {
+  padding-bottom: 1.35rem;
+  margin-bottom: 1.35rem !important;
+  border-bottom: 1px solid var(--rule);
+}
+
+.monograph-reader > div:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.monograph-reader h3 {
+  font-family: var(--font-serif), Georgia, serif !important;
+  font-size: 1.25rem !important;
+  font-weight: 500 !important;
+  line-height: 1.3 !important;
+  color: var(--ink) !important;
+  margin-bottom: 0.6rem !important;
+}
+
+.monograph-reader p {
+  font-family: var(--font-sans), sans-serif !important;
+  font-size: 0.94rem !important;
+  line-height: 1.72 !important;
+  color: var(--ink-secondary) !important;
+  margin-bottom: 0.65rem !important;
+}
+

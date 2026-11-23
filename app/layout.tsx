@@ -1,18 +1,34 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Newsreader, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google';
 import './globals.css';
 import Navigation from '@/components/Navigation';
 import AchievementToast from '@/components/AchievementToast';
 import ToastContainer from '@/components/ToastContainer';
+import VisualizerShell from '@/components/VisualizerShell';
 
-const inter = Inter({
+const newsreader = Newsreader({
   subsets: ['latin'],
-  variable: '--font-inter',
+  weight: ['400', '500', '600'],
+  style: ['normal', 'italic'],
+  variable: '--font-serif',
+});
+
+const ibmPlexSans = IBM_Plex_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-sans',
+});
+
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  variable: '--font-mono',
 });
 
 export const metadata: Metadata = {
-  title: 'Distributed Systems Visualizer',
-  description: 'Interactive learning platform for distributed systems concepts',
+  title: 'Distributed Systems Atlas — Interactive Protocol Monograph',
+  description:
+    'An interactive field manual and live telemetry bench for exploring 22 foundational distributed systems protocols step by step.',
 };
 
 export default function RootLayout({
@@ -21,10 +37,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${inter.variable} font-sans antialiased bg-slate-900 text-white`}>
+    <html
+      lang="en"
+      className={`${newsreader.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable}`}
+    >
+      <body className="font-sans antialiased bg-[var(--paper)] text-[var(--ink)] selection:bg-[#D9441E] selection:text-[#FAF7F1]">
         <Navigation />
-        <main>{children}</main>
+        <VisualizerShell>{children}</VisualizerShell>
         <ToastContainer />
         <AchievementToast />
       </body>

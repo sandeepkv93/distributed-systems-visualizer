@@ -16,7 +16,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface ExportMenuProps {
   svgRef: React.RefObject<SVGSVGElement | null>;
   concept: string;
-  currentState?: any;
+  currentState?: unknown;
 }
 
 export default function ExportMenu({ svgRef, concept, currentState }: ExportMenuProps) {
@@ -82,11 +82,11 @@ export default function ExportMenu({ svgRef, concept, currentState }: ExportMenu
     try {
       await shareVisualization(svgRef.current, concept, `Interactive ${concept} visualization`);
       setIsOpen(false);
-    } catch (error: any) {
-      if (error.message?.includes('not supported')) {
+    } catch (error: unknown) {
+      const err = error as { message?: string; name?: string };
+      if (err.message?.includes('not supported')) {
         showToast('Sharing is not supported in this browser. Try exporting as PNG instead.', 'info');
-      } else if (error.name !== 'AbortError') {
-        // AbortError means user cancelled the share dialog
+      } else if (err.name !== 'AbortError') {
         console.error('Share failed:', error);
         showToast('Failed to share. Please try exporting instead.', 'error');
       }
@@ -129,119 +129,113 @@ export default function ExportMenu({ svgRef, concept, currentState }: ExportMenu
 
   return (
     <div className="relative">
-      {/* Export Button */}
+      {/* Archival Export Button (high contrast on both paper headers & obsidian canvas) */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
+        className="inline-flex items-center gap-2 px-3 py-1.5 bg-[var(--paper-elevated)] text-[var(--ink)] border border-[rgba(22,22,20,0.35)] hover:bg-[var(--ink)] hover:text-[var(--paper-elevated)] hover:border-[var(--ink)] font-mono text-xs uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
         disabled={isExporting}
       >
-        <Download className="w-4 h-4" />
-        Export
+        <Download className="w-3.5 h-3.5" />
+        <span>Export</span>
       </button>
 
       {/* Dropdown Menu */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: -10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -10 }}
-            transition={{ duration: 0.15 }}
-            className="absolute right-0 mt-2 w-56 bg-slate-800 rounded-lg shadow-xl border border-slate-700 py-2 z-50"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.14 }}
+            className="absolute right-0 mt-2 w-60 bg-[var(--paper-elevated)] text-[var(--ink)] border border-[var(--ink)] shadow-[5px_5px_0_0_var(--ink)] py-1.5 z-50"
           >
-            {/* PNG Export */}
             <button
               type="button"
               onClick={handleExportPNG}
               disabled={isExporting}
-              className="w-full px-4 py-2 flex items-center gap-3 hover:bg-slate-700 transition-colors text-left disabled:opacity-50"
+              className="w-full px-3.5 py-2 flex items-center gap-3 hover:bg-[var(--chassis)] transition-colors text-left disabled:opacity-50 cursor-pointer"
             >
-              <ImageIcon className="w-4 h-4 text-blue-400" aria-hidden="true" />
+              <ImageIcon className="w-4 h-4 text-[var(--cobalt)]" aria-hidden="true" />
               <div>
-                <div className="text-white text-sm font-medium">Export as PNG</div>
-                <div className="text-slate-400 text-xs">High-quality image</div>
+                <div className="text-xs font-semibold text-[var(--ink)]">Export as PNG</div>
+                <div className="font-mono text-[10px] text-[var(--ink-muted)]">2× raster capture</div>
               </div>
             </button>
 
-            {/* SVG Export */}
             <button
               type="button"
               onClick={handleExportSVG}
               disabled={isExporting}
-              className="w-full px-4 py-2 flex items-center gap-3 hover:bg-slate-700 transition-colors text-left disabled:opacity-50"
+              className="w-full px-3.5 py-2 flex items-center gap-3 hover:bg-[var(--chassis)] transition-colors text-left disabled:opacity-50 cursor-pointer"
             >
-              <ImageIcon className="w-4 h-4 text-purple-400" aria-hidden="true" />
+              <ImageIcon className="w-4 h-4 text-[var(--signal)]" aria-hidden="true" />
               <div>
-                <div className="text-white text-sm font-medium">Export as SVG</div>
-                <div className="text-slate-400 text-xs">Scalable vector</div>
+                <div className="text-xs font-semibold text-[var(--ink)]">Export as SVG</div>
+                <div className="font-mono text-[10px] text-[var(--ink-muted)]">Scalable vector plate</div>
               </div>
             </button>
 
-            {/* JSON State Export */}
-            {currentState && (
+            {Boolean(currentState) && (
               <button
                 type="button"
                 onClick={handleExportJSON}
                 disabled={isExporting}
-                className="w-full px-4 py-2 flex items-center gap-3 hover:bg-slate-700 transition-colors text-left disabled:opacity-50"
+                className="w-full px-3.5 py-2 flex items-center gap-3 hover:bg-[var(--chassis)] transition-colors text-left disabled:opacity-50 cursor-pointer"
               >
-                <FileJson className="w-4 h-4 text-green-400" />
+                <FileJson className="w-4 h-4 text-[var(--emerald)]" />
                 <div>
-                  <div className="text-white text-sm font-medium">Export State</div>
-                  <div className="text-slate-400 text-xs">JSON snapshot</div>
+                  <div className="text-xs font-semibold text-[var(--ink)]">Export State</div>
+                  <div className="font-mono text-[10px] text-[var(--ink-muted)]">JSON snapshot</div>
                 </div>
               </button>
             )}
 
-            <div className="border-t border-slate-700 my-2" />
+            <div className="border-t border-[var(--rule)] my-1.5" />
 
-            {/* Share */}
             <button
               type="button"
               onClick={handleShare}
               disabled={isExporting}
-              className="w-full px-4 py-2 flex items-center gap-3 hover:bg-slate-700 transition-colors text-left disabled:opacity-50"
+              className="w-full px-3.5 py-2 flex items-center gap-3 hover:bg-[var(--chassis)] transition-colors text-left disabled:opacity-50 cursor-pointer"
             >
-              <Share2 className="w-4 h-4 text-amber-400" />
+              <Share2 className="w-4 h-4 text-[var(--ochre)]" />
               <div>
-                <div className="text-white text-sm font-medium">Share</div>
-                <div className="text-slate-400 text-xs">Via system dialog</div>
+                <div className="text-xs font-semibold text-[var(--ink)]">Share Plate</div>
+                <div className="font-mono text-[10px] text-[var(--ink-muted)]">System share sheet</div>
               </div>
             </button>
 
-            {/* Copy Link */}
             <button
               type="button"
               onClick={handleCopyLink}
-              className="w-full px-4 py-2 flex items-center gap-3 hover:bg-slate-700 transition-colors text-left relative"
+              className="w-full px-3.5 py-2 flex items-center gap-3 hover:bg-[var(--chassis)] transition-colors text-left cursor-pointer"
             >
               {copyFeedback === 'Link copied!' ? (
-                <Check className="w-4 h-4 text-green-400" />
+                <Check className="w-4 h-4 text-[var(--emerald)]" />
               ) : (
-                <Link2 className="w-4 h-4 text-cyan-400" />
+                <Link2 className="w-4 h-4 text-[var(--ink-secondary)]" />
               )}
               <div>
-                <div className="text-white text-sm font-medium">Copy Link</div>
-                <div className="text-slate-400 text-xs">Share URL</div>
+                <div className="text-xs font-semibold text-[var(--ink)]">Copy Link</div>
+                <div className="font-mono text-[10px] text-[var(--ink-muted)]">Direct plate URL</div>
               </div>
             </button>
 
-            {/* Copy State */}
-            {currentState && (
+            {Boolean(currentState) && (
               <button
                 type="button"
                 onClick={handleCopyState}
-                className="w-full px-4 py-2 flex items-center gap-3 hover:bg-slate-700 transition-colors text-left relative"
+                className="w-full px-3.5 py-2 flex items-center gap-3 hover:bg-[var(--chassis)] transition-colors text-left cursor-pointer"
               >
                 {copyFeedback === 'State copied!' ? (
-                  <Check className="w-4 h-4 text-green-400" />
+                  <Check className="w-4 h-4 text-[var(--emerald)]" />
                 ) : (
-                  <Copy className="w-4 h-4 text-slate-400" />
+                  <Copy className="w-4 h-4 text-[var(--ink-secondary)]" />
                 )}
                 <div>
-                  <div className="text-white text-sm font-medium">Copy State</div>
-                  <div className="text-slate-400 text-xs">To clipboard</div>
+                  <div className="text-xs font-semibold text-[var(--ink)]">Copy State</div>
+                  <div className="font-mono text-[10px] text-[var(--ink-muted)]">JSON to clipboard</div>
                 </div>
               </button>
             )}
@@ -249,10 +243,7 @@ export default function ExportMenu({ svgRef, concept, currentState }: ExportMenu
         )}
       </AnimatePresence>
 
-      {/* Click outside to close */}
-      {isOpen && (
-        <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-      )}
+      {isOpen && <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />}
     </div>
   );
 }

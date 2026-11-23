@@ -197,7 +197,7 @@ export default function CAPTheoremPage() {
 
             <div className="bg-slate-700 rounded-lg p-3">
               <div className="flex items-center gap-2 mb-1">
-                <div className="w-3 h-3 rounded-full bg-purple-500" />
+                <div className="w-3 h-3 rounded-full bg-[#D9441E]" />
                 <h4 className="font-semibold text-white">Partition Tolerance (P)</h4>
               </div>
               <p className="text-slate-300 text-xs">
@@ -298,7 +298,7 @@ export default function CAPTheoremPage() {
             {/* Vertices - C, A, P */}
             {(['C', 'A', 'P'] as CAPProperty[]).map((property) => {
               const vertex = triangleVertices[property];
-              const colors = { C: '#3B82F6', A: '#10B981', P: '#8B5CF6' };
+              const colors = { C: '#2563EB', A: '#10B981', P: '#D9441E' };
               const labels = {
                 C: 'Consistency',
                 A: 'Availability',

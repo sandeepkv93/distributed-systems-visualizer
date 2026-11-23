@@ -21,8 +21,70 @@ import { shardingRebalancingScenarios } from '@/visualizers/sharding-rebalancing
 import { twoPhaseCommitScenarios } from '@/visualizers/two-phase-commit/scenarios';
 import { vectorClockScenarios } from '@/visualizers/vector-clocks/scenarios';
 
+export type ConceptDomainId =
+  | 'time-causality'
+  | 'consensus'
+  | 'replication'
+  | 'partitioning'
+  | 'coordination';
+
+export interface ConceptDomain {
+  id: ConceptDomainId;
+  index: string;
+  label: string;
+  shortLabel: string;
+  summary: string;
+}
+
+export const CONCEPT_DOMAINS: readonly ConceptDomain[] = [
+  {
+    id: 'time-causality',
+    index: '01',
+    label: 'Time & Causality',
+    shortLabel: 'Time',
+    summary: 'Logical clocks, partial ordering, and global state cuts without synchronized walls.',
+  },
+  {
+    id: 'consensus',
+    index: '02',
+    label: 'Consensus & Fault Tolerance',
+    shortLabel: 'Consensus',
+    summary: 'Agreement under crashes, split-brain partitions, and Byzantine adversaries.',
+  },
+  {
+    id: 'replication',
+    index: '03',
+    label: 'Replication & Consistency',
+    shortLabel: 'Replication',
+    summary: 'CAP trade-offs, quorums, append-only logs, CRDT merges, and anti-entropy repair.',
+  },
+  {
+    id: 'partitioning',
+    index: '04',
+    label: 'Partitioning & Routing',
+    shortLabel: 'Routing',
+    summary: 'Hash rings, shard movement, and backpressure-aware request routing.',
+  },
+  {
+    id: 'coordination',
+    index: '05',
+    label: 'Coordination & Transactions',
+    shortLabel: 'Transactions',
+    summary: 'Lease-based locks, atomic commit protocols, and compensating sagas.',
+  },
+] as const;
+
+export const CONCEPT_DOMAINS_BY_ID: ReadonlyMap<ConceptDomainId, ConceptDomain> = new Map(
+  CONCEPT_DOMAINS.map((domain) => [domain.id, domain])
+);
+
 export interface ConceptCatalogEntry {
   id: string;
+  plateNumber: string;
+  domainId: ConceptDomainId;
+  domainLabel: string;
+  citation: string;
+  mechanism: string;
   name: string;
   navName: string;
   path: string;
@@ -39,6 +101,9 @@ export function getScenarioKey(conceptId: string, scenarioId: string): string {
 
 interface ConceptMetadata {
   id: string;
+  domainId: ConceptDomainId;
+  citation: string;
+  mechanism: string;
   name: string;
   navName?: string;
   description: string;
@@ -47,10 +112,16 @@ interface ConceptMetadata {
   scenarios?: Scenario[];
 }
 
-function buildEntry(meta: ConceptMetadata): ConceptCatalogEntry {
+function buildEntry(meta: ConceptMetadata, index: number): ConceptCatalogEntry {
   const scenarios = meta.scenarios ?? [];
+  const domain = CONCEPT_DOMAINS_BY_ID.get(meta.domainId);
   return {
     id: meta.id,
+    plateNumber: String(index + 1).padStart(2, '0'),
+    domainId: meta.domainId,
+    domainLabel: domain?.label ?? 'Distributed Systems',
+    citation: meta.citation,
+    mechanism: meta.mechanism,
     name: meta.name,
     navName: meta.navName ?? meta.name,
     path: `/${meta.id}`,
@@ -62,143 +133,191 @@ function buildEntry(meta: ConceptMetadata): ConceptCatalogEntry {
   };
 }
 
-export const CONCEPTS_CATALOG: ConceptCatalogEntry[] = [
-  buildEntry({
+const RAW_CONCEPTS: ConceptMetadata[] = [
+  {
     id: 'cap-theorem',
+    domainId: 'replication',
+    citation: 'Brewer, 2000',
+    mechanism: 'Trade-off Bound',
     name: 'CAP Theorem',
     description:
       'Explore trade-offs among Consistency, Availability, and Partition Tolerance with real systems.',
     color: 'bg-pink-600',
     emoji: '🔺',
-  }),
-  buildEntry({
+  },
+  {
     id: 'lamport-clocks',
+    domainId: 'time-causality',
+    citation: 'Lamport, 1978',
+    mechanism: 'Scalar Logical Time',
     name: 'Lamport Clocks',
     description:
       'Understand logical clocks and total-order delivery using broadcasts and acknowledgements.',
     color: 'bg-teal-600',
     emoji: '⏱️',
     scenarios: lamportClocksScenarios,
-  }),
-  buildEntry({
+  },
+  {
     id: 'vector-clocks',
+    domainId: 'time-causality',
+    citation: 'Fidge & Mattern, 1988',
+    mechanism: 'Causal Partial Order',
     name: 'Vector Clocks',
     description:
       'Track causality, detect concurrency, and compare event orderings with vector clocks.',
     color: 'bg-red-600',
     emoji: '🧭',
     scenarios: vectorClockScenarios,
-  }),
-  buildEntry({
+  },
+  {
     id: 'chandy-lamport',
+    domainId: 'time-causality',
+    citation: 'Chandy & Lamport, 1985',
+    mechanism: 'Consistent Cut',
     name: 'Chandy-Lamport Snapshot',
     description:
       'Trace marker messages to record local state and in-flight messages for a global snapshot.',
     color: 'bg-cyan-600',
     emoji: '📸',
     scenarios: chandyLamportScenarios,
-  }),
-  buildEntry({
+  },
+  {
     id: 'eventual-consistency',
+    domainId: 'replication',
+    citation: 'Vogels, 2009',
+    mechanism: 'Tunable Quorums',
     name: 'Eventual Consistency',
     description:
       'Write with ONE/QUORUM/ALL and observe replication, conflict, and anti-entropy convergence.',
     color: 'bg-yellow-600',
     emoji: '🌐',
     scenarios: eventualConsistencyScenarios,
-  }),
-  buildEntry({
+  },
+  {
     id: 'crdts',
+    domainId: 'replication',
+    citation: 'Shapiro et al., 2011',
+    mechanism: 'Join-Semilattice',
     name: 'CRDTs',
     description:
       'Explore G-Counter, OR-Set, and RGA to see conflict-free merges across replicas.',
     color: 'bg-emerald-700',
     emoji: '🧮',
     scenarios: crdtScenarios,
-  }),
-  buildEntry({
+  },
+  {
     id: 'gossip-anti-entropy',
+    domainId: 'replication',
+    citation: 'Demers et al., 1987',
+    mechanism: 'Epidemic Dissemination',
     name: 'Gossip & Anti-Entropy',
     description:
       'Push, pull, and push-pull rounds spread updates across nodes without a central coordinator.',
     color: 'bg-emerald-600',
     emoji: '🫧',
     scenarios: gossipAntiEntropyScenarios,
-  }),
-  buildEntry({
+  },
+  {
     id: 'merkle-anti-entropy',
+    domainId: 'replication',
+    citation: 'DeCandia et al., 2007',
+    mechanism: 'Hash-Tree Diffing',
     name: 'Merkle Anti-Entropy',
     description:
       'Use Merkle trees to pinpoint divergence and sync only the necessary keys.',
     color: 'bg-sky-600',
     emoji: '🌳',
     scenarios: merkleAntiEntropyScenarios,
-  }),
-  buildEntry({
+  },
+  {
     id: 'quorum-replication',
+    domainId: 'replication',
+    citation: 'Gifford, 1979',
+    mechanism: 'W + R > N Intersection',
     name: 'Quorum Replication',
     description:
       'Tune W/R quorums and watch read-repair fix stale replicas after failures.',
     color: 'bg-orange-600',
     emoji: '⚖️',
     scenarios: quorumReplicationScenarios,
-  }),
-  buildEntry({
+  },
+  {
     id: 'replication-log',
+    domainId: 'replication',
+    citation: 'Kreps et al., 2011',
+    mechanism: 'ISR & High-Watermark',
     name: 'Replication Log',
     description:
       'Track a leader and ISR followers, see high-watermarks advance, and observe lag.',
     color: 'bg-slate-600',
     emoji: '📜',
     scenarios: replicationLogScenarios,
-  }),
-  buildEntry({
+  },
+  {
     id: 'failure-detectors',
+    domainId: 'consensus',
+    citation: 'Hayashibara / Das, 2004',
+    mechanism: 'Phi Accrual & SWIM',
     name: 'Failure Detectors',
     description:
       'Watch phi accrual and SWIM probes move nodes through alive, suspect, and failed.',
     color: 'bg-orange-700',
     emoji: '🚨',
     scenarios: failureDetectorScenarios,
-  }),
-  buildEntry({
+  },
+  {
     id: 'consistent-hashing',
+    domainId: 'partitioning',
+    citation: 'Karger et al., 1997',
+    mechanism: 'Ring & Virtual Nodes',
     name: 'Consistent Hashing',
     description:
       'Distribute keys across a ring and see how virtual nodes minimize reshuffling.',
     color: 'bg-indigo-600',
     emoji: '🧿',
     scenarios: consistentHashingScenarios,
-  }),
-  buildEntry({
+  },
+  {
     id: 'sharding-rebalancing',
+    domainId: 'partitioning',
+    citation: 'Chang et al., 2006',
+    mechanism: 'Range & Hash Shards',
     name: 'Sharding + Rebalancing',
     description:
       'Compare range vs hash sharding and watch shard movement as nodes join or leave.',
     color: 'bg-cyan-700',
     emoji: '🧩',
     scenarios: shardingRebalancingScenarios,
-  }),
-  buildEntry({
+  },
+  {
     id: 'load-balancing',
+    domainId: 'partitioning',
+    citation: 'Mitzenmacher, 2001',
+    mechanism: 'Backpressure & Shedding',
     name: 'Load Balancing',
     description:
       'Route requests across workers, trigger backpressure, and see drops under load.',
     color: 'bg-amber-700',
     emoji: '🚦',
     scenarios: loadBalancingScenarios,
-  }),
-  buildEntry({
+  },
+  {
     id: 'distributed-locking',
+    domainId: 'coordination',
+    citation: 'Burrows, 2006',
+    mechanism: 'Leases & Fencing',
     name: 'Distributed Locking',
     description:
       'Acquire a lease, renew via heartbeats, and see timeouts trigger failover.',
     color: 'bg-lime-600',
     emoji: '🔒',
     scenarios: distributedLockingScenarios,
-  }),
-  buildEntry({
+  },
+  {
     id: 'two-phase-commit',
+    domainId: 'coordination',
+    citation: 'Gray, 1978',
+    mechanism: 'Atomic Commit',
     name: 'Two-Phase Commit',
     navName: '2PC',
     description:
@@ -206,27 +325,36 @@ export const CONCEPTS_CATALOG: ConceptCatalogEntry[] = [
     color: 'bg-green-600',
     emoji: '🔗',
     scenarios: twoPhaseCommitScenarios,
-  }),
-  buildEntry({
+  },
+  {
     id: 'distributed-transactions',
+    domainId: 'coordination',
+    citation: 'Garcia-Molina, 1987',
+    mechanism: '3PC & Compensating Sagas',
     name: 'Distributed Transactions',
     description:
       'Compare 3PC commit flow with saga steps and compensations on failure.',
     color: 'bg-purple-700',
     emoji: '🧾',
     scenarios: distributedTransactionsScenarios,
-  }),
-  buildEntry({
+  },
+  {
     id: 'network-partitions',
+    domainId: 'consensus',
+    citation: 'Davidson et al., 1985',
+    mechanism: 'Split-Brain Healing',
     name: 'Network Partitions',
     description:
       'Split the network, elect leaders per partition, then heal and resolve split-brain.',
     color: 'bg-red-700',
     emoji: '🕸️',
     scenarios: networkPartitionsScenarios,
-  }),
-  buildEntry({
+  },
+  {
     id: 'paxos',
+    domainId: 'consensus',
+    citation: 'Lamport, 1998',
+    mechanism: 'Prepare / Accept Quorums',
     name: 'Paxos Consensus',
     navName: 'Paxos',
     description:
@@ -234,35 +362,46 @@ export const CONCEPTS_CATALOG: ConceptCatalogEntry[] = [
     color: 'bg-purple-600',
     emoji: '🗳️',
     scenarios: paxosScenarios,
-  }),
-  buildEntry({
+  },
+  {
     id: 'raft',
+    domainId: 'consensus',
+    citation: 'Ongaro & Ousterhout, 2014',
+    mechanism: 'Leader & Log Replication',
     name: 'Raft Consensus',
     description:
       'Pick a leader, replicate logs, and survive failures. See how Raft keeps nodes consistent during elections and recovery.',
     color: 'bg-blue-600',
     emoji: '🧭',
     scenarios: raftScenarios,
-  }),
-  buildEntry({
+  },
+  {
     id: 'consensus-variants',
+    domainId: 'consensus',
+    citation: 'Moraru et al., 2013',
+    mechanism: 'Multi-Paxos & EPaxos',
     name: 'Consensus Variants',
     description:
       'Compare reconfiguration in Raft, stable leaders in Multi-Paxos, and EPaxos fast paths.',
     color: 'bg-indigo-700',
     emoji: '🧪',
     scenarios: consensusVariantsScenarios,
-  }),
-  buildEntry({
+  },
+  {
     id: 'pbft',
+    domainId: 'consensus',
+    citation: 'Castro & Liskov, 1999',
+    mechanism: '3f + 1 Byzantine Quorum',
     name: 'PBFT',
     description:
       'Follow pre-prepare, prepare, and commit phases plus view changes under byzantine faults.',
     color: 'bg-rose-600',
     emoji: '🛡️',
     scenarios: pbftScenarios,
-  }),
+  },
 ];
+
+export const CONCEPTS_CATALOG: ConceptCatalogEntry[] = RAW_CONCEPTS.map(buildEntry);
 
 export const CONCEPTS_BY_ID: ReadonlyMap<string, ConceptCatalogEntry> = new Map(
   CONCEPTS_CATALOG.map((entry) => [entry.id, entry])
