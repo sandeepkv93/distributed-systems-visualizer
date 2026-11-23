@@ -10,7 +10,8 @@ import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import { replicationLogScenarios } from '@/visualizers/replication-log/scenarios';
 import { LogMessage, LogPartition } from '@/lib/types';
-import { motion } from 'framer-motion';
+import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
+import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 
 export default function ReplicationLogPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -19,6 +20,7 @@ export default function ReplicationLogPage() {
   const [messages, setMessages] = useState<LogMessage[]>(replication.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
+  const [selectedReplicaId, setSelectedReplicaId] = useState<string | null>(null);
 
   const syncVisualization = useCallback(() => {
     setPartition({
@@ -90,40 +92,54 @@ export default function ReplicationLogPage() {
     updateVisualization();
   };
 
-  const markOutOfSync = () => {
-    const follower = partition.replicas.find((r) => r.role === 'follower');
+  const markOutOfSync = (replicaId?: string) => {
+    const follower =
+      (replicaId && partition.replicas.find((r) => r.id === replicaId && r.role === 'follower')) ||
+      partition.replicas.find((r) => r.role === 'follower');
     if (!follower) return;
     replication.markOutOfSync(follower.id);
     updateVisualization();
   };
 
-  const markInSync = () => {
-    const follower = partition.replicas.find((r) => r.role === 'follower' && !r.inSync);
+  const markInSync = (replicaId?: string) => {
+    const follower =
+      (replicaId && partition.replicas.find((r) => r.id === replicaId && r.role === 'follower')) ||
+      partition.replicas.find((r) => r.role === 'follower' && !r.inSync);
     if (!follower) return;
     replication.markInSync(follower.id);
     updateVisualization();
   };
 
-  const getReplicaColor = (replica: LogPartition['replicas'][number]): string => {
-    if (replica.role === 'leader') return '#3B82F6';
-    if (!replica.inSync) return '#F59E0B';
-    return '#10B981';
+  const fetchReplica = (replicaId: string) => {
+    replication.fetch(replicaId);
+    updateVisualization();
   };
 
-  const getMessageColor = (message: LogMessage): string => {
+  const getReplicaColor = (replica: LogPartition['replicas'][number]): string => {
+    if (replica.role === 'leader') return SCOPE_COLORS.signal;
+    if (!replica.inSync) return SCOPE_COLORS.amber;
+    return SCOPE_COLORS.emerald;
+  };
+
+  const getMessageStyle = (
+    message: LogMessage
+  ): { color: string; markerKey: 'cobalt' | 'emerald' | 'amber' | 'muted'; label: string } => {
     switch (message.type) {
       case 'Produce':
-        return '#3B82F6';
+        return { color: SCOPE_COLORS.cobalt, markerKey: 'cobalt', label: 'PRODUCE' };
       case 'Replicate':
-        return '#10B981';
+        return { color: SCOPE_COLORS.emerald, markerKey: 'emerald', label: 'REPL' };
       case 'Fetch':
-        return '#F59E0B';
+        return { color: SCOPE_COLORS.amber, markerKey: 'amber', label: 'FETCH' };
       default:
-        return '#6B7280';
+        return { color: SCOPE_COLORS.inkMuted, markerKey: 'muted', label: 'MSG' };
     }
   };
 
   const stats = replication.getStats();
+  const inspectedReplica = selectedReplicaId
+    ? partition.replicas.find((r) => r.id === selectedReplicaId) ?? null
+    : null;
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen md:h-screen bg-slate-900">
@@ -163,15 +179,15 @@ export default function ReplicationLogPage() {
               Read the theory
             </button>
           </div>
-          <div className="flex gap-6 mt-3 text-sm">
+          <div className="flex flex-wrap gap-6 mt-3 text-sm">
             <span className="text-slate-300">
               Replicas: <span className="font-semibold text-white">{stats.replicas}</span>
             </span>
             <span className="text-slate-300">
-              ISR: <span className="font-semibold text-white">{stats.isrSize}</span>
+              ISR: <span className="font-semibold text-green-400">{stats.isrSize}</span>
             </span>
             <span className="text-slate-300">
-              HW: <span className="font-semibold text-white">{stats.highWatermark}</span>
+              HW: <span className="font-semibold text-blue-400">{stats.highWatermark}</span>
             </span>
             <span className="text-slate-300">
               Log Size: <span className="font-semibold text-white">{stats.logSize}</span>
@@ -188,46 +204,21 @@ export default function ReplicationLogPage() {
             />
           </div>
 
-          <svg ref={svgRef} viewBox="0 0 840 340" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            {partition.replicas.map((replica, index) => (
-              <motion.g
-                key={replica.id}
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              >
-                <circle
-                  cx={160 + index * 260}
-                  cy={160}
-                  r="45"
-                  fill={getReplicaColor(replica)}
-                  stroke="#1F2937"
-                  strokeWidth="3"
-                />
-                <text
-                  x={160 + index * 260}
-                  y={150}
-                  textAnchor="middle"
-                  fill="#FFF"
-                  fontSize="14"
-                  fontWeight="bold"
-                >
-                  {replica.id}
-                </text>
-                <text
-                  x={160 + index * 260}
-                  y={168}
-                  textAnchor="middle"
-                  fill="#E2E8F0"
-                  fontSize="10"
-                >
-                  {replica.role.toUpperCase()}
-                </text>
-                <text x={160 + index * 260} y={182} textAnchor="middle" fill="#CBD5E1" fontSize="9">
-                  hw {replica.highWatermark}
-                </text>
-              </motion.g>
-            ))}
+          <svg ref={svgRef} viewBox="0 0 840 360" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+            <ScopeDefs idPrefix="repllog" />
+
+            {/* Replication bus rail */}
+            {partition.replicas.length > 1 && (
+              <line
+                x1={160}
+                y1={160}
+                x2={160 + (partition.replicas.length - 1) * 260}
+                y2={160}
+                stroke={SCOPE_COLORS.hairline}
+                strokeWidth="1"
+                strokeDasharray="4 4"
+              />
+            )}
 
             {messages
               .filter((m) => m.status === 'in-flight')
@@ -237,33 +228,125 @@ export default function ReplicationLogPage() {
                 if (fromIndex === -1 || toIndex === -1) return null;
                 const x1 = 160 + fromIndex * 260;
                 const x2 = 160 + toIndex * 260;
+                const style = getMessageStyle(message);
                 return (
-                  <g key={message.id}>
-                    <motion.line
-                      x1={x1}
-                      y1={160}
-                      x2={x2}
-                      y2={160}
-                      stroke={getMessageColor(message)}
-                      strokeWidth="2"
-                      strokeDasharray="6,6"
-                      initial={{ pathLength: 0, opacity: 0 }}
-                      animate={{ pathLength: 1, opacity: 1 }}
-                      transition={{ duration: 0.4 }}
-                    />
-                    <motion.circle
-                      cx={(x1 + x2) / 2}
-                      cy={160}
-                      r="6"
-                      fill={getMessageColor(message)}
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ duration: 0.3 }}
-                    />
-                  </g>
+                  <ScopeEdge
+                    key={message.id}
+                    idPrefix="repllog"
+                    x1={x1}
+                    y1={160}
+                    x2={x2}
+                    y2={160}
+                    color={style.color}
+                    markerKey={style.markerKey}
+                    inset={48}
+                    label={style.label}
+                    dashed={message.type === 'Fetch'}
+                  />
                 );
               })}
+
+            {partition.replicas.map((replica, index) => {
+              const cx = 160 + index * 260;
+              return (
+                <ScopeNode
+                  key={replica.id}
+                  x={cx}
+                  y={160}
+                  radius={44}
+                  label={replica.id}
+                  sublabel={`HW ${replica.highWatermark}`}
+                  topTag={replica.role === 'leader' ? 'LEADER · ISR' : replica.inSync ? 'FOLLOWER · ISR' : 'OUT OF SYNC'}
+                  bottomLine1={`LEO ${replica.log.length}`}
+                  accentColor={getReplicaColor(replica)}
+                  highlighted={replica.role === 'leader'}
+                  selected={selectedReplicaId === replica.id}
+                  onClick={() =>
+                    setSelectedReplicaId((prev) => (prev === replica.id ? null : replica.id))
+                  }
+                />
+              );
+            })}
           </svg>
+
+          {!inspectedReplica && <WireTapHint text="Click any replica to inspect log offsets & ISR status" />}
+
+          {inspectedReplica && (
+            <WireTapInspector
+              title={`REPLICA ${inspectedReplica.id}`}
+              subtitle={inspectedReplica.role === 'leader' ? 'PARTITION LEADER' : 'PARTITION FOLLOWER'}
+              status={
+                inspectedReplica.role === 'leader'
+                  ? 'leader'
+                  : inspectedReplica.inSync
+                  ? 'healthy'
+                  : 'candidate'
+              }
+              className="top-14 left-4"
+              metrics={[
+                { label: 'Role', value: inspectedReplica.role.toUpperCase(), tone: 'signal' },
+                {
+                  label: 'ISR State',
+                  value: inspectedReplica.inSync ? 'IN-SYNC' : 'OUT-OF-SYNC',
+                  tone: inspectedReplica.inSync ? 'emerald' : 'amber',
+                },
+                { label: 'High-Watermark', value: inspectedReplica.highWatermark, tone: 'cobalt' },
+                { label: 'Log End (LEO)', value: inspectedReplica.log.length },
+              ]}
+              actions={
+                inspectedReplica.role === 'leader'
+                  ? [
+                      {
+                        label: 'Produce Entry',
+                        onClick: produce,
+                        variant: 'signal',
+                      },
+                    ]
+                  : [
+                      {
+                        label: 'Fetch Log',
+                        onClick: () => fetchReplica(inspectedReplica.id),
+                      },
+                      inspectedReplica.inSync
+                        ? {
+                            label: 'Drop from ISR',
+                            onClick: () => markOutOfSync(inspectedReplica.id),
+                            variant: 'danger',
+                          }
+                        : {
+                            label: 'Rejoin ISR',
+                            onClick: () => markInSync(inspectedReplica.id),
+                            variant: 'emerald',
+                          },
+                    ]
+              }
+              onClose={() => setSelectedReplicaId(null)}
+            >
+              <div>
+                <div className="text-[9px] uppercase tracking-[0.12em] text-[#9E9B90] mb-1">
+                  Commit Log ({inspectedReplica.log.length} records)
+                </div>
+                {inspectedReplica.log.length === 0 ? (
+                  <div className="text-[#9E9B90]">Empty partition log</div>
+                ) : (
+                  <div className="space-y-1">
+                    {inspectedReplica.log.map((entry) => {
+                      const committed = entry.offset < inspectedReplica.highWatermark;
+                      return (
+                        <div key={entry.offset} className="flex items-center justify-between gap-2">
+                          <span className="text-[#9E9B90]">#{entry.offset}</span>
+                          <span className="text-[#F4F0E8]">{entry.value}</span>
+                          <span className={committed ? 'text-[#34D399]' : 'text-[#FBBF24]'}>
+                            {committed ? 'HW' : 'UNCOMMIT'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </WireTapInspector>
+          )}
 
           <div className="absolute bottom-4 left-4 bg-slate-800 rounded-lg p-4 border border-slate-700 space-y-2 max-w-xs">
             <h3 className="text-sm font-semibold text-white">Manual Controls</h3>
@@ -274,20 +357,20 @@ export default function ReplicationLogPage() {
               Produce Message
             </button>
             <button
-              onClick={markOutOfSync}
+              onClick={() => markOutOfSync()}
               className="w-full px-3 py-2 bg-amber-600 text-white text-sm rounded hover:bg-amber-700"
             >
               Remove Follower from ISR
             </button>
             <button
-              onClick={markInSync}
+              onClick={() => markInSync()}
               className="w-full px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700"
             >
               Rejoin ISR
             </button>
           </div>
 
-          <div className="absolute top-4 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-sm max-h-96 overflow-y-auto">
+          <div className="absolute top-16 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-sm max-h-80 overflow-y-auto">
             <h3 className="text-sm font-semibold text-white mb-2">Replica Logs</h3>
             <div className="space-y-2">
               {partition.replicas.map((replica) => (

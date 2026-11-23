@@ -10,7 +10,8 @@ import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import { merkleAntiEntropyScenarios } from '@/visualizers/merkle-anti-entropy/scenarios';
 import { MerkleMessage, MerkleReplica } from '@/lib/types';
-import { motion } from 'framer-motion';
+import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
+import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 
 export default function MerkleAntiEntropyPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -19,6 +20,7 @@ export default function MerkleAntiEntropyPage() {
   const [messages, setMessages] = useState<MerkleMessage[]>(merkle.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
+  const [selectedReplicaId, setSelectedReplicaId] = useState<string | null>(null);
 
   const syncVisualization = useCallback(() => {
     setReplicas([...merkle.getReplicas()]);
@@ -81,26 +83,33 @@ export default function MerkleAntiEntropyPage() {
     updateVisualization();
   };
 
-  const mutateKey = () => {
+  const mutateKey = (replicaId: string = 'R0') => {
     const key = `k${Math.floor(Math.random() * 12) + 1}`;
-    merkle.mutateReplica('R0', key, `${key}-v${Math.floor(Math.random() * 5) + 2}`);
+    merkle.mutateReplica(replicaId, key, `${key}-v${Math.floor(Math.random() * 5) + 2}`);
     updateVisualization();
   };
 
-  const getMessageColor = (message: MerkleMessage): string => {
+  const getMessageStyle = (
+    message: MerkleMessage
+  ): { color: string; markerKey: 'cobalt' | 'amber' | 'emerald' | 'muted'; label: string } => {
     switch (message.type) {
       case 'CompareRoot':
-        return '#3B82F6';
+        return { color: SCOPE_COLORS.cobalt, markerKey: 'cobalt', label: 'ROOT DIFF' };
       case 'CompareNode':
-        return '#F59E0B';
+        return { color: SCOPE_COLORS.amber, markerKey: 'amber', label: 'SUBTREE' };
       case 'SyncLeaf':
-        return '#10B981';
+        return { color: SCOPE_COLORS.emerald, markerKey: 'emerald', label: 'SYNC LEAF' };
       default:
-        return '#6B7280';
+        return { color: SCOPE_COLORS.inkMuted, markerKey: 'muted', label: 'MSG' };
     }
   };
 
   const stats = merkle.getStats();
+  const rootsMatch =
+    replicas.length >= 2 && replicas[0].root?.hash === replicas[1].root?.hash;
+  const inspectedReplica = selectedReplicaId
+    ? replicas.find((r) => r.id === selectedReplicaId) ?? null
+    : null;
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen md:h-screen bg-slate-900">
@@ -140,7 +149,7 @@ export default function MerkleAntiEntropyPage() {
               Read the theory
             </button>
           </div>
-          <div className="flex gap-6 mt-3 text-sm">
+          <div className="flex flex-wrap gap-6 mt-3 text-sm">
             <span className="text-slate-300">
               Replicas: <span className="font-semibold text-white">{stats.replicaCount}</span>
             </span>
@@ -152,6 +161,12 @@ export default function MerkleAntiEntropyPage() {
                 {stats.mismatchedKeys}
               </span>
             </span>
+            <span className="text-slate-300">
+              Roots:{' '}
+              <span className={`font-semibold ${rootsMatch ? 'text-green-400' : 'text-amber-400'}`}>
+                {rootsMatch ? 'MATCH' : 'DIVERGED'}
+              </span>
+            </span>
           </div>
         </div>
 
@@ -160,76 +175,142 @@ export default function MerkleAntiEntropyPage() {
             <ExportMenu
               svgRef={svgRef}
               concept="Merkle Tree Anti-Entropy"
-              currentState={{ scenario: selectedScenario }}
+              currentState={{ scenario: selectedScenario, mismatchedKeys: stats.mismatchedKeys }}
             />
           </div>
 
           <svg ref={svgRef} viewBox="0 0 840 420" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            {replicas.map((replica, index) => (
-              <motion.g
-                key={replica.id}
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              >
-                <circle
-                  cx={200 + index * 440}
-                  cy={200}
-                  r="55"
-                  fill="#1E293B"
-                  stroke="#334155"
-                  strokeWidth="3"
-                />
-                <text
-                  x={200 + index * 440}
-                  y={190}
-                  textAnchor="middle"
-                  fill="#FFF"
-                  fontSize="14"
-                  fontWeight="bold"
-                >
-                  {replica.id}
-                </text>
-                <text
-                  x={200 + index * 440}
-                  y={212}
-                  textAnchor="middle"
-                  fill="#CBD5E1"
-                  fontSize="10"
-                >
-                  root {replica.root?.hash?.slice(0, 6) || 'n/a'}
-                </text>
-              </motion.g>
-            ))}
+            <ScopeDefs idPrefix="merkle" />
+
+            {/* Sync channel rail between replicas */}
+            <line
+              x1={220}
+              y1={200}
+              x2={620}
+              y2={200}
+              stroke={rootsMatch ? SCOPE_COLORS.emerald : SCOPE_COLORS.amber}
+              strokeWidth="1"
+              strokeDasharray="4 4"
+              opacity="0.45"
+            />
+            <text
+              x={420}
+              y={178}
+              textAnchor="middle"
+              fill={rootsMatch ? SCOPE_COLORS.emerald : SCOPE_COLORS.amber}
+              fontSize="10"
+              fontFamily="var(--font-mono), monospace"
+              letterSpacing="0.12em"
+            >
+              {rootsMatch ? 'MERKLE ROOTS CONVERGED' : `${stats.mismatchedKeys} DIVERGENT LEAF KEYS`}
+            </text>
 
             {messages
               .filter((m) => m.status === 'in-flight')
-              .map((message) => (
-                <g key={message.id}>
-                  <motion.line
-                    x1={200}
+              .map((message) => {
+                const style = getMessageStyle(message);
+                const fromLeft = message.from === replicas[0]?.id;
+                return (
+                  <ScopeEdge
+                    key={message.id}
+                    idPrefix="merkle"
+                    x1={fromLeft ? 220 : 620}
                     y1={200}
-                    x2={640}
+                    x2={fromLeft ? 620 : 220}
                     y2={200}
-                    stroke={getMessageColor(message)}
-                    strokeWidth="2"
-                    strokeDasharray="6,6"
-                    initial={{ pathLength: 0, opacity: 0 }}
-                    animate={{ pathLength: 1, opacity: 1 }}
-                    transition={{ duration: 0.4 }}
+                    color={style.color}
+                    markerKey={style.markerKey}
+                    inset={58}
+                    label={style.label}
+                    dashed={message.type === 'CompareNode'}
                   />
-                  <motion.circle
-                    cx={420}
-                    cy={200}
-                    r="6"
-                    fill={getMessageColor(message)}
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ duration: 0.3 }}
-                  />
-                </g>
-              ))}
+                );
+              })}
+
+            {replicas.map((replica, index) => {
+              const cx = 220 + index * 400;
+              return (
+                <ScopeNode
+                  key={replica.id}
+                  x={cx}
+                  y={200}
+                  radius={52}
+                  label={replica.id}
+                  sublabel={`#${replica.root?.hash?.slice(0, 6) || 'n/a'}`}
+                  topTag={rootsMatch ? 'SYNCED TREE' : 'DIVERGENT TREE'}
+                  bottomLine1={`${replica.data.size} LEAF KEYS`}
+                  accentColor={rootsMatch ? SCOPE_COLORS.emerald : SCOPE_COLORS.amber}
+                  highlighted={!rootsMatch}
+                  selected={selectedReplicaId === replica.id}
+                  onClick={() =>
+                    setSelectedReplicaId((prev) => (prev === replica.id ? null : replica.id))
+                  }
+                />
+              );
+            })}
           </svg>
+
+          {!inspectedReplica && <WireTapHint text="Click any replica to inspect Merkle root & keys" />}
+
+          {inspectedReplica && (
+            <WireTapInspector
+              title={`REPLICA ${inspectedReplica.id}`}
+              subtitle="MERKLE HASH TREE"
+              status={rootsMatch ? 'healthy' : 'candidate'}
+              className="top-14 left-4"
+              metrics={[
+                {
+                  label: 'Root Hash',
+                  value: inspectedReplica.root?.hash?.slice(0, 8) || 'n/a',
+                  tone: 'cobalt',
+                },
+                {
+                  label: 'Tree Status',
+                  value: rootsMatch ? 'IN SYNC' : 'DIVERGED',
+                  tone: rootsMatch ? 'emerald' : 'amber',
+                },
+                { label: 'Leaf Keys', value: inspectedReplica.data.size },
+                {
+                  label: 'Mismatches',
+                  value: stats.mismatchedKeys,
+                  tone: stats.mismatchedKeys > 0 ? 'signal' : 'emerald',
+                },
+              ]}
+              actions={[
+                {
+                  label: 'Mutate Key',
+                  onClick: () => mutateKey(inspectedReplica.id),
+                  variant: 'signal',
+                },
+                {
+                  label: 'Compare Roots',
+                  onClick: compareRoots,
+                  variant: 'emerald',
+                },
+              ]}
+              onClose={() => setSelectedReplicaId(null)}
+            >
+              <div>
+                <div className="text-[9px] uppercase tracking-[0.12em] text-[#9E9B90] mb-1">
+                  Leaf Entries ({inspectedReplica.data.size})
+                </div>
+                <div className="space-y-1">
+                  {Array.from(inspectedReplica.data.entries()).map(([key, value]) => {
+                    const peer = replicas.find((r) => r.id !== inspectedReplica.id);
+                    const mismatched = peer && peer.data.get(key) !== value;
+                    return (
+                      <div key={key} className="flex items-center justify-between gap-2">
+                        <span className="text-[#F4F0E8]">{key}</span>
+                        <span className={mismatched ? 'text-[#FB923C]' : 'text-[#34D399]'}>
+                          {value}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </WireTapInspector>
+          )}
 
           <div className="absolute bottom-4 left-4 bg-slate-800 rounded-lg p-4 border border-slate-700 space-y-2 max-w-xs">
             <h3 className="text-sm font-semibold text-white">Manual Controls</h3>
@@ -240,8 +321,8 @@ export default function MerkleAntiEntropyPage() {
               Compare Roots
             </button>
             <button
-              onClick={mutateKey}
-              className="w-full px-3 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700"
+              onClick={() => mutateKey('R0')}
+              className="w-full px-3 py-2 bg-[#D9441E] text-white text-sm rounded hover:bg-[#B83412]"
             >
               Mutate Replica R0
             </button>
@@ -250,7 +331,7 @@ export default function MerkleAntiEntropyPage() {
             </p>
           </div>
 
-          <div className="absolute top-4 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-sm max-h-96 overflow-y-auto">
+          <div className="absolute top-16 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-sm max-h-64 overflow-y-auto">
             <h3 className="text-sm font-semibold text-white mb-2">Replica Data</h3>
             <div className="space-y-2">
               {replicas.map((replica) => (
@@ -272,15 +353,15 @@ export default function MerkleAntiEntropyPage() {
             <h3 className="text-sm font-semibold text-white mb-2">Legend</h3>
             <div className="space-y-1 text-xs">
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-blue-600" />
+                <div className="w-3 h-3 rounded-full bg-[#60A5FA]" />
                 <span className="text-slate-400">Root compare</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-amber-600" />
-                <span className="text-slate-400">Node compare</span>
+                <div className="w-3 h-3 rounded-full bg-[#FBBF24]" />
+                <span className="text-slate-400">Subtree compare</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-green-600" />
+                <div className="w-3 h-3 rounded-full bg-[#34D399]" />
                 <span className="text-slate-400">Leaf sync</span>
               </div>
             </div>

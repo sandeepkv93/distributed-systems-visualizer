@@ -10,7 +10,8 @@ import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import { crdtScenarios } from '@/visualizers/crdts/scenarios';
 import { CRDTMessage, CRDTReplica } from '@/lib/types';
-import { motion } from 'framer-motion';
+import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
+import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 
 export default function CRDTsPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -19,6 +20,7 @@ export default function CRDTsPage() {
   const [messages, setMessages] = useState<CRDTMessage[]>(crdt.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
+  const [selectedReplicaId, setSelectedReplicaId] = useState<string | null>(null);
 
   const syncVisualization = useCallback(() => {
     setReplicas([...crdt.getReplicas()]);
@@ -99,36 +101,40 @@ export default function CRDTsPage() {
     }
   };
 
-  const incrementRandom = () => {
-    const replica = replicas[Math.floor(Math.random() * replicas.length)];
-    crdt.increment(replica.id);
+  const incrementRandom = (replicaId?: string) => {
+    const target = replicaId ?? replicas[Math.floor(Math.random() * replicas.length)].id;
+    crdt.increment(target);
     updateVisualization();
   };
 
-  const addRandom = () => {
-    const replica = replicas[Math.floor(Math.random() * replicas.length)];
+  const addRandom = (replicaId?: string) => {
+    const target = replicaId ?? replicas[Math.floor(Math.random() * replicas.length)].id;
     const value = ['apple', 'banana', 'cherry'][Math.floor(Math.random() * 3)];
-    crdt.orSetAdd(replica.id, value);
+    crdt.orSetAdd(target, value);
     updateVisualization();
   };
 
-  const removeRandom = () => {
-    const replica = replicas[Math.floor(Math.random() * replicas.length)];
+  const removeRandom = (replicaId?: string) => {
+    const replica =
+      (replicaId && replicas.find((r) => r.id === replicaId)) ||
+      replicas[Math.floor(Math.random() * replicas.length)];
     const values = crdt.getORSetValues(replica);
     if (values.length === 0) return;
     crdt.orSetRemove(replica.id, values[0]);
     updateVisualization();
   };
 
-  const insertRga = () => {
-    const replica = replicas[Math.floor(Math.random() * replicas.length)];
+  const insertRga = (replicaId?: string) => {
+    const target = replicaId ?? replicas[Math.floor(Math.random() * replicas.length)].id;
     const value = String.fromCharCode(65 + Math.floor(Math.random() * 5));
-    crdt.rgaInsert(replica.id, value);
+    crdt.rgaInsert(target, value);
     updateVisualization();
   };
 
-  const removeRga = () => {
-    const replica = replicas[Math.floor(Math.random() * replicas.length)];
+  const removeRga = (replicaId?: string) => {
+    const replica =
+      (replicaId && replicas.find((r) => r.id === replicaId)) ||
+      replicas[Math.floor(Math.random() * replicas.length)];
     const seq = crdt.getRgaSequence(replica);
     if (seq.length === 0) return;
     crdt.rgaRemove(replica.id, seq[seq.length - 1].id);
@@ -141,6 +147,11 @@ export default function CRDTsPage() {
   };
 
   const stats = crdt.getStats();
+  const hasDivergence =
+    stats.divergentGCounter > 0 || stats.divergentORSet > 0 || stats.divergentRGA > 0;
+  const inspectedReplica = selectedReplicaId
+    ? replicas.find((r) => r.id === selectedReplicaId) ?? null
+    : null;
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen md:h-screen bg-slate-900">
@@ -180,7 +191,7 @@ export default function CRDTsPage() {
               Read the theory
             </button>
           </div>
-          <div className="flex gap-6 mt-3 text-sm">
+          <div className="flex flex-wrap gap-6 mt-3 text-sm">
             <span className="text-slate-300">
               Replicas: <span className="font-semibold text-white">{stats.replicaCount}</span>
             </span>
@@ -220,43 +231,22 @@ export default function CRDTsPage() {
             />
           </div>
 
-          <svg ref={svgRef} viewBox="0 0 880 320" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            {replicas.map((replica, index) => (
-              <motion.g
-                key={replica.id}
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              >
-                <circle
-                  cx={160 + index * 280}
-                  cy={150}
-                  r="45"
-                  fill="#1E293B"
-                  stroke="#334155"
-                  strokeWidth="3"
-                />
-                <text
-                  x={160 + index * 280}
-                  y={145}
-                  textAnchor="middle"
-                  fill="#FFF"
-                  fontSize="14"
-                  fontWeight="bold"
-                >
-                  {replica.id}
-                </text>
-                <text
-                  x={160 + index * 280}
-                  y={165}
-                  textAnchor="middle"
-                  fill="#CBD5E1"
-                  fontSize="10"
-                >
-                  G={crdt.getGCounterTotal(replica)}
-                </text>
-              </motion.g>
-            ))}
+          <svg ref={svgRef} viewBox="0 0 880 340" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+            <ScopeDefs idPrefix="crdt" />
+
+            {/* Lattice sync bus */}
+            {replicas.length > 1 && (
+              <line
+                x1={160}
+                y1={160}
+                x2={160 + (replicas.length - 1) * 280}
+                y2={160}
+                stroke={hasDivergence ? SCOPE_COLORS.amber : SCOPE_COLORS.emerald}
+                strokeWidth="1"
+                strokeDasharray="4 4"
+                opacity="0.4"
+              />
+            )}
 
             {messages
               .filter((m) => m.status === 'in-flight')
@@ -267,62 +257,139 @@ export default function CRDTsPage() {
                 const x1 = 160 + fromIndex * 280;
                 const x2 = 160 + toIndex * 280;
                 return (
-                  <g key={message.id}>
-                    <motion.line
-                      x1={x1}
-                      y1={150}
-                      x2={x2}
-                      y2={150}
-                      stroke="#3B82F6"
-                      strokeWidth="2"
-                      strokeDasharray="6,6"
-                      initial={{ pathLength: 0, opacity: 0 }}
-                      animate={{ pathLength: 1, opacity: 1 }}
-                      transition={{ duration: 0.4 }}
-                    />
-                    <motion.circle
-                      cx={(x1 + x2) / 2}
-                      cy={150}
-                      r="6"
-                      fill="#3B82F6"
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ duration: 0.3 }}
-                    />
-                  </g>
+                  <ScopeEdge
+                    key={message.id}
+                    idPrefix="crdt"
+                    x1={x1}
+                    y1={160}
+                    x2={x2}
+                    y2={160}
+                    color={SCOPE_COLORS.cobalt}
+                    markerKey="cobalt"
+                    inset={50}
+                    label="MERGE"
+                  />
                 );
               })}
+
+            {replicas.map((replica, index) => {
+              const cx = 160 + index * 280;
+              const orCount = crdt.getORSetValues(replica).length;
+              const rgaLen = crdt.getRgaSequence(replica).length;
+              return (
+                <ScopeNode
+                  key={replica.id}
+                  x={cx}
+                  y={160}
+                  radius={46}
+                  label={replica.id}
+                  sublabel={`G = ${crdt.getGCounterTotal(replica)}`}
+                  topTag={hasDivergence ? 'LOCAL STATE' : 'CONVERGED'}
+                  bottomLine1={`SET ${orCount} · RGA ${rgaLen}`}
+                  accentColor={hasDivergence ? SCOPE_COLORS.amber : SCOPE_COLORS.emerald}
+                  highlighted={hasDivergence}
+                  selected={selectedReplicaId === replica.id}
+                  onClick={() =>
+                    setSelectedReplicaId((prev) => (prev === replica.id ? null : replica.id))
+                  }
+                />
+              );
+            })}
           </svg>
+
+          {!inspectedReplica && <WireTapHint text="Click any replica to inspect lattice state & mutate locally" />}
+
+          {inspectedReplica && (
+            <WireTapInspector
+              title={`REPLICA ${inspectedReplica.id}`}
+              subtitle="CONFLICT-FREE REPLICATED DATA TYPE"
+              status={hasDivergence ? 'candidate' : 'healthy'}
+              className="top-14 left-4"
+              metrics={[
+                { label: 'G-Counter', value: crdt.getGCounterTotal(inspectedReplica), tone: 'cobalt' },
+                { label: 'OR-Set Size', value: crdt.getORSetValues(inspectedReplica).length, tone: 'emerald' },
+                { label: 'RGA Length', value: crdt.getRgaSequence(inspectedReplica).length, tone: 'amber' },
+                {
+                  label: 'Cluster',
+                  value: hasDivergence ? 'DIVERGENT' : 'CONVERGED',
+                  tone: hasDivergence ? 'signal' : 'emerald',
+                },
+              ]}
+              actions={[
+                {
+                  label: '+1 Counter',
+                  onClick: () => incrementRandom(inspectedReplica.id),
+                },
+                {
+                  label: 'OR-Set Add',
+                  onClick: () => addRandom(inspectedReplica.id),
+                  variant: 'emerald',
+                },
+                {
+                  label: 'RGA Insert',
+                  onClick: () => insertRga(inspectedReplica.id),
+                  variant: 'signal',
+                },
+                {
+                  label: 'Merge All',
+                  onClick: syncAll,
+                },
+              ]}
+              onClose={() => setSelectedReplicaId(null)}
+            >
+              <div className="space-y-1.5">
+                <div>
+                  <span className="text-[#9E9B90]">Vector: </span>
+                  <span className="text-[#60A5FA]">{JSON.stringify(inspectedReplica.gCounter)}</span>
+                </div>
+                <div>
+                  <span className="text-[#9E9B90]">OR-Set: </span>
+                  <span className="text-[#34D399]">
+                    {crdt.getORSetValues(inspectedReplica).join(', ') || 'empty'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[#9E9B90]">RGA: </span>
+                  <span className="text-[#FBBF24]">
+                    {crdt
+                      .getRgaSequence(inspectedReplica)
+                      .map((e) => e.value)
+                      .join(' ') || 'empty'}
+                  </span>
+                </div>
+              </div>
+            </WireTapInspector>
+          )}
 
           <div className="absolute bottom-4 left-4 bg-slate-800 rounded-lg p-4 border border-slate-700 space-y-2 max-w-xs">
             <h3 className="text-sm font-semibold text-white">Manual Controls</h3>
             <button
-              onClick={incrementRandom}
+              onClick={() => incrementRandom()}
               className="w-full px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
             >
               Increment G-Counter
             </button>
             <button
-              onClick={addRandom}
+              onClick={() => addRandom()}
               className="w-full px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700"
             >
               OR-Set Add
             </button>
             <button
-              onClick={removeRandom}
+              onClick={() => removeRandom()}
               className="w-full px-3 py-2 bg-amber-600 text-white text-sm rounded hover:bg-amber-700"
             >
               OR-Set Remove
             </button>
             <button
-              onClick={insertRga}
-              className="w-full px-3 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700"
+              onClick={() => insertRga()}
+              className="w-full px-3 py-2 bg-[#D9441E] text-white text-sm rounded hover:bg-[#B83412]"
             >
               RGA Insert
             </button>
             <button
-              onClick={removeRga}
-              className="w-full px-3 py-2 bg-pink-600 text-white text-sm rounded hover:bg-pink-700"
+              onClick={() => removeRga()}
+              className="w-full px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700"
             >
               RGA Remove
             </button>
@@ -334,7 +401,7 @@ export default function CRDTsPage() {
             </button>
           </div>
 
-          <div className="absolute top-4 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-sm max-h-96 overflow-y-auto">
+          <div className="absolute top-16 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-sm max-h-80 overflow-y-auto">
             <h3 className="text-sm font-semibold text-white mb-2">Replica State</h3>
             <div className="space-y-3">
               {replicas.map((replica) => (

@@ -10,7 +10,8 @@ import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import { eventualConsistencyScenarios } from '@/visualizers/eventual-consistency/scenarios';
 import { EventualConsistencyNode, EventualConsistencyMessage } from '@/lib/types';
-import { motion } from 'framer-motion';
+import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
+import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 
 export default function EventualConsistencyPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -19,6 +20,7 @@ export default function EventualConsistencyPage() {
   const [messages, setMessages] = useState<EventualConsistencyMessage[]>(ec.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const syncVisualization = useCallback(() => {
     setNodes([...ec.getNodes()]);
@@ -138,12 +140,14 @@ export default function EventualConsistencyPage() {
   // Manual controls
   const writeKey = (
     key: string,
-    value: any,
-    consistencyLevel: 'ONE' | 'QUORUM' | 'ALL' = 'QUORUM'
+    value: unknown,
+    consistencyLevel: 'ONE' | 'QUORUM' | 'ALL' = 'QUORUM',
+    targetNodeId?: string
   ) => {
     const healthyNodes = nodes.filter((n) => n.status === 'healthy');
-    if (healthyNodes.length > 0) {
-      ec.write(key, value, healthyNodes[0].id, consistencyLevel);
+    const coordinatorId = targetNodeId ?? healthyNodes[0]?.id;
+    if (coordinatorId) {
+      ec.write(key, value, coordinatorId, consistencyLevel);
       updateVisualization();
     }
   };
@@ -165,24 +169,27 @@ export default function EventualConsistencyPage() {
 
   // Get node color
   const getNodeColor = (node: EventualConsistencyNode): string => {
-    if (node.status === 'failed') return '#EF4444'; // red
-    if (node.data.size === 0) return '#6B7280'; // gray (no data)
-    return '#10B981'; // green (has data)
+    if (node.status === 'failed') return SCOPE_COLORS.danger;
+    if (node.data.size === 0) return SCOPE_COLORS.inkMuted;
+    return SCOPE_COLORS.emerald;
   };
 
   // Get message color
   const getMessageColor = (message: EventualConsistencyMessage): string => {
     switch (message.type) {
       case 'Replicate':
-        return '#8B5CF6'; // purple
+        return SCOPE_COLORS.cobalt;
       case 'AntiEntropy':
-        return '#F59E0B'; // amber
+        return SCOPE_COLORS.signal;
       default:
-        return '#6B7280';
+        return SCOPE_COLORS.inkMuted;
     }
   };
 
   const stats = ec.getStats();
+  const inspectedNode = selectedNodeId
+    ? nodes.find((n) => n.id === selectedNodeId) ?? null
+    : null;
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen md:h-screen bg-slate-900">
@@ -225,7 +232,7 @@ export default function EventualConsistencyPage() {
               Read the theory
             </button>
           </div>
-          <div className="flex gap-6 mt-2 text-sm">
+          <div className="flex flex-wrap gap-6 mt-2 text-sm">
             <span className="text-slate-300">
               Nodes: <span className="font-semibold text-white">{stats.totalNodes}</span>
             </span>
@@ -260,68 +267,24 @@ export default function EventualConsistencyPage() {
             />
           </div>
           <svg ref={svgRef} viewBox="0 0 840 700" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            {/* Nodes */}
-            {nodes.map((node, index) => (
-              <motion.g
-                key={node.id}
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              >
-                <circle
-                  cx={node.position.x}
-                  cy={node.position.y}
-                  r="45"
-                  fill={getNodeColor(node)}
-                  stroke="#1F2937"
-                  strokeWidth="3"
-                  className="cursor-pointer"
-                  onClick={() =>
-                    node.status === 'failed' ? recoverNode(node.id) : failNode(node.id)
-                  }
+            <ScopeDefs idPrefix="ec" />
+
+            {/* Subtle replication ring hairlines */}
+            {nodes.map((a, i) => {
+              const b = nodes[(i + 1) % nodes.length];
+              if (!b) return null;
+              return (
+                <line
+                  key={`ec-ring-${a.id}-${b.id}`}
+                  x1={a.position.x}
+                  y1={a.position.y}
+                  x2={b.position.x}
+                  y2={b.position.y}
+                  stroke={SCOPE_COLORS.hairlineSubtle}
+                  strokeWidth="1"
                 />
-                <text
-                  x={node.position.x}
-                  y={node.position.y - 10}
-                  textAnchor="middle"
-                  fill="#FFF"
-                  fontSize="14"
-                  fontWeight="bold"
-                >
-                  {node.id}
-                </text>
-                <text
-                  x={node.position.x}
-                  y={node.position.y + 5}
-                  textAnchor="middle"
-                  fill="#FFF"
-                  fontSize="10"
-                >
-                  v{node.version}
-                </text>
-                <text
-                  x={node.position.x}
-                  y={node.position.y + 20}
-                  textAnchor="middle"
-                  fill="#CBD5E1"
-                  fontSize="9"
-                >
-                  {node.data.size} keys
-                </text>
-                {node.status === 'failed' && (
-                  <text
-                    x={node.position.x}
-                    y={node.position.y + 35}
-                    textAnchor="middle"
-                    fill="#FFF"
-                    fontSize="11"
-                    fontWeight="bold"
-                  >
-                    FAILED
-                  </text>
-                )}
-              </motion.g>
-            ))}
+              );
+            })}
 
             {/* Messages */}
             {messages
@@ -329,39 +292,116 @@ export default function EventualConsistencyPage() {
               .map((message) => {
                 const fromNode = nodes.find((n) => n.id === message.from);
                 const toNode = nodes.find((n) => n.id === message.to);
-
                 if (!fromNode || !toNode) return null;
-
-                const midX = (fromNode.position.x + toNode.position.x) / 2;
-                const midY = (fromNode.position.y + toNode.position.y) / 2;
-
+                const isAntiEntropy = message.type === 'AntiEntropy';
                 return (
-                  <g key={message.id}>
-                    <motion.line
-                      x1={fromNode.position.x}
-                      y1={fromNode.position.y}
-                      x2={toNode.position.x}
-                      y2={toNode.position.y}
-                      stroke={getMessageColor(message)}
-                      strokeWidth="2"
-                      strokeDasharray="5,5"
-                      initial={{ pathLength: 0, opacity: 0 }}
-                      animate={{ pathLength: 1, opacity: 1 }}
-                      transition={{ duration: 0.5 }}
-                    />
-                    <motion.circle
-                      cx={midX}
-                      cy={midY}
-                      r="6"
-                      fill={getMessageColor(message)}
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ duration: 0.3 }}
-                    />
-                  </g>
+                  <ScopeEdge
+                    key={message.id}
+                    idPrefix="ec"
+                    x1={fromNode.position.x}
+                    y1={fromNode.position.y}
+                    x2={toNode.position.x}
+                    y2={toNode.position.y}
+                    color={getMessageColor(message)}
+                    markerKey={isAntiEntropy ? 'signal' : 'cobalt'}
+                    inset={46}
+                    label={isAntiEntropy ? 'SYNC' : 'REPL'}
+                    dashed={isAntiEntropy}
+                  />
                 );
               })}
+
+            {/* Nodes */}
+            {nodes.map((node) => (
+              <ScopeNode
+                key={node.id}
+                x={node.position.x}
+                y={node.position.y}
+                radius={42}
+                label={node.id}
+                sublabel={`v${node.version}`}
+                topTag={node.status === 'failed' ? 'OFFLINE' : node.data.size > 0 ? 'REPLICA' : 'IDLE'}
+                bottomLine1={`${node.data.size} ${node.data.size === 1 ? 'KEY' : 'KEYS'}`}
+                accentColor={getNodeColor(node)}
+                failed={node.status === 'failed'}
+                highlighted={node.status === 'healthy' && node.data.size > 0}
+                selected={selectedNodeId === node.id}
+                onClick={() =>
+                  setSelectedNodeId((prev) => (prev === node.id ? null : node.id))
+                }
+              />
+            ))}
           </svg>
+
+          {!inspectedNode && <WireTapHint text="Click any replica to inspect versions & inject faults" />}
+
+          {inspectedNode && (
+            <WireTapInspector
+              title={`REPLICA ${inspectedNode.id}`}
+              subtitle="ASYNC REPLICATION NODE"
+              status={inspectedNode.status === 'failed' ? 'failed' : 'healthy'}
+              className="top-14 left-4"
+              metrics={[
+                {
+                  label: 'State',
+                  value: inspectedNode.status.toUpperCase(),
+                  tone: inspectedNode.status === 'failed' ? 'danger' : 'emerald',
+                },
+                { label: 'Version', value: `v${inspectedNode.version}`, tone: 'cobalt' },
+                { label: 'Keys Held', value: inspectedNode.data.size, tone: 'amber' },
+                { label: 'RF Target', value: stats.replicationFactor },
+              ]}
+              actions={[
+                ...(inspectedNode.status === 'healthy'
+                  ? [
+                      {
+                        label: 'Write QUORUM',
+                        onClick: () =>
+                          writeKey(
+                            `k${inspectedNode.id.slice(-1)}`,
+                            Math.floor(Math.random() * 100),
+                            'QUORUM',
+                            inspectedNode.id
+                          ),
+                        variant: 'signal' as const,
+                      },
+                      {
+                        label: 'Fail Replica',
+                        onClick: () => failNode(inspectedNode.id),
+                        variant: 'danger' as const,
+                      },
+                    ]
+                  : [
+                      {
+                        label: 'Recover Replica',
+                        onClick: () => recoverNode(inspectedNode.id),
+                        variant: 'emerald' as const,
+                      },
+                    ]),
+              ]}
+              onClose={() => setSelectedNodeId(null)}
+            >
+              <div>
+                <div className="text-[9px] uppercase tracking-[0.12em] text-[#9E9B90] mb-1">
+                  Local Key-Value Store ({inspectedNode.data.size})
+                </div>
+                {inspectedNode.data.size === 0 ? (
+                  <div className="text-[#9E9B90]">Empty store</div>
+                ) : (
+                  <div className="space-y-1">
+                    {Array.from(inspectedNode.data.entries()).map(([key, dataValue]) => (
+                      <div key={key} className="flex items-center justify-between gap-2">
+                        <span className="text-[#F4F0E8]">{key}</span>
+                        <span className="text-[#34D399]">
+                          {JSON.stringify(dataValue.value)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </WireTapInspector>
+          )}
 
           {/* Manual controls */}
           <div className="absolute bottom-4 left-4 bg-slate-800 rounded-lg p-4 border border-slate-700 space-y-2 max-w-xs">
@@ -377,7 +417,7 @@ export default function EventualConsistencyPage() {
               </button>
               <button
                 onClick={() => writeKey('key2', Math.floor(Math.random() * 100), 'QUORUM')}
-                className="w-full px-2 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 mb-1"
+                className="w-full px-2 py-1 bg-[#D9441E] text-white text-xs rounded hover:bg-[#B83412] mb-1"
               >
                 Write (QUORUM)
               </button>
@@ -397,14 +437,10 @@ export default function EventualConsistencyPage() {
                 Run Anti-Entropy
               </button>
             </div>
-
-            <div className="border-t border-slate-700 pt-2 mt-2">
-              <p className="text-xs text-slate-400 mb-1">Click nodes to fail/recover</p>
-            </div>
           </div>
 
           {/* Data view */}
-          <div className="absolute top-4 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-sm max-h-96 overflow-y-auto">
+          <div className="absolute top-16 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-sm max-h-80 overflow-y-auto">
             <h3 className="text-sm font-semibold text-white mb-2">Node Data</h3>
             <div className="space-y-2">
               {nodes
@@ -435,24 +471,24 @@ export default function EventualConsistencyPage() {
             <h3 className="text-sm font-semibold text-white mb-2">Consistency Levels</h3>
             <div className="space-y-1 text-xs">
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-blue-600" />
-                <span className="text-slate-400">ONE (fast, may be stale)</span>
+                <div className="w-3 h-3 rounded-full bg-[#60A5FA]" />
+                <span className="text-slate-400">ONE / Replicate</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-purple-600" />
-                <span className="text-slate-400">QUORUM (balanced)</span>
+                <div className="w-3 h-3 rounded-full bg-[#D9441E]" />
+                <span className="text-slate-400">QUORUM / Anti-Entropy</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-amber-600" />
+                <div className="w-3 h-3 rounded-full bg-[#FBBF24]" />
                 <span className="text-slate-400">ALL (strong, slower)</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-green-600" />
-                <span className="text-slate-400">Healthy node</span>
+                <div className="w-3 h-3 rounded-full bg-[#34D399]" />
+                <span className="text-slate-400">Healthy replica</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-red-600" />
-                <span className="text-slate-400">Failed node</span>
+                <div className="w-3 h-3 rounded-full bg-[#F87171]" />
+                <span className="text-slate-400">Failed replica</span>
               </div>
             </div>
           </div>

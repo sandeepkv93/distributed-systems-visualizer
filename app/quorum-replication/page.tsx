@@ -10,7 +10,8 @@ import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import { quorumReplicationScenarios } from '@/visualizers/quorum-replication/scenarios';
 import { QuorumNode, QuorumMessage } from '@/lib/types';
-import { motion } from 'framer-motion';
+import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
+import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 
 export default function QuorumReplicationPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -21,6 +22,7 @@ export default function QuorumReplicationPage() {
   const [showArticle, setShowArticle] = useState(false);
   const [quorumWrite, setQuorumWrite] = useState(2);
   const [quorumRead, setQuorumRead] = useState(2);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const syncVisualization = useCallback(() => {
     setNodes([...quorum.getNodes()]);
@@ -88,20 +90,24 @@ export default function QuorumReplicationPage() {
     }
   };
 
-  const writeRandom = () => {
+  const writeRandom = (coordinatorId?: string) => {
     const healthyNodes = nodes.filter((n) => n.status === 'healthy');
     if (healthyNodes.length === 0) return;
-    const coordinator = healthyNodes[Math.floor(Math.random() * healthyNodes.length)];
+    const coordinator =
+      (coordinatorId && healthyNodes.find((n) => n.id === coordinatorId)) ||
+      healthyNodes[Math.floor(Math.random() * healthyNodes.length)];
     const key = `item:${Math.floor(Math.random() * 5) + 1}`;
     const value = Math.floor(Math.random() * 100);
     quorum.write(key, value, coordinator.id, quorumWrite);
     updateVisualization();
   };
 
-  const readRandom = () => {
+  const readRandom = (coordinatorId?: string) => {
     const healthyNodes = nodes.filter((n) => n.status === 'healthy');
     if (healthyNodes.length === 0) return;
-    const coordinator = healthyNodes[Math.floor(Math.random() * healthyNodes.length)];
+    const coordinator =
+      (coordinatorId && healthyNodes.find((n) => n.id === coordinatorId)) ||
+      healthyNodes[Math.floor(Math.random() * healthyNodes.length)];
     const key = `item:${Math.floor(Math.random() * 5) + 1}`;
     quorum.read(key, coordinator.id, quorumRead);
     updateVisualization();
@@ -118,25 +124,31 @@ export default function QuorumReplicationPage() {
   };
 
   const getNodeColor = (node: QuorumNode): string => {
-    if (node.status === 'failed') return '#EF4444';
-    if (node.data.size === 0) return '#6B7280';
-    return '#10B981';
+    if (node.status === 'failed') return SCOPE_COLORS.danger;
+    if (node.data.size === 0) return SCOPE_COLORS.inkMuted;
+    return SCOPE_COLORS.emerald;
   };
 
-  const getMessageColor = (message: QuorumMessage): string => {
+  const getMessageStyle = (
+    message: QuorumMessage
+  ): { color: string; markerKey: 'cobalt' | 'amber' | 'signal' | 'muted'; label: string } => {
     switch (message.type) {
       case 'Write':
-        return '#3B82F6';
+        return { color: SCOPE_COLORS.cobalt, markerKey: 'cobalt', label: 'WRITE' };
       case 'Read':
-        return '#F59E0B';
+        return { color: SCOPE_COLORS.amber, markerKey: 'amber', label: 'READ' };
       case 'Repair':
-        return '#8B5CF6';
+        return { color: SCOPE_COLORS.signal, markerKey: 'signal', label: 'REPAIR' };
       default:
-        return '#6B7280';
+        return { color: SCOPE_COLORS.inkMuted, markerKey: 'muted', label: 'MSG' };
     }
   };
 
   const stats = quorum.getStats();
+  const inspectedNode = selectedNodeId
+    ? nodes.find((n) => n.id === selectedNodeId) ?? null
+    : null;
+  const strongOverlap = quorumWrite + quorumRead > stats.replicationFactor;
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen md:h-screen bg-slate-900">
@@ -176,7 +188,7 @@ export default function QuorumReplicationPage() {
               Read the theory
             </button>
           </div>
-          <div className="flex gap-6 mt-2 text-sm">
+          <div className="flex flex-wrap gap-6 mt-2 text-sm">
             <span className="text-slate-300">
               Nodes: <span className="font-semibold text-white">{stats.totalNodes}</span>
             </span>
@@ -187,7 +199,10 @@ export default function QuorumReplicationPage() {
               Keys: <span className="font-semibold text-white">{stats.totalKeys}</span>
             </span>
             <span className="text-slate-300">
-              RF: <span className="font-semibold text-white">{stats.replicationFactor}</span>
+              Quorum:{' '}
+              <span className={`font-semibold ${strongOverlap ? 'text-green-400' : 'text-amber-400'}`}>
+                W={quorumWrite} + R={quorumRead} {strongOverlap ? '>' : '≤'} RF={stats.replicationFactor}
+              </span>
             </span>
           </div>
         </div>
@@ -197,111 +212,147 @@ export default function QuorumReplicationPage() {
             <ExportMenu
               svgRef={svgRef}
               concept="Quorum Replication + Read Repair"
-              currentState={{ scenario: selectedScenario }}
+              currentState={{ scenario: selectedScenario, quorumWrite, quorumRead }}
             />
           </div>
 
           <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            {nodes.map((node, index) => (
-              <motion.g
-                key={node.id}
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: index * 0.08 }}
-              >
-                <circle
-                  cx={node.position.x}
-                  cy={node.position.y}
-                  r="45"
-                  fill={getNodeColor(node)}
-                  stroke="#1F2937"
-                  strokeWidth="3"
-                  className="cursor-pointer"
-                  onClick={() =>
-                    node.status === 'failed' ? recoverNode(node.id) : failNode(node.id)
-                  }
+            <ScopeDefs idPrefix="quorum" />
+
+            {/* Mesh ring hairlines */}
+            {nodes.map((a, i) => {
+              const b = nodes[(i + 1) % nodes.length];
+              if (!b) return null;
+              return (
+                <line
+                  key={`q-ring-${a.id}-${b.id}`}
+                  x1={a.position.x}
+                  y1={a.position.y}
+                  x2={b.position.x}
+                  y2={b.position.y}
+                  stroke={SCOPE_COLORS.hairlineSubtle}
+                  strokeWidth="1"
                 />
-                <text
-                  x={node.position.x}
-                  y={node.position.y - 10}
-                  textAnchor="middle"
-                  fill="#FFF"
-                  fontSize="14"
-                  fontWeight="bold"
-                >
-                  {node.id}
-                </text>
-                <text
-                  x={node.position.x}
-                  y={node.position.y + 5}
-                  textAnchor="middle"
-                  fill="#FFF"
-                  fontSize="10"
-                >
-                  v{node.version}
-                </text>
-                <text
-                  x={node.position.x}
-                  y={node.position.y + 20}
-                  textAnchor="middle"
-                  fill="#CBD5E1"
-                  fontSize="9"
-                >
-                  {node.data.size} keys
-                </text>
-                {node.status === 'failed' && (
-                  <text
-                    x={node.position.x}
-                    y={node.position.y + 35}
-                    textAnchor="middle"
-                    fill="#FFF"
-                    fontSize="11"
-                    fontWeight="bold"
-                  >
-                    FAILED
-                  </text>
-                )}
-              </motion.g>
-            ))}
+              );
+            })}
 
             {messages
               .filter((m) => m.status === 'in-flight')
               .map((message) => {
                 const fromNode = nodes.find((n) => n.id === message.from);
                 const toNode = nodes.find((n) => n.id === message.to);
-
                 if (!fromNode || !toNode) return null;
-
-                const midX = (fromNode.position.x + toNode.position.x) / 2;
-                const midY = (fromNode.position.y + toNode.position.y) / 2;
-
+                const style = getMessageStyle(message);
                 return (
-                  <g key={message.id}>
-                    <motion.line
-                      x1={fromNode.position.x}
-                      y1={fromNode.position.y}
-                      x2={toNode.position.x}
-                      y2={toNode.position.y}
-                      stroke={getMessageColor(message)}
-                      strokeWidth="2"
-                      strokeDasharray="6,6"
-                      initial={{ pathLength: 0, opacity: 0 }}
-                      animate={{ pathLength: 1, opacity: 1 }}
-                      transition={{ duration: 0.4 }}
-                    />
-                    <motion.circle
-                      cx={midX}
-                      cy={midY}
-                      r="6"
-                      fill={getMessageColor(message)}
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ duration: 0.3 }}
-                    />
-                  </g>
+                  <ScopeEdge
+                    key={message.id}
+                    idPrefix="quorum"
+                    x1={fromNode.position.x}
+                    y1={fromNode.position.y}
+                    x2={toNode.position.x}
+                    y2={toNode.position.y}
+                    color={style.color}
+                    markerKey={style.markerKey}
+                    inset={46}
+                    label={style.label}
+                    dashed={message.type === 'Repair'}
+                  />
                 );
               })}
+
+            {nodes.map((node) => (
+              <ScopeNode
+                key={node.id}
+                x={node.position.x}
+                y={node.position.y}
+                radius={42}
+                label={node.id}
+                sublabel={`v${node.version}`}
+                topTag={node.status === 'failed' ? 'FAILED' : node.data.size > 0 ? 'REPLICA' : 'EMPTY'}
+                bottomLine1={`${node.data.size} ${node.data.size === 1 ? 'KEY' : 'KEYS'}`}
+                accentColor={getNodeColor(node)}
+                failed={node.status === 'failed'}
+                highlighted={node.status === 'healthy' && node.data.size > 0}
+                selected={selectedNodeId === node.id}
+                onClick={() =>
+                  setSelectedNodeId((prev) => (prev === node.id ? null : node.id))
+                }
+              />
+            ))}
           </svg>
+
+          {!inspectedNode && <WireTapHint text="Click any replica to inspect versions & inject faults" />}
+
+          {inspectedNode && (
+            <WireTapInspector
+              title={`REPLICA ${inspectedNode.id}`}
+              subtitle={`W=${quorumWrite} · R=${quorumRead} · RF=${stats.replicationFactor}`}
+              status={inspectedNode.status === 'failed' ? 'failed' : 'healthy'}
+              className="top-14 left-4"
+              metrics={[
+                {
+                  label: 'Status',
+                  value: inspectedNode.status.toUpperCase(),
+                  tone: inspectedNode.status === 'failed' ? 'danger' : 'emerald',
+                },
+                { label: 'Version', value: `v${inspectedNode.version}`, tone: 'cobalt' },
+                { label: 'Stored Keys', value: inspectedNode.data.size, tone: 'amber' },
+                {
+                  label: 'Overlap',
+                  value: strongOverlap ? 'W + R > RF' : 'STALE RISK',
+                  tone: strongOverlap ? 'emerald' : 'signal',
+                },
+              ]}
+              actions={[
+                ...(inspectedNode.status === 'healthy'
+                  ? [
+                      {
+                        label: 'Coord Write',
+                        onClick: () => writeRandom(inspectedNode.id),
+                        variant: 'signal' as const,
+                      },
+                      {
+                        label: 'Coord Read',
+                        onClick: () => readRandom(inspectedNode.id),
+                      },
+                      {
+                        label: 'Fail Replica',
+                        onClick: () => failNode(inspectedNode.id),
+                        variant: 'danger' as const,
+                      },
+                    ]
+                  : [
+                      {
+                        label: 'Recover Replica',
+                        onClick: () => recoverNode(inspectedNode.id),
+                        variant: 'emerald' as const,
+                      },
+                    ]),
+              ]}
+              onClose={() => setSelectedNodeId(null)}
+            >
+              <div>
+                <div className="text-[9px] uppercase tracking-[0.12em] text-[#9E9B90] mb-1">
+                  Replica Entries ({inspectedNode.data.size})
+                </div>
+                {inspectedNode.data.size === 0 ? (
+                  <div className="text-[#9E9B90]">No data stored</div>
+                ) : (
+                  <div className="space-y-1">
+                    {Array.from(inspectedNode.data.entries()).map(([key, dataValue]) => (
+                      <div key={key} className="flex items-center justify-between gap-2">
+                        <span className="text-[#F4F0E8]">{key}</span>
+                        <span className="text-[#34D399]">
+                          {JSON.stringify(dataValue.value)}{' '}
+                          <span className="text-[#9E9B90]">v{dataValue.version}</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </WireTapInspector>
+          )}
 
           <div className="absolute bottom-4 left-4 bg-slate-800 rounded-lg p-4 border border-slate-700 space-y-3 max-w-xs">
             <h3 className="text-sm font-semibold text-white">Manual Controls</h3>
@@ -343,22 +394,21 @@ export default function QuorumReplicationPage() {
             </div>
             <div className="border-t border-slate-700 pt-2 space-y-2">
               <button
-                onClick={writeRandom}
+                onClick={() => writeRandom()}
                 className="w-full px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
               >
                 Write Random Key
               </button>
               <button
-                onClick={readRandom}
+                onClick={() => readRandom()}
                 className="w-full px-3 py-2 bg-amber-600 text-white text-sm rounded hover:bg-amber-700"
               >
                 Read Random Key
               </button>
             </div>
-            <p className="text-xs text-slate-400">Click nodes to fail/recover.</p>
           </div>
 
-          <div className="absolute top-4 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-sm max-h-96 overflow-y-auto">
+          <div className="absolute top-16 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-sm max-h-72 overflow-y-auto">
             <h3 className="text-sm font-semibold text-white mb-2">Replica Data</h3>
             <div className="space-y-2">
               {nodes.map((node) => (
@@ -385,28 +435,28 @@ export default function QuorumReplicationPage() {
             <h3 className="text-sm font-semibold text-white mb-2">Legend</h3>
             <div className="space-y-1 text-xs">
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-green-600" />
+                <div className="w-3 h-3 rounded-full bg-[#34D399]" />
                 <span className="text-slate-400">Replica with data</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-slate-500" />
+                <div className="w-3 h-3 rounded-full bg-[#9E9B90]" />
                 <span className="text-slate-400">Empty replica</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-red-600" />
+                <div className="w-3 h-3 rounded-full bg-[#F87171]" />
                 <span className="text-slate-400">Failed replica</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-blue-600" />
+                <div className="w-3 h-3 rounded-full bg-[#60A5FA]" />
                 <span className="text-slate-400">Write</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-amber-600" />
+                <div className="w-3 h-3 rounded-full bg-[#FBBF24]" />
                 <span className="text-slate-400">Read</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-purple-600" />
-                <span className="text-slate-400">Repair</span>
+                <div className="w-3 h-3 rounded-full bg-[#D9441E]" />
+                <span className="text-slate-400">Read Repair</span>
               </div>
             </div>
           </div>
