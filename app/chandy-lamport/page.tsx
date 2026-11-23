@@ -10,7 +10,8 @@ import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import { chandyLamportScenarios } from '@/visualizers/chandy-lamport/scenarios';
 import { SnapshotNode, SnapshotMessage } from '@/lib/types';
-import { motion } from 'framer-motion';
+import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
+import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 
 export default function ChandyLamportPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -19,6 +20,7 @@ export default function ChandyLamportPage() {
   const [messages, setMessages] = useState<SnapshotMessage[]>(snapshot.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const syncVisualization = useCallback(() => {
     setNodes([...snapshot.getNodes()]);
@@ -91,16 +93,19 @@ export default function ChandyLamportPage() {
   };
 
   const getNodeColor = (node: SnapshotNode): string => {
-    if (!node.snapshot) return '#6B7280';
-    if (node.snapshot.complete) return '#10B981';
-    return '#F59E0B';
+    if (!node.snapshot) return SCOPE_COLORS.cobalt;
+    if (node.snapshot.complete) return SCOPE_COLORS.emerald;
+    return SCOPE_COLORS.amber;
   };
 
   const getMessageColor = (message: SnapshotMessage): string => {
-    return message.type === 'Marker' ? '#8B5CF6' : '#3B82F6';
+    return message.type === 'Marker' ? SCOPE_COLORS.signal : SCOPE_COLORS.cobalt;
   };
 
   const stats = snapshot.getStats();
+  const inspectedNode = selectedNodeId
+    ? nodes.find((n) => n.id === selectedNodeId) ?? null
+    : null;
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen md:h-screen bg-slate-900">
@@ -140,7 +145,7 @@ export default function ChandyLamportPage() {
               Read the theory
             </button>
           </div>
-          <div className="flex gap-6 mt-2 text-sm">
+          <div className="flex flex-wrap gap-6 mt-2 text-sm">
             <span className="text-slate-300">
               Nodes: <span className="font-semibold text-white">{stats.totalNodes}</span>
             </span>
@@ -169,92 +174,149 @@ export default function ChandyLamportPage() {
           </div>
 
           <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            {nodes.map((node, index) => (
-              <motion.g
-                key={node.id}
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: index * 0.08 }}
-              >
-                <circle
-                  cx={node.position.x}
-                  cy={node.position.y}
-                  r="45"
-                  fill={getNodeColor(node)}
-                  stroke="#1F2937"
-                  strokeWidth="3"
+            <ScopeDefs idPrefix="cl" />
+
+            {nodes.map((a, i) =>
+              nodes.slice(i + 1).map((b) => (
+                <line
+                  key={`cl-mesh-${a.id}-${b.id}`}
+                  x1={a.position.x}
+                  y1={a.position.y}
+                  x2={b.position.x}
+                  y2={b.position.y}
+                  stroke={SCOPE_COLORS.hairlineSubtle}
+                  strokeWidth="1"
                 />
-                <text
-                  x={node.position.x}
-                  y={node.position.y - 10}
-                  textAnchor="middle"
-                  fill="#FFF"
-                  fontSize="14"
-                  fontWeight="bold"
-                >
-                  {node.id}
-                </text>
-                <text
-                  x={node.position.x}
-                  y={node.position.y + 5}
-                  textAnchor="middle"
-                  fill="#FFF"
-                  fontSize="10"
-                >
-                  local {node.localState}
-                </text>
-                {node.snapshot && (
-                  <text
-                    x={node.position.x}
-                    y={node.position.y + 20}
-                    textAnchor="middle"
-                    fill="#E2E8F0"
-                    fontSize="9"
-                  >
-                    {node.snapshot.complete ? 'SNAPSHOT DONE' : 'SNAPSHOT ACTIVE'}
-                  </text>
-                )}
-              </motion.g>
-            ))}
+              ))
+            )}
 
             {messages
               .filter((m) => m.status === 'in-flight')
               .map((message) => {
                 const fromNode = nodes.find((n) => n.id === message.from);
                 const toNode = nodes.find((n) => n.id === message.to);
-
                 if (!fromNode || !toNode) return null;
-
-                const midX = (fromNode.position.x + toNode.position.x) / 2;
-                const midY = (fromNode.position.y + toNode.position.y) / 2;
-
+                const isMarker = message.type === 'Marker';
                 return (
-                  <g key={message.id}>
-                    <motion.line
-                      x1={fromNode.position.x}
-                      y1={fromNode.position.y}
-                      x2={toNode.position.x}
-                      y2={toNode.position.y}
-                      stroke={getMessageColor(message)}
-                      strokeWidth="2"
-                      strokeDasharray="6,6"
-                      initial={{ pathLength: 0, opacity: 0 }}
-                      animate={{ pathLength: 1, opacity: 1 }}
-                      transition={{ duration: 0.5 }}
-                    />
-                    <motion.circle
-                      cx={midX}
-                      cy={midY}
-                      r="6"
-                      fill={getMessageColor(message)}
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ duration: 0.3 }}
-                    />
-                  </g>
+                  <ScopeEdge
+                    key={message.id}
+                    idPrefix="cl"
+                    x1={fromNode.position.x}
+                    y1={fromNode.position.y}
+                    x2={toNode.position.x}
+                    y2={toNode.position.y}
+                    color={getMessageColor(message)}
+                    markerKey={isMarker ? 'signal' : 'cobalt'}
+                    inset={46}
+                    label={isMarker ? 'MARKER' : 'APP'}
+                    dashed={isMarker}
+                  />
                 );
               })}
+
+            {nodes.map((node) => (
+              <ScopeNode
+                key={node.id}
+                x={node.position.x}
+                y={node.position.y}
+                radius={40}
+                label={node.id}
+                sublabel={`STATE ${node.localState}`}
+                topTag={
+                  node.snapshot
+                    ? node.snapshot.complete
+                      ? 'DONE'
+                      : 'RECORDING'
+                    : 'PROCESS'
+                }
+                bottomLine1={
+                  node.snapshot
+                    ? `REC ${node.snapshot.localState} · CH ${Object.keys(node.snapshot.channels).length}`
+                    : 'IDLE'
+                }
+                accentColor={getNodeColor(node)}
+                highlighted={Boolean(node.snapshot && !node.snapshot.complete)}
+                selected={selectedNodeId === node.id}
+                onClick={() =>
+                  setSelectedNodeId((prev) => (prev === node.id ? null : node.id))
+                }
+              />
+            ))}
           </svg>
+
+          {!inspectedNode && <WireTapHint text="Click any node to inspect recorded channels" />}
+
+          {inspectedNode && (
+            <WireTapInspector
+              title={`NODE ${inspectedNode.id}`}
+              subtitle={
+                inspectedNode.snapshot
+                  ? inspectedNode.snapshot.complete
+                    ? 'SNAPSHOT COMPLETE'
+                    : 'RECORDING INCOMING CHANNELS'
+                  : 'NO SNAPSHOT YET'
+              }
+              status={
+                inspectedNode.snapshot
+                  ? inspectedNode.snapshot.complete
+                    ? 'healthy'
+                    : 'candidate'
+                  : 'info'
+              }
+              className="top-14 left-4"
+              metrics={[
+                { label: 'Live State', value: inspectedNode.localState, tone: 'cobalt' },
+                {
+                  label: 'Recorded State',
+                  value: inspectedNode.snapshot ? inspectedNode.snapshot.localState : '—',
+                  tone: 'emerald',
+                },
+                {
+                  label: 'Recording From',
+                  value: inspectedNode.snapshot?.recordingFrom.length ?? 0,
+                  tone: 'amber',
+                },
+                {
+                  label: 'Snapshot ID',
+                  value: inspectedNode.snapshot?.id ?? '—',
+                },
+              ]}
+              actions={[
+                {
+                  label: 'Initiate Snapshot',
+                  onClick: () => {
+                    snapshot.startSnapshot(inspectedNode.id);
+                    updateVisualization();
+                  },
+                  variant: 'signal',
+                },
+              ]}
+              onClose={() => setSelectedNodeId(null)}
+            >
+              <div>
+                <div className="text-[9px] uppercase tracking-[0.12em] text-[#9E9B90] mb-1">
+                  Recorded Channel Logs
+                </div>
+                {!inspectedNode.snapshot ? (
+                  <div className="text-[#6E6B62]">No snapshot recorded yet</div>
+                ) : (
+                  <div className="space-y-1">
+                    {Object.entries(inspectedNode.snapshot.channels).map(([fromId, records]) => (
+                      <div
+                        key={`${inspectedNode.id}-${fromId}`}
+                        className="px-2 py-1 bg-[#0E1110] border border-[rgba(244,240,232,0.1)] text-[10px]"
+                      >
+                        <span className="text-[#60A5FA]">{fromId}→{inspectedNode.id}:</span>{' '}
+                        {records.length > 0
+                          ? records.map((r) => JSON.stringify(r.value)).join(', ')
+                          : 'empty'}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </WireTapInspector>
+          )}
 
           <div className="absolute bottom-4 left-4 bg-slate-800 rounded-lg p-4 border border-slate-700 space-y-2 max-w-xs">
             <h3 className="text-sm font-semibold text-white">Manual Controls</h3>
@@ -266,36 +328,33 @@ export default function ChandyLamportPage() {
             </button>
             <button
               onClick={startSnapshot}
-              className="w-full px-3 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700"
+              className="w-full px-3 py-2 bg-[#D9441E] text-white text-sm rounded hover:bg-[#B83412]"
             >
               Start Snapshot
             </button>
             <p className="text-xs text-slate-400">
-              Markers propagate automatically; in-flight messages are delivered with a short delay.
+              Markers propagate automatically; in-flight messages are captured on open channels.
             </p>
           </div>
 
-          <div className="absolute top-4 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-sm max-h-96 overflow-y-auto">
+          <div className="absolute top-16 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-xs max-h-64 overflow-y-auto">
             <h3 className="text-sm font-semibold text-white mb-2">Snapshot State</h3>
-            <div className="space-y-3">
+            <div className="space-y-2 font-mono">
               {nodes.map((node) => (
                 <div key={node.id} className="text-xs">
-                  <div className="font-semibold text-white mb-1">{node.id}</div>
+                  <div className="font-semibold text-[#F4F0E8] mb-0.5">{node.id}</div>
                   {node.snapshot ? (
-                    <div className="pl-2 space-y-1 text-slate-300">
-                      <div>Snapshot: {node.snapshot.id}</div>
-                      <div>Recorded local: {node.snapshot.localState}</div>
-                      <div>Recording from: {node.snapshot.recordingFrom.join(', ') || 'none'}</div>
-                      <div className="text-slate-400">Channels:</div>
+                    <div className="pl-2 space-y-0.5 text-slate-300">
+                      <div>local: {node.snapshot.localState}</div>
                       {Object.entries(node.snapshot.channels).map(([fromId, records]) => (
-                        <div key={`${node.id}-${fromId}`} className="pl-2 text-slate-300">
+                        <div key={`${node.id}-${fromId}`} className="text-slate-400">
                           {fromId}:{' '}
                           {records.length > 0
                             ? records.map((r) => JSON.stringify(r.value)).join(', ')
                             : 'empty'}
                         </div>
                       ))}
-                      {node.snapshot.complete && <div className="text-green-400">Complete</div>}
+                      {node.snapshot.complete && <div className="text-[#34D399]">Complete</div>}
                     </div>
                   ) : (
                     <div className="pl-2 text-slate-500">No snapshot yet</div>
@@ -306,27 +365,23 @@ export default function ChandyLamportPage() {
           </div>
 
           <div className="absolute bottom-4 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700">
-            <h3 className="text-sm font-semibold text-white mb-2">Legend</h3>
-            <div className="space-y-1 text-xs">
+            <h3 className="text-sm font-semibold text-white mb-2">Signals</h3>
+            <div className="space-y-1.5 text-xs font-mono">
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-slate-500" />
-                <span className="text-slate-400">No snapshot</span>
+                <div className="w-3 h-3 rounded-full bg-[#FBBF24]" />
+                <span className="text-slate-300">Recording</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-amber-500" />
-                <span className="text-slate-400">Recording</span>
+                <div className="w-3 h-3 rounded-full bg-[#34D399]" />
+                <span className="text-slate-300">Complete</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-green-600" />
-                <span className="text-slate-400">Complete</span>
+                <div className="w-3 h-3 rounded-full bg-[#60A5FA]" />
+                <span className="text-slate-300">App Message</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-blue-600" />
-                <span className="text-slate-400">App message</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-purple-600" />
-                <span className="text-slate-400">Marker</span>
+                <div className="w-3 h-3 rounded-full bg-[#D9441E]" />
+                <span className="text-slate-300">Marker Cut</span>
               </div>
             </div>
           </div>

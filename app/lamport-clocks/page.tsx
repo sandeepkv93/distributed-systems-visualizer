@@ -10,7 +10,8 @@ import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import { lamportClocksScenarios } from '@/visualizers/lamport-clocks/scenarios';
 import { LamportNode, LamportMessage } from '@/lib/types';
-import { motion } from 'framer-motion';
+import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
+import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 
 export default function LamportClocksPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -19,6 +20,7 @@ export default function LamportClocksPage() {
   const [messages, setMessages] = useState<LamportMessage[]>(lamport.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const syncVisualization = useCallback(() => {
     setNodes([...lamport.getNodes()]);
@@ -83,16 +85,19 @@ export default function LamportClocksPage() {
   };
 
   const getNodeColor = (node: LamportNode): string => {
-    if (node.holdback.length > 0) return '#F59E0B';
-    if (node.delivered.length > 0) return '#10B981';
-    return '#6B7280';
+    if (node.holdback.length > 0) return SCOPE_COLORS.amber;
+    if (node.delivered.length > 0) return SCOPE_COLORS.emerald;
+    return SCOPE_COLORS.cobalt;
   };
 
   const getMessageColor = (message: LamportMessage): string => {
-    return message.type === 'Broadcast' ? '#3B82F6' : '#8B5CF6';
+    return message.type === 'Broadcast' ? SCOPE_COLORS.cobalt : SCOPE_COLORS.signal;
   };
 
   const stats = lamport.getStats();
+  const inspectedNode = selectedNodeId
+    ? nodes.find((n) => n.id === selectedNodeId) ?? null
+    : null;
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen md:h-screen bg-slate-900">
@@ -132,7 +137,7 @@ export default function LamportClocksPage() {
               Read the theory
             </button>
           </div>
-          <div className="flex gap-6 mt-2 text-sm">
+          <div className="flex flex-wrap gap-6 mt-2 text-sm">
             <span className="text-slate-300">
               Nodes: <span className="font-semibold text-white">{stats.totalNodes}</span>
             </span>
@@ -159,90 +164,118 @@ export default function LamportClocksPage() {
           </div>
 
           <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            {nodes.map((node, index) => (
-              <motion.g
-                key={node.id}
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: index * 0.08 }}
-              >
-                <circle
-                  cx={node.position.x}
-                  cy={node.position.y}
-                  r="45"
-                  fill={getNodeColor(node)}
-                  stroke="#1F2937"
-                  strokeWidth="3"
+            <ScopeDefs idPrefix="lamport" />
+
+            {/* Mesh connections */}
+            {nodes.map((a, i) =>
+              nodes.slice(i + 1).map((b) => (
+                <line
+                  key={`lm-${a.id}-${b.id}`}
+                  x1={a.position.x}
+                  y1={a.position.y}
+                  x2={b.position.x}
+                  y2={b.position.y}
+                  stroke={SCOPE_COLORS.hairlineSubtle}
+                  strokeWidth="1"
                 />
-                <text
-                  x={node.position.x}
-                  y={node.position.y - 10}
-                  textAnchor="middle"
-                  fill="#FFF"
-                  fontSize="14"
-                  fontWeight="bold"
-                >
-                  {node.id}
-                </text>
-                <text
-                  x={node.position.x}
-                  y={node.position.y + 5}
-                  textAnchor="middle"
-                  fill="#FFF"
-                  fontSize="10"
-                >
-                  clock {node.clock}
-                </text>
-                <text
-                  x={node.position.x}
-                  y={node.position.y + 20}
-                  textAnchor="middle"
-                  fill="#CBD5E1"
-                  fontSize="9"
-                >
-                  holdback {node.holdback.length}
-                </text>
-              </motion.g>
-            ))}
+              ))
+            )}
 
             {messages
               .filter((m) => m.status === 'in-flight')
               .map((message) => {
                 const fromNode = nodes.find((n) => n.id === message.from);
                 const toNode = nodes.find((n) => n.id === message.to);
-
                 if (!fromNode || !toNode) return null;
-
-                const midX = (fromNode.position.x + toNode.position.x) / 2;
-                const midY = (fromNode.position.y + toNode.position.y) / 2;
-
+                const isBcast = message.type === 'Broadcast';
                 return (
-                  <g key={message.id}>
-                    <motion.line
-                      x1={fromNode.position.x}
-                      y1={fromNode.position.y}
-                      x2={toNode.position.x}
-                      y2={toNode.position.y}
-                      stroke={getMessageColor(message)}
-                      strokeWidth="2"
-                      strokeDasharray="6,6"
-                      initial={{ pathLength: 0, opacity: 0 }}
-                      animate={{ pathLength: 1, opacity: 1 }}
-                      transition={{ duration: 0.4 }}
-                    />
-                    <motion.circle
-                      cx={midX}
-                      cy={midY}
-                      r="6"
-                      fill={getMessageColor(message)}
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ duration: 0.3 }}
-                    />
-                  </g>
+                  <ScopeEdge
+                    key={message.id}
+                    idPrefix="lamport"
+                    x1={fromNode.position.x}
+                    y1={fromNode.position.y}
+                    x2={toNode.position.x}
+                    y2={toNode.position.y}
+                    color={getMessageColor(message)}
+                    markerKey={isBcast ? 'cobalt' : 'signal'}
+                    inset={46}
+                    label={isBcast ? 'BCAST' : 'ACK'}
+                    dashed={!isBcast}
+                  />
                 );
               })}
+
+            {nodes.map((node) => (
+              <ScopeNode
+                key={node.id}
+                x={node.position.x}
+                y={node.position.y}
+                radius={42}
+                label={node.id}
+                sublabel={`L = ${node.clock}`}
+                topTag={node.holdback.length > 0 ? 'HOLDBACK' : 'PROCESS'}
+                bottomLine1={`QUEUE ${node.holdback.length} · DELIV ${node.delivered.length}`}
+                accentColor={getNodeColor(node)}
+                highlighted={node.holdback.length > 0}
+                selected={selectedNodeId === node.id}
+                onClick={() =>
+                  setSelectedNodeId((prev) => (prev === node.id ? null : node.id))
+                }
+              />
+            ))}
           </svg>
+
+          {!inspectedNode && <WireTapHint text="Click any process to inspect holdback & deliveries" />}
+
+          {inspectedNode && (
+            <WireTapInspector
+              title={`PROCESS ${inspectedNode.id}`}
+              subtitle="SCALAR LOGICAL CLOCK"
+              status={inspectedNode.holdback.length > 0 ? 'candidate' : 'healthy'}
+              className="top-14 left-4"
+              metrics={[
+                { label: 'Lamport Clock', value: inspectedNode.clock, tone: 'cobalt' },
+                { label: 'Holdback Queue', value: inspectedNode.holdback.length, tone: 'amber' },
+                { label: 'Delivered', value: inspectedNode.delivered.length, tone: 'emerald' },
+                { label: 'Status', value: inspectedNode.status.toUpperCase() },
+              ]}
+              actions={[
+                {
+                  label: 'Local Event',
+                  onClick: () => localEvent(inspectedNode.id),
+                },
+                {
+                  label: 'Broadcast',
+                  onClick: () => broadcast(inspectedNode.id),
+                  variant: 'signal',
+                },
+              ]}
+              onClose={() => setSelectedNodeId(null)}
+            >
+              <div className="space-y-2">
+                <div>
+                  <div className="text-[9px] uppercase tracking-[0.12em] text-[#9E9B90] mb-1">
+                    Delivered Total Order ({inspectedNode.delivered.length})
+                  </div>
+                  {inspectedNode.delivered.length === 0 ? (
+                    <div className="text-[#6E6B62]">No deliveries yet</div>
+                  ) : (
+                    <div className="space-y-1">
+                      {inspectedNode.delivered.map((msg) => (
+                        <div
+                          key={`${inspectedNode.id}-${msg.id}`}
+                          className="px-2 py-1 bg-[#0E1110] border border-[rgba(244,240,232,0.1)] text-[10px]"
+                        >
+                          <span className="text-[#60A5FA]">t={msg.timestamp}</span> {msg.from}:{' '}
+                          {JSON.stringify(msg.value)}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </WireTapInspector>
+          )}
 
           <div className="absolute bottom-4 left-4 bg-slate-800 rounded-lg p-4 border border-slate-700 space-y-2 max-w-xs">
             <h3 className="text-sm font-semibold text-white">Manual Controls</h3>
@@ -269,13 +302,13 @@ export default function LamportClocksPage() {
             </p>
           </div>
 
-          <div className="absolute top-4 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-sm max-h-96 overflow-y-auto">
+          <div className="absolute top-16 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-xs max-h-64 overflow-y-auto">
             <h3 className="text-sm font-semibold text-white mb-2">Delivery Order</h3>
-            <div className="space-y-3">
+            <div className="space-y-2 font-mono">
               {nodes.map((node) => (
                 <div key={`delivered-${node.id}`} className="text-xs">
-                  <div className="font-semibold text-white mb-1">{node.id}</div>
-                  <div className="pl-2 space-y-1 text-slate-300">
+                  <div className="font-semibold text-[#F4F0E8] mb-0.5">{node.id}</div>
+                  <div className="pl-2 space-y-0.5 text-slate-300">
                     {node.delivered.length === 0 && (
                       <div className="text-slate-500">No deliveries yet</div>
                     )}
@@ -291,27 +324,23 @@ export default function LamportClocksPage() {
           </div>
 
           <div className="absolute bottom-4 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700">
-            <h3 className="text-sm font-semibold text-white mb-2">Legend</h3>
-            <div className="space-y-1 text-xs">
+            <h3 className="text-sm font-semibold text-white mb-2">Signals</h3>
+            <div className="space-y-1.5 text-xs font-mono">
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-slate-500" />
-                <span className="text-slate-400">Idle</span>
+                <div className="w-3 h-3 rounded-full bg-[#FBBF24]" />
+                <span className="text-slate-300">Pending Holdback</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-amber-500" />
-                <span className="text-slate-400">Pending delivery</span>
+                <div className="w-3 h-3 rounded-full bg-[#34D399]" />
+                <span className="text-slate-300">Delivered</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-green-600" />
-                <span className="text-slate-400">Delivered messages</span>
+                <div className="w-3 h-3 rounded-full bg-[#60A5FA]" />
+                <span className="text-slate-300">Broadcast</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-blue-600" />
-                <span className="text-slate-400">Broadcast</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-purple-600" />
-                <span className="text-slate-400">Ack</span>
+                <div className="w-3 h-3 rounded-full bg-[#D9441E]" />
+                <span className="text-slate-300">Ack</span>
               </div>
             </div>
           </div>

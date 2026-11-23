@@ -10,7 +10,8 @@ import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import { distributedLockingScenarios } from '@/visualizers/distributed-locking/scenarios';
 import { LockMessage, LockNode } from '@/lib/types';
-import { motion } from 'framer-motion';
+import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
+import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 
 export default function DistributedLockingPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -19,6 +20,7 @@ export default function DistributedLockingPage() {
   const [messages, setMessages] = useState<LockMessage[]>(lock.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const syncVisualization = useCallback(() => {
     setNodes([...lock.getNodes()]);
@@ -131,32 +133,55 @@ export default function DistributedLockingPage() {
   };
 
   const getNodeColor = (node: LockNode): string => {
-    if (node.status === 'failed') return '#EF4444';
-    if (node.role === 'manager') return '#3B82F6';
-    if (node.holdingLock) return '#10B981';
-    return '#6B7280';
+    if (node.status === 'failed') return SCOPE_COLORS.danger;
+    if (node.role === 'manager') return SCOPE_COLORS.cobalt;
+    if (node.holdingLock) return SCOPE_COLORS.emerald;
+    return SCOPE_COLORS.inkMuted;
   };
 
   const getMessageColor = (message: LockMessage): string => {
     switch (message.type) {
       case 'Acquire':
-        return '#3B82F6';
+        return SCOPE_COLORS.cobalt;
       case 'Grant':
-        return '#10B981';
+        return SCOPE_COLORS.emerald;
       case 'Heartbeat':
-        return '#F59E0B';
+        return SCOPE_COLORS.amber;
       case 'Release':
-        return '#EC4899';
+        return SCOPE_COLORS.signal;
       case 'Timeout':
-        return '#EF4444';
+        return SCOPE_COLORS.danger;
       case 'Deny':
-        return '#94A3B8';
+        return SCOPE_COLORS.inkMuted;
       default:
-        return '#6B7280';
+        return SCOPE_COLORS.inkMuted;
+    }
+  };
+
+  const getMessageMarker = (
+    message: LockMessage
+  ): 'cobalt' | 'emerald' | 'amber' | 'signal' | 'danger' | 'muted' => {
+    switch (message.type) {
+      case 'Acquire':
+        return 'cobalt';
+      case 'Grant':
+        return 'emerald';
+      case 'Heartbeat':
+        return 'amber';
+      case 'Release':
+        return 'signal';
+      case 'Timeout':
+        return 'danger';
+      default:
+        return 'muted';
     }
   };
 
   const stats = lock.getStats();
+  const manager = nodes.find((n) => n.role === 'manager');
+  const inspectedNode = selectedNodeId
+    ? nodes.find((n) => n.id === selectedNodeId) ?? null
+    : null;
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen md:h-screen bg-slate-900">
@@ -196,7 +221,7 @@ export default function DistributedLockingPage() {
               Read the theory
             </button>
           </div>
-          <div className="flex gap-6 mt-2 text-sm">
+          <div className="flex flex-wrap gap-6 mt-2 text-sm">
             <span className="text-slate-300">
               Nodes: <span className="font-semibold text-white">{stats.totalNodes}</span>
             </span>
@@ -229,109 +254,155 @@ export default function DistributedLockingPage() {
           </div>
 
           <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            {nodes.map((node, index) => (
-              <motion.g
-                key={node.id}
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: index * 0.08 }}
-              >
-                <circle
-                  cx={node.position.x}
-                  cy={node.position.y}
-                  r={node.role === 'manager' ? 55 : 45}
-                  fill={getNodeColor(node)}
-                  stroke="#1F2937"
-                  strokeWidth="3"
-                  className={node.role === 'client' ? 'cursor-pointer' : ''}
-                  onClick={() =>
-                    node.role === 'client' &&
-                    (node.status === 'failed' ? recoverNode(node.id) : failNode(node.id))
-                  }
-                />
-                <text
-                  x={node.position.x}
-                  y={node.position.y - 10}
-                  textAnchor="middle"
-                  fill="#FFF"
-                  fontSize="14"
-                  fontWeight="bold"
-                >
-                  {node.id}
-                </text>
-                <text
-                  x={node.position.x}
-                  y={node.position.y + 6}
-                  textAnchor="middle"
-                  fill="#E2E8F0"
-                  fontSize="10"
-                >
-                  {node.role === 'manager' ? 'LOCK MANAGER' : node.holdingLock ? 'OWNER' : 'CLIENT'}
-                </text>
-                {node.holdingLock && node.leaseExpiresAt && (
-                  <text
-                    x={node.position.x}
-                    y={node.position.y + 22}
-                    textAnchor="middle"
-                    fill="#FDE68A"
-                    fontSize="9"
-                  >
-                    expires {Math.max(0, Math.ceil((node.leaseExpiresAt - Date.now()) / 1000))}s
-                  </text>
-                )}
-                {node.status === 'failed' && (
-                  <text
-                    x={node.position.x}
-                    y={node.position.y + 35}
-                    textAnchor="middle"
-                    fill="#FFF"
-                    fontSize="11"
-                    fontWeight="bold"
-                  >
-                    FAILED
-                  </text>
-                )}
-              </motion.g>
-            ))}
+            <ScopeDefs idPrefix="lock" />
+
+            {/* Spokes from lock manager to clients */}
+            {manager &&
+              nodes
+                .filter((n) => n.role === 'client')
+                .map((client) => (
+                  <line
+                    key={`lk-wire-${client.id}`}
+                    x1={manager.position.x}
+                    y1={manager.position.y}
+                    x2={client.position.x}
+                    y2={client.position.y}
+                    stroke={
+                      client.holdingLock
+                        ? 'rgba(52, 211, 153, 0.35)'
+                        : SCOPE_COLORS.hairlineSubtle
+                    }
+                    strokeWidth={client.holdingLock ? '1.6' : '1'}
+                  />
+                ))}
 
             {messages
               .filter((m) => m.status === 'in-flight')
               .map((message) => {
                 const fromNode = nodes.find((n) => n.id === message.from);
                 const toNode = nodes.find((n) => n.id === message.to);
-
                 if (!fromNode || !toNode) return null;
 
-                const midX = (fromNode.position.x + toNode.position.x) / 2;
-                const midY = (fromNode.position.y + toNode.position.y) / 2;
-
                 return (
-                  <g key={message.id}>
-                    <motion.line
-                      x1={fromNode.position.x}
-                      y1={fromNode.position.y}
-                      x2={toNode.position.x}
-                      y2={toNode.position.y}
-                      stroke={getMessageColor(message)}
-                      strokeWidth="2"
-                      strokeDasharray="6,6"
-                      initial={{ pathLength: 0, opacity: 0 }}
-                      animate={{ pathLength: 1, opacity: 1 }}
-                      transition={{ duration: 0.4 }}
-                    />
-                    <motion.circle
-                      cx={midX}
-                      cy={midY}
-                      r="6"
-                      fill={getMessageColor(message)}
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ duration: 0.3 }}
-                    />
-                  </g>
+                  <ScopeEdge
+                    key={message.id}
+                    idPrefix="lock"
+                    x1={fromNode.position.x}
+                    y1={fromNode.position.y}
+                    x2={toNode.position.x}
+                    y2={toNode.position.y}
+                    color={getMessageColor(message)}
+                    markerKey={getMessageMarker(message)}
+                    inset={48}
+                    label={message.type.toUpperCase()}
+                    dashed={message.type === 'Heartbeat'}
+                  />
                 );
               })}
+
+            {nodes.map((node) => {
+              const isFailed = node.status === 'failed';
+              const isManager = node.role === 'manager';
+              const remainingSec =
+                node.holdingLock && node.leaseExpiresAt
+                  ? Math.max(0, Math.ceil((node.leaseExpiresAt - Date.now()) / 1000))
+                  : null;
+              return (
+                <ScopeNode
+                  key={node.id}
+                  x={node.position.x}
+                  y={node.position.y}
+                  radius={isManager ? 48 : 38}
+                  label={node.id}
+                  sublabel={
+                    isFailed
+                      ? 'OFFLINE'
+                      : isManager
+                      ? 'MANAGER'
+                      : node.holdingLock
+                      ? 'LEASED'
+                      : 'IDLE'
+                  }
+                  topTag={isManager ? 'COORDINATOR' : node.holdingLock ? 'LOCK OWNER' : 'CLIENT'}
+                  bottomLine1={
+                    remainingSec !== null
+                      ? `TTL ${remainingSec}s`
+                      : isManager
+                      ? `OWNER ${stats.leaseOwner || 'NONE'}`
+                      : undefined
+                  }
+                  accentColor={getNodeColor(node)}
+                  failed={isFailed}
+                  highlighted={node.holdingLock || isManager}
+                  selected={selectedNodeId === node.id}
+                  onClick={() =>
+                    setSelectedNodeId((prev) => (prev === node.id ? null : node.id))
+                  }
+                />
+              );
+            })}
           </svg>
+
+          {!inspectedNode && <WireTapHint text="Click manager or client to inspect lease state" />}
+
+          {inspectedNode && (
+            <WireTapInspector
+              title={inspectedNode.role === 'manager' ? 'LOCK MANAGER (L)' : `CLIENT ${inspectedNode.id}`}
+              subtitle={`${inspectedNode.role.toUpperCase()} · ${inspectedNode.status.toUpperCase()}`}
+              status={
+                inspectedNode.status === 'failed'
+                  ? 'failed'
+                  : inspectedNode.holdingLock
+                  ? 'healthy'
+                  : 'info'
+              }
+              className="top-14 left-4"
+              metrics={[
+                { label: 'Role', value: inspectedNode.role.toUpperCase(), tone: 'cobalt' },
+                {
+                  label: 'Holding Lease',
+                  value: inspectedNode.holdingLock ? 'YES' : 'NO',
+                  tone: inspectedNode.holdingLock ? 'emerald' : 'default',
+                },
+                { label: 'Current Owner', value: stats.leaseOwner || 'NONE', tone: 'amber' },
+                { label: 'Wait Queue', value: stats.queueLength },
+              ]}
+              actions={
+                inspectedNode.role === 'client'
+                  ? [
+                      {
+                        label: inspectedNode.status === 'failed' ? 'Recover' : 'Crash Client',
+                        onClick: () =>
+                          inspectedNode.status === 'failed'
+                            ? recoverNode(inspectedNode.id)
+                            : failNode(inspectedNode.id),
+                        variant: inspectedNode.status === 'failed' ? 'emerald' : 'danger',
+                      },
+                      {
+                        label: inspectedNode.holdingLock ? 'Renew Heartbeat' : 'Request Lock',
+                        onClick: () => {
+                          if (inspectedNode.holdingLock) {
+                            lock.sendHeartbeat(inspectedNode.id);
+                          } else {
+                            lock.requestLock(inspectedNode.id);
+                          }
+                          updateVisualization();
+                        },
+                        variant: 'signal',
+                        disabled: inspectedNode.status === 'failed',
+                      },
+                    ]
+                  : [
+                      {
+                        label: 'Check Lease Expiry',
+                        onClick: tickLease,
+                        variant: 'signal',
+                      },
+                    ]
+              }
+              onClose={() => setSelectedNodeId(null)}
+            />
+          )}
 
           <div className="absolute bottom-4 left-4 bg-slate-800 rounded-lg p-4 border border-slate-700 space-y-2 max-w-xs">
             <h3 className="text-sm font-semibold text-white">Manual Controls</h3>
@@ -343,7 +414,7 @@ export default function DistributedLockingPage() {
             </button>
             <button
               onClick={releaseOwner}
-              className="w-full px-3 py-2 bg-pink-600 text-white text-sm rounded hover:bg-pink-700"
+              className="w-full px-3 py-2 bg-[#D9441E] text-white text-sm rounded hover:bg-[#B83412]"
             >
               Release Lock (Owner)
             </button>
@@ -359,17 +430,17 @@ export default function DistributedLockingPage() {
             >
               Check Lease Expiry
             </button>
-            <p className="text-xs text-slate-400">Click clients to fail/recover.</p>
+            <p className="text-xs text-slate-400">Click any node to inspect or crash/recover.</p>
           </div>
 
-          <div className="absolute top-4 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-sm max-h-96 overflow-y-auto">
+          <div className="absolute top-16 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-xs max-h-64 overflow-y-auto">
             <h3 className="text-sm font-semibold text-white mb-2">Client Status</h3>
-            <div className="space-y-2">
+            <div className="space-y-2 font-mono">
               {nodes
                 .filter((n) => n.role === 'client')
                 .map((node) => (
                   <div key={`client-${node.id}`} className="text-xs">
-                    <div className="font-semibold text-white mb-1">
+                    <div className="font-semibold text-[#F4F0E8] mb-0.5">
                       {node.id} ({node.status})
                     </div>
                     <div className="pl-2 text-slate-300">
@@ -377,8 +448,7 @@ export default function DistributedLockingPage() {
                       {node.leaseExpiresAt && (
                         <span className="text-slate-400">
                           {' '}
-                          · expires in{' '}
-                          {Math.max(0, Math.ceil((node.leaseExpiresAt - Date.now()) / 1000))}s
+                          · {Math.max(0, Math.ceil((node.leaseExpiresAt - Date.now()) / 1000))}s
                         </span>
                       )}
                     </div>
@@ -389,22 +459,22 @@ export default function DistributedLockingPage() {
 
           <div className="absolute bottom-4 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700">
             <h3 className="text-sm font-semibold text-white mb-2">Legend</h3>
-            <div className="space-y-1 text-xs">
+            <div className="space-y-1.5 text-xs font-mono">
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-blue-600" />
-                <span className="text-slate-400">Lock manager</span>
+                <div className="w-3 h-3 rounded-full bg-[#60A5FA]" />
+                <span className="text-slate-300">Lock Manager</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-green-600" />
-                <span className="text-slate-400">Lock owner</span>
+                <div className="w-3 h-3 rounded-full bg-[#34D399]" />
+                <span className="text-slate-300">Lease Owner</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-slate-500" />
-                <span className="text-slate-400">Client idle</span>
+                <div className="w-3 h-3 rounded-full bg-[#9E9B90]" />
+                <span className="text-slate-300">Client Idle</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-red-600" />
-                <span className="text-slate-400">Failed client</span>
+                <div className="w-3 h-3 rounded-full bg-[#F87171]" />
+                <span className="text-slate-300">Failed Client</span>
               </div>
             </div>
           </div>

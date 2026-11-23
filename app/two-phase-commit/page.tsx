@@ -10,7 +10,8 @@ import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import { twoPhaseCommitScenarios } from '@/visualizers/two-phase-commit/scenarios';
 import { TwoPhaseCommitNode, TwoPhaseCommitMessage } from '@/lib/types';
-import { motion } from 'framer-motion';
+import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
+import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 
 export default function TwoPhaseCommitPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -20,6 +21,7 @@ export default function TwoPhaseCommitPage() {
   const [messages, setMessages] = useState<TwoPhaseCommitMessage[]>(tpc.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   // Update visualization
   const updateVisualization = useCallback(() => {
@@ -188,38 +190,21 @@ export default function TwoPhaseCommitPage() {
 
   // Get node color based on state
   const getNodeColor = (node: TwoPhaseCommitNode): string => {
-    if (node.status === 'failed') return '#EF4444'; // red
+    if (node.status === 'failed') return SCOPE_COLORS.danger;
 
-    if (node.role === 'coordinator') {
-      switch (node.state) {
-        case 'init':
-          return '#6B7280'; // gray
-        case 'preparing':
-          return '#F59E0B'; // amber
-        case 'committing':
-          return '#3B82F6'; // blue
-        case 'committed':
-          return '#10B981'; // green
-        case 'aborting':
-          return '#F97316'; // orange
-        case 'aborted':
-          return '#EF4444'; // red
-        default:
-          return '#6B7280';
-      }
-    } else {
-      switch (node.state) {
-        case 'init':
-          return '#6B7280'; // gray
-        case 'prepared':
-          return '#F59E0B'; // amber
-        case 'committed':
-          return '#10B981'; // green
-        case 'aborted':
-          return '#EF4444'; // red
-        default:
-          return '#6B7280';
-      }
+    switch (node.state) {
+      case 'preparing':
+      case 'prepared':
+        return SCOPE_COLORS.amber;
+      case 'committing':
+        return SCOPE_COLORS.cobalt;
+      case 'committed':
+        return SCOPE_COLORS.emerald;
+      case 'aborting':
+      case 'aborted':
+        return SCOPE_COLORS.signal;
+      default:
+        return SCOPE_COLORS.inkMuted;
     }
   };
 
@@ -227,23 +212,44 @@ export default function TwoPhaseCommitPage() {
   const getMessageColor = (message: TwoPhaseCommitMessage): string => {
     switch (message.type) {
       case 'VoteRequest':
-        return '#8B5CF6'; // purple
+        return SCOPE_COLORS.amber;
       case 'VoteYes':
-        return '#10B981'; // green
+        return SCOPE_COLORS.emerald;
       case 'VoteNo':
-        return '#EF4444'; // red
+        return SCOPE_COLORS.danger;
       case 'Commit':
-        return '#3B82F6'; // blue
+        return SCOPE_COLORS.cobalt;
       case 'Abort':
-        return '#F97316'; // orange
-      case 'Ack':
-        return '#6B7280'; // gray
+        return SCOPE_COLORS.signal;
       default:
-        return '#6B7280';
+        return SCOPE_COLORS.inkMuted;
+    }
+  };
+
+  const getMessageMarker = (
+    message: TwoPhaseCommitMessage
+  ): 'amber' | 'emerald' | 'danger' | 'cobalt' | 'signal' | 'muted' => {
+    switch (message.type) {
+      case 'VoteRequest':
+        return 'amber';
+      case 'VoteYes':
+        return 'emerald';
+      case 'VoteNo':
+        return 'danger';
+      case 'Commit':
+        return 'cobalt';
+      case 'Abort':
+        return 'signal';
+      default:
+        return 'muted';
     }
   };
 
   const stats = tpc.getStats();
+  const allNodes = [coordinator, ...participants];
+  const inspectedNode = selectedNodeId
+    ? allNodes.find((n) => n.id === selectedNodeId) ?? null
+    : null;
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen md:h-screen bg-slate-900">
@@ -286,7 +292,7 @@ export default function TwoPhaseCommitPage() {
               Read the theory
             </button>
           </div>
-          <div className="flex gap-6 mt-2 text-sm">
+          <div className="flex flex-wrap gap-6 mt-2 text-sm">
             <span className="text-slate-300">
               Participants:{' '}
               <span className="font-semibold text-white">{stats.totalParticipants}</span>
@@ -329,122 +335,22 @@ export default function TwoPhaseCommitPage() {
           </div>
 
           <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            {/* Coordinator */}
-            <motion.g
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              <circle
-                cx={coordinator.position.x}
-                cy={coordinator.position.y}
-                r="40"
-                fill={getNodeColor(coordinator)}
-                stroke="#1F2937"
-                strokeWidth="3"
-              />
-              <text
-                x={coordinator.position.x}
-                y={coordinator.position.y - 5}
-                textAnchor="middle"
-                fill="#FFF"
-                fontSize="14"
-                fontWeight="bold"
-              >
-                Coordinator
-              </text>
-              <text
-                x={coordinator.position.x}
-                y={coordinator.position.y + 10}
-                textAnchor="middle"
-                fill="#FFF"
-                fontSize="10"
-              >
-                {coordinator.state.toUpperCase()}
-              </text>
-              {coordinator.status === 'failed' && (
-                <text
-                  x={coordinator.position.x}
-                  y={coordinator.position.y + 25}
-                  textAnchor="middle"
-                  fill="#FFF"
-                  fontSize="12"
-                  fontWeight="bold"
-                >
-                  FAILED
-                </text>
-              )}
-            </motion.g>
+            <ScopeDefs idPrefix="tpc" />
 
-            {/* Participants */}
-            {participants.map((participant, index) => (
-              <motion.g
-                key={participant.id}
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              >
-                <circle
-                  cx={participant.position.x}
-                  cy={participant.position.y}
-                  r="35"
-                  fill={getNodeColor(participant)}
-                  stroke="#1F2937"
-                  strokeWidth="3"
-                  className="cursor-pointer"
-                  onClick={() =>
-                    participant.status === 'failed'
-                      ? recoverParticipant(participant.id)
-                      : failParticipant(participant.id)
-                  }
-                />
-                <text
-                  x={participant.position.x}
-                  y={participant.position.y - 5}
-                  textAnchor="middle"
-                  fill="#FFF"
-                  fontSize="12"
-                  fontWeight="bold"
-                >
-                  {participant.id}
-                </text>
-                <text
-                  x={participant.position.x}
-                  y={participant.position.y + 10}
-                  textAnchor="middle"
-                  fill="#FFF"
-                  fontSize="9"
-                >
-                  {participant.state.toUpperCase()}
-                </text>
-                {participant.vote && (
-                  <text
-                    x={participant.position.x}
-                    y={participant.position.y + 25}
-                    textAnchor="middle"
-                    fill={participant.vote === 'yes' ? '#10B981' : '#EF4444'}
-                    fontSize="10"
-                    fontWeight="bold"
-                  >
-                    {participant.vote.toUpperCase()}
-                  </text>
-                )}
-                {participant.status === 'failed' && (
-                  <text
-                    x={participant.position.x}
-                    y={participant.position.y + 40}
-                    textAnchor="middle"
-                    fill="#FFF"
-                    fontSize="11"
-                    fontWeight="bold"
-                  >
-                    FAILED
-                  </text>
-                )}
-              </motion.g>
+            {/* Coordinator-to-participant topology links */}
+            {participants.map((p) => (
+              <line
+                key={`tpc-link-${p.id}`}
+                x1={coordinator.position.x}
+                y1={coordinator.position.y}
+                x2={p.position.x}
+                y2={p.position.y}
+                stroke={SCOPE_COLORS.hairlineSubtle}
+                strokeWidth="1.2"
+              />
             ))}
 
-            {/* Messages */}
+            {/* Animated directional messages */}
             {messages
               .filter((m) => m.status === 'in-flight')
               .map((message) => {
@@ -456,49 +362,134 @@ export default function TwoPhaseCommitPage() {
                   message.to === 'coordinator'
                     ? coordinator
                     : participants.find((p) => p.id === message.to);
-
                 if (!fromNode || !toNode) return null;
 
-                const midX = (fromNode.position.x + toNode.position.x) / 2;
-                const midY = (fromNode.position.y + toNode.position.y) / 2;
-
                 return (
-                  <g key={message.id}>
-                    <motion.line
-                      x1={fromNode.position.x}
-                      y1={fromNode.position.y}
-                      x2={toNode.position.x}
-                      y2={toNode.position.y}
-                      stroke={getMessageColor(message)}
-                      strokeWidth="2"
-                      strokeDasharray="5,5"
-                      initial={{ pathLength: 0, opacity: 0 }}
-                      animate={{ pathLength: 1, opacity: 1 }}
-                      transition={{ duration: 0.5 }}
-                    />
-                    <motion.circle
-                      cx={midX}
-                      cy={midY}
-                      r="8"
-                      fill={getMessageColor(message)}
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ duration: 0.3 }}
-                    />
-                    <text
-                      x={midX}
-                      y={midY - 12}
-                      textAnchor="middle"
-                      fill={getMessageColor(message)}
-                      fontSize="10"
-                      fontWeight="bold"
-                    >
-                      {message.type}
-                    </text>
-                  </g>
+                  <ScopeEdge
+                    key={message.id}
+                    idPrefix="tpc"
+                    x1={fromNode.position.x}
+                    y1={fromNode.position.y}
+                    x2={toNode.position.x}
+                    y2={toNode.position.y}
+                    color={getMessageColor(message)}
+                    markerKey={getMessageMarker(message)}
+                    inset={44}
+                    label={message.type}
+                    dashed={message.type === 'VoteRequest'}
+                  />
                 );
               })}
+
+            {/* Coordinator */}
+            <ScopeNode
+              x={coordinator.position.x}
+              y={coordinator.position.y}
+              radius={44}
+              label="COORD"
+              sublabel={coordinator.status === 'failed' ? 'OFFLINE' : coordinator.state.toUpperCase()}
+              topTag="COORDINATOR"
+              bottomLine1={`OUTCOME ${stats.transactionOutcome.toUpperCase()}`}
+              accentColor={getNodeColor(coordinator)}
+              failed={coordinator.status === 'failed'}
+              highlighted
+              selected={selectedNodeId === coordinator.id}
+              onClick={() =>
+                setSelectedNodeId((prev) => (prev === coordinator.id ? null : coordinator.id))
+              }
+            />
+
+            {/* Participants */}
+            {participants.map((participant) => {
+              const isFailed = participant.status === 'failed';
+              return (
+                <ScopeNode
+                  key={participant.id}
+                  x={participant.position.x}
+                  y={participant.position.y}
+                  radius={38}
+                  label={`P${participant.id.split('-')[1]}`}
+                  sublabel={isFailed ? 'OFFLINE' : participant.state.toUpperCase()}
+                  topTag={participant.vote ? `VOTE ${participant.vote.toUpperCase()}` : 'PARTICIPANT'}
+                  bottomLine1={participant.id}
+                  accentColor={getNodeColor(participant)}
+                  failed={isFailed}
+                  highlighted={participant.state === 'committed'}
+                  selected={selectedNodeId === participant.id}
+                  onClick={() =>
+                    setSelectedNodeId((prev) => (prev === participant.id ? null : participant.id))
+                  }
+                />
+              );
+            })}
           </svg>
+
+          {!inspectedNode && <WireTapHint text="Click coordinator or participant to open Wire Tap" />}
+
+          {inspectedNode && (
+            <WireTapInspector
+              title={inspectedNode.role === 'coordinator' ? 'COORDINATOR' : inspectedNode.id.toUpperCase()}
+              subtitle={`${inspectedNode.state.toUpperCase()} · ${inspectedNode.status.toUpperCase()}`}
+              status={
+                inspectedNode.status === 'failed'
+                  ? 'failed'
+                  : inspectedNode.state === 'committed'
+                  ? 'healthy'
+                  : inspectedNode.state === 'aborted' || inspectedNode.state === 'aborting'
+                  ? 'leader'
+                  : 'candidate'
+              }
+              className="top-14 left-4"
+              metrics={[
+                { label: 'Phase State', value: inspectedNode.state.toUpperCase(), tone: 'amber' },
+                {
+                  label: 'Vote',
+                  value: inspectedNode.vote ? inspectedNode.vote.toUpperCase() : '—',
+                  tone:
+                    inspectedNode.vote === 'yes'
+                      ? 'emerald'
+                      : inspectedNode.vote === 'no'
+                      ? 'danger'
+                      : 'default',
+                },
+                { label: 'YES / NO', value: `${stats.yesVotes} / ${stats.noVotes}`, tone: 'cobalt' },
+                { label: 'Outcome', value: stats.transactionOutcome.toUpperCase() },
+              ]}
+              actions={
+                inspectedNode.role === 'participant'
+                  ? [
+                      {
+                        label: inspectedNode.status === 'failed' ? 'Recover' : 'Crash Node',
+                        onClick: () =>
+                          inspectedNode.status === 'failed'
+                            ? recoverParticipant(inspectedNode.id)
+                            : failParticipant(inspectedNode.id),
+                        variant: inspectedNode.status === 'failed' ? 'emerald' : 'danger',
+                      },
+                      {
+                        label: 'Vote YES',
+                        onClick: () => voteYes(inspectedNode.id),
+                        variant: 'emerald',
+                        disabled: inspectedNode.status === 'failed' || inspectedNode.vote !== undefined,
+                      },
+                      {
+                        label: 'Vote NO',
+                        onClick: () => voteNo(inspectedNode.id),
+                        variant: 'signal',
+                        disabled: inspectedNode.status === 'failed' || inspectedNode.vote !== undefined,
+                      },
+                    ]
+                  : [
+                      {
+                        label: 'Start Transaction',
+                        onClick: startTransaction,
+                        variant: 'signal',
+                      },
+                    ]
+              }
+              onClose={() => setSelectedNodeId(null)}
+            />
+          )}
 
           {/* Manual controls */}
           <div className="absolute bottom-4 left-4 bg-slate-800 rounded-lg p-4 border border-slate-700 space-y-2 max-w-xs">
@@ -534,33 +525,33 @@ export default function TwoPhaseCommitPage() {
             </div>
 
             <div className="border-t border-slate-700 pt-2 mt-2">
-              <p className="text-xs text-slate-400 mb-1">Click participants to fail/recover</p>
+              <p className="text-xs text-slate-400 mb-1">Click any node to inspect or fail/recover</p>
             </div>
           </div>
 
           {/* Legend */}
-          <div className="absolute top-4 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700">
+          <div className="absolute top-16 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700">
             <h3 className="text-sm font-semibold text-white mb-2">States</h3>
-            <div className="space-y-1 text-xs">
+            <div className="space-y-1.5 text-xs font-mono">
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-gray-600" />
-                <span className="text-slate-400">INIT</span>
+                <div className="w-3 h-3 rounded-full bg-[#9E9B90]" />
+                <span className="text-slate-300">INIT</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-amber-600" />
-                <span className="text-slate-400">PREPARING/PREPARED</span>
+                <div className="w-3 h-3 rounded-full bg-[#FBBF24]" />
+                <span className="text-slate-300">PREPARING / PREPARED</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-blue-600" />
-                <span className="text-slate-400">COMMITTING</span>
+                <div className="w-3 h-3 rounded-full bg-[#60A5FA]" />
+                <span className="text-slate-300">COMMITTING</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-green-600" />
-                <span className="text-slate-400">COMMITTED</span>
+                <div className="w-3 h-3 rounded-full bg-[#34D399]" />
+                <span className="text-slate-300">COMMITTED</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-red-600" />
-                <span className="text-slate-400">ABORTED/FAILED</span>
+                <div className="w-3 h-3 rounded-full bg-[#D9441E]" />
+                <span className="text-slate-300">ABORTED / FAILED</span>
               </div>
             </div>
           </div>
