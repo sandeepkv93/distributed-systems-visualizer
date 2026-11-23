@@ -17,6 +17,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { CONCEPTS_CATALOG, CONCEPT_DOMAINS, TOTAL_CONCEPTS } from '@/lib/catalog';
+import { searchAtlas, SearchKindFilter } from '@/lib/search';
 import { useProgress } from '@/hooks/useProgress';
 
 export default function Navigation() {
@@ -27,6 +28,7 @@ export default function Navigation() {
   const [showIndexMenu, setShowIndexMenu] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [query, setQuery] = useState('');
+  const [searchFilter, setSearchFilter] = useState<SearchKindFilter>('all');
   const [selectedIdx, setSelectedIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -36,18 +38,10 @@ export default function Navigation() {
     [normalizedPath]
   );
 
-  const filteredConcepts = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return CONCEPTS_CATALOG;
-    return CONCEPTS_CATALOG.filter(
-      (c) =>
-        c.name.toLowerCase().includes(q) ||
-        c.domainLabel.toLowerCase().includes(q) ||
-        c.citation.toLowerCase().includes(q) ||
-        c.mechanism.toLowerCase().includes(q) ||
-        c.plateNumber.includes(q)
-    );
-  }, [query]);
+  const searchResults = useMemo(
+    () => searchAtlas(query, searchFilter, 32),
+    [query, searchFilter]
+  );
 
   // Global Cmd+K / Ctrl+K shortcut for instant protocol jumping
   useEffect(() => {
@@ -73,25 +67,26 @@ export default function Navigation() {
 
   const openCommandPalette = () => {
     setQuery('');
+    setSearchFilter('all');
     setSelectedIdx(0);
     setShowIndexMenu(false);
     setShowCommandPalette(true);
   };
 
   const handlePaletteKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (filteredConcepts.length === 0) return;
+    if (searchResults.length === 0) return;
     if (event.key === 'ArrowDown') {
       event.preventDefault();
-      setSelectedIdx((idx) => (idx + 1) % filteredConcepts.length);
+      setSelectedIdx((idx) => (idx + 1) % searchResults.length);
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
-      setSelectedIdx((idx) => (idx - 1 + filteredConcepts.length) % filteredConcepts.length);
+      setSelectedIdx((idx) => (idx - 1 + searchResults.length) % searchResults.length);
     } else if (event.key === 'Enter') {
       event.preventDefault();
-      const target = filteredConcepts[selectedIdx] ?? filteredConcepts[0];
+      const target = searchResults[selectedIdx] ?? searchResults[0];
       if (target) {
         setShowCommandPalette(false);
-        router.push(target.path);
+        router.push(target.href);
       }
     }
   };
@@ -370,15 +365,15 @@ export default function Navigation() {
       {/* Command Palette Modal */}
       {showCommandPalette && (
         <div
-          className="fixed inset-0 z-50 bg-[#161614]/50 backdrop-blur-[2px] flex items-start justify-center pt-[12vh] px-4"
+          className="fixed inset-0 z-50 bg-[#161614]/50 backdrop-blur-[2px] flex items-start justify-center pt-[10vh] px-4"
           onClick={() => setShowCommandPalette(false)}
         >
           <div
-            className="w-full max-w-xl bg-[var(--paper-elevated)] border border-[var(--ink)] shadow-[8px_8px_0_0_var(--ink)] overflow-hidden"
+            className="w-full max-w-2xl bg-[var(--paper-elevated)] border border-[var(--ink)] shadow-[8px_8px_0_0_var(--ink)] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
-            aria-label="Jump to protocol"
+            aria-label="Search Atlas"
           >
             <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--rule)] bg-[var(--paper)]">
               <Search className="w-4 h-4 text-[var(--ink-muted)] flex-shrink-0" />
@@ -391,7 +386,7 @@ export default function Navigation() {
                   setSelectedIdx(0);
                 }}
                 onKeyDown={handlePaletteKeyDown}
-                placeholder="Jump to protocol, paper (e.g. Lamport, 1978), or domain..."
+                placeholder='Search plates, 79 scenarios, duels, outages (e.g. "split brain", "3f+1", "Lamport")...'
                 className="w-full bg-transparent text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus:outline-none"
               />
               <button
@@ -404,22 +399,77 @@ export default function Navigation() {
               </button>
             </div>
 
+            {/* Filter Tabs */}
+            <div className="flex flex-wrap items-center gap-1.5 px-4 py-2 border-b border-[var(--rule)] bg-[var(--chassis)]/65 font-mono text-[10px] uppercase tracking-wider">
+              {(
+                [
+                  { id: 'all', label: 'All' },
+                  { id: 'plate', label: 'Plates (22)' },
+                  { id: 'scenario', label: 'Scenarios (79)' },
+                  { id: 'duel', label: 'Duels (6)' },
+                  { id: 'incident', label: 'Outages (6)' },
+                  { id: 'lab', label: 'Labs' },
+                ] as const
+              ).map((tab) => {
+                const active = searchFilter === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => {
+                      setSearchFilter(tab.id);
+                      setSelectedIdx(0);
+                    }}
+                    className={`px-2 py-1 border transition-colors cursor-pointer ${
+                      active
+                        ? 'bg-[var(--ink)] text-[var(--paper-elevated)] border-[var(--ink)] font-semibold'
+                        : 'bg-[var(--paper-elevated)] text-[var(--ink-secondary)] border-[var(--rule)] hover:border-[var(--ink)]'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+
             <div className="max-h-[55vh] overflow-y-auto divide-y divide-[var(--rule)]">
-              {filteredConcepts.length === 0 ? (
+              {searchResults.length === 0 ? (
                 <div className="px-4 py-8 text-center font-mono text-xs text-[var(--ink-muted)]">
-                  No protocols matching &ldquo;{query}&rdquo;
+                  No Atlas entries matching &ldquo;{query}&rdquo;
                 </div>
               ) : (
-                filteredConcepts.map((concept, idx) => {
+                searchResults.map((item, idx) => {
                   const isSelected = idx === selectedIdx;
+                  const conceptId = item.kind === 'plate' ? item.id.replace('plate:', '') : null;
+                  const badgeTone =
+                    item.kind === 'incident'
+                      ? isSelected
+                        ? 'bg-[#D9441E] text-[#FAF7F1]'
+                        : 'bg-[var(--signal)]/12 text-[var(--signal)]'
+                      : item.kind === 'duel'
+                      ? isSelected
+                        ? 'bg-[#A8640B] text-[#FAF7F1]'
+                        : 'bg-[var(--ochre)]/12 text-[var(--ochre)]'
+                      : item.kind === 'lab'
+                      ? isSelected
+                        ? 'bg-[#0F6B50] text-[#FAF7F1]'
+                        : 'bg-[var(--emerald)]/12 text-[var(--emerald)]'
+                      : item.kind === 'scenario'
+                      ? isSelected
+                        ? 'bg-[#1D4B8F] text-[#FAF7F1]'
+                        : 'bg-[var(--cobalt)]/12 text-[var(--cobalt)]'
+                      : isSelected
+                      ? 'bg-[#FAF7F1]/15 text-[#FB923C]'
+                      : 'bg-[var(--chassis)] text-[var(--ink-secondary)]';
+
                   return (
                     <button
-                      key={concept.id}
+                      key={item.id}
                       type="button"
                       onMouseEnter={() => setSelectedIdx(idx)}
                       onClick={() => {
                         setShowCommandPalette(false);
-                        router.push(concept.path);
+                        router.push(item.href);
                       }}
                       className={`w-full px-4 py-2.5 flex items-center justify-between gap-3 text-left transition-colors cursor-pointer ${
                         isSelected
@@ -428,32 +478,42 @@ export default function Navigation() {
                       }`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div
-                          className={`w-8 h-8 flex items-center justify-center flex-shrink-0 border ${
-                            isSelected
-                              ? 'border-[#FAF7F1]/25 bg-[#FAF7F1]/10 text-[#FAF7F1]'
-                              : 'border-[var(--rule)] bg-[var(--paper)] text-[var(--ink)]'
-                          }`}
-                        >
-                          <ConceptGlyph id={concept.id} className="w-6 h-6" />
-                        </div>
+                        {conceptId ? (
+                          <div
+                            className={`w-8 h-8 flex items-center justify-center flex-shrink-0 border ${
+                              isSelected
+                                ? 'border-[#FAF7F1]/25 bg-[#FAF7F1]/10 text-[#FAF7F1]'
+                                : 'border-[var(--rule)] bg-[var(--paper)] text-[var(--ink)]'
+                            }`}
+                          >
+                            <ConceptGlyph id={conceptId} className="w-6 h-6" />
+                          </div>
+                        ) : (
+                          <span
+                            className={`px-2 py-1 font-mono text-[9.5px] font-semibold uppercase tracking-wider flex-shrink-0 ${badgeTone}`}
+                          >
+                            {item.badge}
+                          </span>
+                        )}
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            <span
-                              className={`font-mono text-[10px] tabular-nums ${
-                                isSelected ? 'text-[#FB923C]' : 'text-[var(--ink-muted)]'
-                              }`}
-                            >
-                              FIG. {concept.plateNumber}
-                            </span>
-                            <span className="text-sm font-medium truncate">{concept.name}</span>
+                            {conceptId && (
+                              <span
+                                className={`font-mono text-[10px] tabular-nums ${
+                                  isSelected ? 'text-[#FB923C]' : 'text-[var(--ink-muted)]'
+                                }`}
+                              >
+                                {item.badge}
+                              </span>
+                            )}
+                            <span className="text-sm font-medium truncate">{item.title}</span>
                           </div>
                           <div
                             className={`font-mono text-[10px] truncate mt-0.5 ${
                               isSelected ? 'text-[#D6D2C7]' : 'text-[var(--ink-muted)]'
                             }`}
                           >
-                            {concept.domainLabel} · {concept.citation}
+                            {item.subtitle}
                           </div>
                         </div>
                       </div>
