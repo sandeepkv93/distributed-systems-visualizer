@@ -440,7 +440,7 @@ export default function PaxosPage() {
               </button>
               <button
                 onClick={() => triggerProposal('proposer-1', `Value-${Date.now() % 100}`)}
-                className="w-full px-3 py-1 bg-purple-600 text-white text-sm rounded hover:bg-purple-700"
+                className="w-full px-3 py-1 bg-[#D9441E] text-white text-sm rounded hover:bg-[#B83412]"
               >
                 Proposer 1: Propose
               </button>

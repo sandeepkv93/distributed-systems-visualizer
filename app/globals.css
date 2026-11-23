@@ -346,14 +346,14 @@ main[data-view="visualizer"] > div > div.w-full.md\:w-96.bg-slate-800 .text-slat
   color: var(--ink-secondary) !important;
 }
 
-/* Harmonize purple buttons inside floating oscilloscope controls to crisp instrument vermilion/amber */
-main[data-view="visualizer"] div.flex-1.relative.bg-slate-900 button.bg-purple-600 {
-  background-color: var(--signal) !important;
-  color: #faf7f1 !important;
+/* Responsive overflow safety for floating HUD cards inside obsidian canvases on narrow viewports */
+main[data-view="visualizer"] div.flex-1.relative.bg-slate-900 > div.absolute.bg-slate-800 {
+  max-width: calc(100% - 2rem);
 }
 
-main[data-view="visualizer"] div.flex-1.relative.bg-slate-900 button.bg-purple-600:hover {
-  background-color: var(--signal-hover) !important;
+main[data-view="visualizer"] svg g[role="button"]:focus-visible circle:first-of-type {
+  stroke: #f4f0e8;
+  stroke-width: 2.5px;
 }
 
 /* Editorial Monograph Reader typography (overrides legacy dark-mode text classes in all 22 drawers) */

@@ -111,8 +111,20 @@ export function ScopeNode({
   return (
     <g
       onClick={onClick}
-      className={onClick ? 'cursor-pointer' : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+      className={onClick ? 'cursor-pointer focus:outline-none' : undefined}
       role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-label={onClick ? `Inspect ${label}` : undefined}
     >
       {/* Partition or selection outer dashed halo */}
       {(haloColor || selected || highlighted) && (

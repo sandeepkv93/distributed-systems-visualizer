@@ -440,7 +440,7 @@ export default function RaftPage() {
                   raft.finalizeElection();
                   updateVisualization();
                 }}
-                className="w-full px-3 py-1 bg-purple-600 text-white text-sm rounded hover:bg-purple-700"
+                className="w-full px-3 py-1 bg-[#D9441E] text-white text-sm rounded hover:bg-[#B83412]"
               >
                 Process Votes
               </button>
