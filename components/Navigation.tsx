@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import ProgressDashboard from './ProgressDashboard';
 import ConceptGlyph from './ConceptGlyph';
-import { Search, BookMarked, ChevronDown, X, ArrowUpRight } from 'lucide-react';
+import { Search, BookMarked, ChevronDown, X, ArrowUpRight, Scale } from 'lucide-react';
 import { CONCEPTS_CATALOG, CONCEPT_DOMAINS, TOTAL_CONCEPTS } from '@/lib/catalog';
 import { useProgress } from '@/hooks/useProgress';
 
@@ -118,7 +118,7 @@ export default function Navigation() {
               </div>
             </Link>
 
-            {activeConcept && (
+            {activeConcept ? (
               <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
                 <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--chassis)] text-[var(--ink-secondary)] border border-[var(--rule)] flex-shrink-0">
                   PLATE {activeConcept.plateNumber}
@@ -130,11 +130,32 @@ export default function Navigation() {
                   · {activeConcept.citation}
                 </span>
               </div>
-            )}
+            ) : normalizedPath === '/duel' ? (
+              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
+                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--signal)] text-[#FAF7F1] flex-shrink-0">
+                  DUEL LAB
+                </span>
+                <span className="font-editorial text-base text-[var(--ink)] truncate">
+                  Side-by-Side Protocol Bench
+                </span>
+              </div>
+            ) : null}
           </div>
 
           {/* Right Instrument Controls */}
           <div className="flex items-center gap-2">
+            {/* Protocol Duel Link */}
+            <Link
+              href="/duel"
+              className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 font-mono text-xs uppercase tracking-wider border transition-colors ${
+                normalizedPath === '/duel'
+                  ? 'bg-[var(--signal)] text-[#FAF7F1] border-[var(--signal)]'
+                  : 'bg-[var(--paper-elevated)] text-[var(--ink)] border-[var(--rule)] hover:border-[var(--ink)]'
+              }`}
+            >
+              <Scale className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Duel</span>
+            </Link>
             {/* Domain-Grouped Protocol Index Popover */}
             <div className="relative">
               <button
