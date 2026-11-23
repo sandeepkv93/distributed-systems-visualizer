@@ -5,7 +5,17 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import ProgressDashboard from './ProgressDashboard';
 import ConceptGlyph from './ConceptGlyph';
-import { Search, BookMarked, ChevronDown, X, ArrowUpRight, Scale, Network, Sliders } from 'lucide-react';
+import {
+  Search,
+  BookMarked,
+  ChevronDown,
+  X,
+  ArrowUpRight,
+  Scale,
+  Network,
+  Sliders,
+  AlertTriangle,
+} from 'lucide-react';
 import { CONCEPTS_CATALOG, CONCEPT_DOMAINS, TOTAL_CONCEPTS } from '@/lib/catalog';
 import { useProgress } from '@/hooks/useProgress';
 
@@ -157,6 +167,15 @@ export default function Navigation() {
                   Fault-Tolerance &amp; Quorum Calculator
                 </span>
               </div>
+            ) : normalizedPath === '/incidents' ? (
+              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
+                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--signal)] text-[#FAF7F1] flex-shrink-0">
+                  POSTMORTEMS
+                </span>
+                <span className="font-editorial text-base text-[var(--ink)] truncate">
+                  Diagnose the Outage
+                </span>
+              </div>
             ) : null}
           </div>
 
@@ -173,7 +192,7 @@ export default function Navigation() {
               aria-label="Protocol Dependency Map"
             >
               <Network className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Map</span>
+              <span className="hidden lg:inline">Map</span>
             </Link>
 
             {/* Quorum & Fault-Tolerance Workbench Link */}
@@ -187,7 +206,7 @@ export default function Navigation() {
               aria-label="Quorum and Fault-Tolerance Workbench"
             >
               <Sliders className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Bench</span>
+              <span className="hidden lg:inline">Bench</span>
             </Link>
 
             {/* Protocol Duel Link */}
@@ -201,7 +220,21 @@ export default function Navigation() {
               aria-label="Protocol Duel Lab"
             >
               <Scale className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Duel</span>
+              <span className="hidden lg:inline">Duel</span>
+            </Link>
+
+            {/* Incident Postmortem Lab Link */}
+            <Link
+              href="/incidents"
+              className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 font-mono text-xs uppercase tracking-wider border transition-colors ${
+                normalizedPath === '/incidents'
+                  ? 'bg-[var(--signal)] text-[#FAF7F1] border-[var(--signal)]'
+                  : 'bg-[var(--paper-elevated)] text-[var(--ink)] border-[var(--rule)] hover:border-[var(--ink)]'
+              }`}
+              aria-label="Incident Postmortem Lab"
+            >
+              <AlertTriangle className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline">Outages</span>
             </Link>
             {/* Domain-Grouped Protocol Index Popover */}
             <div className="relative">

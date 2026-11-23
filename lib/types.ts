@@ -600,4 +600,5 @@ export interface UserProgress {
   timeSpent: { [concept: string]: number };
   achievements: string[];
   checkpointsSolved?: string[];
+  incidentsSolved?: string[];
 }

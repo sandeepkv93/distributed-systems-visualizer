@@ -7,6 +7,7 @@ import {
   normalizeConceptId,
 } from './catalog';
 import { TOTAL_CHECKPOINTS } from './checkpoints';
+import { TOTAL_INCIDENTS } from './incidents';
 
 const PROGRESS_KEY = 'distributed_systems_progress';
 const SESSION_START_KEY = 'session_start_time';
@@ -41,6 +42,8 @@ export interface ProgressStats {
   totalAchievements: number;
   checkpointsSolved: number;
   totalCheckpoints: number;
+  incidentsSolved: number;
+  totalIncidents: number;
 }
 
 export interface ProgressStoreSnapshot {
@@ -63,6 +66,7 @@ export function createDefaultProgress(): UserProgress {
     timeSpent: {},
     achievements: [],
     checkpointsSolved: [],
+    incidentsSolved: [],
   };
 }
 
@@ -84,7 +88,14 @@ export function validateProgressData(input: unknown): UserProgress | null {
     return null;
   }
 
-  const { conceptsCompleted, scenariosCompleted, timeSpent, achievements, checkpointsSolved } = input;
+  const {
+    conceptsCompleted,
+    scenariosCompleted,
+    timeSpent,
+    achievements,
+    checkpointsSolved,
+    incidentsSolved,
+  } = input;
 
   if (!isStringArray(conceptsCompleted)) {
     return null;
@@ -99,6 +110,9 @@ export function validateProgressData(input: unknown): UserProgress | null {
     return null;
   }
   if (checkpointsSolved !== undefined && !isStringArray(checkpointsSolved)) {
+    return null;
+  }
+  if (incidentsSolved !== undefined && !isStringArray(incidentsSolved)) {
     return null;
   }
 
@@ -117,6 +131,7 @@ export function validateProgressData(input: unknown): UserProgress | null {
     timeSpent: normalizedTimeSpent,
     achievements: dedupe(achievements),
     checkpointsSolved: checkpointsSolved ? dedupe(checkpointsSolved) : [],
+    incidentsSolved: incidentsSolved ? dedupe(incidentsSolved) : [],
   };
 }
 
@@ -157,6 +172,12 @@ const ACHIEVEMENTS: AchievementDefinition[] = [
     name: 'Intuition Verified',
     description: 'Solve 3 prediction checkpoints before running failure scenarios',
     condition: (progress: UserProgress) => (progress.checkpointsSolved?.length ?? 0) >= 3,
+  },
+  {
+    id: 'incident_commander',
+    name: 'Incident Commander',
+    description: 'Diagnose and resolve 3 production outage postmortems',
+    condition: (progress: UserProgress) => (progress.incidentsSolved?.length ?? 0) >= 3,
   },
   {
     id: 'dedicated_learner',
@@ -200,6 +221,8 @@ function computeStats(progress: UserProgress): ProgressStats {
     totalAchievements: ACHIEVEMENTS.length,
     checkpointsSolved: progress.checkpointsSolved?.length ?? 0,
     totalCheckpoints: TOTAL_CHECKPOINTS,
+    incidentsSolved: progress.incidentsSolved?.length ?? 0,
+    totalIncidents: TOTAL_INCIDENTS,
   };
 }
 
@@ -312,6 +335,7 @@ export function saveProgress(progress: UserProgress): void {
       timeSpent: { ...progress.timeSpent },
       achievements: dedupe(progress.achievements),
       checkpointsSolved: dedupe(progress.checkpointsSolved ?? []),
+      incidentsSolved: dedupe(progress.incidentsSolved ?? []),
     };
     localStorage.setItem(PROGRESS_KEY, JSON.stringify(normalized));
     notifyProgressListeners();
@@ -329,6 +353,20 @@ export function markCheckpointSolved(checkpointId: string): void {
   const solved = progress.checkpointsSolved ?? [];
   if (!solved.includes(trimmed)) {
     progress.checkpointsSolved = [...solved, trimmed];
+    saveProgress(progress);
+    checkAchievements(progress);
+  }
+}
+
+// Mark an incident postmortem drill as resolved
+export function markIncidentSolved(incidentId: string): void {
+  const trimmed = incidentId.trim();
+  if (!trimmed) return;
+
+  const progress = getProgress();
+  const solved = progress.incidentsSolved ?? [];
+  if (!solved.includes(trimmed)) {
+    progress.incidentsSolved = [...solved, trimmed];
     saveProgress(progress);
     checkAchievements(progress);
   }
