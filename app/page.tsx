@@ -3,7 +3,7 @@ import ConceptGrid from '@/components/ConceptGrid';
 import HeroSimulation from '@/components/HeroSimulation';
 import LearningTracks from '@/components/LearningTracks';
 import { TOTAL_CONCEPTS, TOTAL_SCENARIOS } from '@/lib/catalog';
-import { ArrowDown, ArrowUpRight, Scale } from 'lucide-react';
+import { ArrowDown, ArrowUpRight, Network, Scale } from 'lucide-react';
 
 export default function Home() {
   return (
@@ -42,6 +42,14 @@ export default function Home() {
               >
                 <span>Open Plate 20 · Raft</span>
                 <ArrowUpRight className="w-4 h-4" />
+              </Link>
+
+              <Link
+                href="/map"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--paper-elevated)] hover:bg-[var(--chassis)] text-[var(--ink)] border border-[var(--ink)] font-mono text-xs uppercase tracking-[0.1em] transition-colors"
+              >
+                <Network className="w-3.5 h-3.5 text-[var(--cobalt)]" />
+                <span>Dependency Map</span>
               </Link>
 
               <Link

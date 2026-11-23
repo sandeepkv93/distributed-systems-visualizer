@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import ProgressDashboard from './ProgressDashboard';
 import ConceptGlyph from './ConceptGlyph';
-import { Search, BookMarked, ChevronDown, X, ArrowUpRight, Scale } from 'lucide-react';
+import { Search, BookMarked, ChevronDown, X, ArrowUpRight, Scale, Network } from 'lucide-react';
 import { CONCEPTS_CATALOG, CONCEPT_DOMAINS, TOTAL_CONCEPTS } from '@/lib/catalog';
 import { useProgress } from '@/hooks/useProgress';
 
@@ -139,11 +139,34 @@ export default function Navigation() {
                   Side-by-Side Protocol Bench
                 </span>
               </div>
+            ) : normalizedPath === '/map' ? (
+              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
+                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--cobalt)] text-[#FAF7F1] flex-shrink-0">
+                  DEPENDENCY MAP
+                </span>
+                <span className="font-editorial text-base text-[var(--ink)] truncate">
+                  22-Protocol Systems Genealogy
+                </span>
+              </div>
             ) : null}
           </div>
 
           {/* Right Instrument Controls */}
           <div className="flex items-center gap-2">
+            {/* Protocol Dependency Map Link */}
+            <Link
+              href="/map"
+              className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 font-mono text-xs uppercase tracking-wider border transition-colors ${
+                normalizedPath === '/map'
+                  ? 'bg-[var(--cobalt)] text-[#FAF7F1] border-[var(--cobalt)]'
+                  : 'bg-[var(--paper-elevated)] text-[var(--ink)] border-[var(--rule)] hover:border-[var(--ink)]'
+              }`}
+              aria-label="Protocol Dependency Map"
+            >
+              <Network className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Map</span>
+            </Link>
+
             {/* Protocol Duel Link */}
             <Link
               href="/duel"
@@ -152,6 +175,7 @@ export default function Navigation() {
                   ? 'bg-[var(--signal)] text-[#FAF7F1] border-[var(--signal)]'
                   : 'bg-[var(--paper-elevated)] text-[var(--ink)] border-[var(--rule)] hover:border-[var(--ink)]'
               }`}
+              aria-label="Protocol Duel Lab"
             >
               <Scale className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Duel</span>
