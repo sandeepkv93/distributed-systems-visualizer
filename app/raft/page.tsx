@@ -14,6 +14,13 @@ import { AnimatePresence } from 'framer-motion';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
+import ChaosStrip from '@/components/ChaosStrip';
+import {
+  ChaosConfig,
+  DEFAULT_CHAOS_CONFIG,
+  applyChaosToMessages,
+  computeDeliveryDelay,
+} from '@/lib/chaos';
 
 export default function RaftPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -25,6 +32,14 @@ export default function RaftPage() {
   const [showArticle, setShowArticle] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
+  const [chaos, setChaos] = useState<ChaosConfig>(DEFAULT_CHAOS_CONFIG);
+  const [droppedCount, setDroppedCount] = useState(0);
+  const chaosRef = useRef<ChaosConfig>(DEFAULT_CHAOS_CONFIG);
+
+  const handleChaosChange = useCallback((next: ChaosConfig) => {
+    chaosRef.current = next;
+    setChaos(next);
+  }, []);
 
   // Update visualization from algorithm state
   const updateVisualization = useCallback(() => {
@@ -47,19 +62,44 @@ export default function RaftPage() {
 
   // Handle events
   useEffect(() => {
+    const runWithChaos = (
+      filterType: RaftMessage['type'],
+      deliverAction: () => void
+    ) => {
+      const execute = () => {
+        const { dropRate } = chaosRef.current;
+        if (dropRate > 0) {
+          const pending = raft
+            .getMessages()
+            .filter((m) => m.type === filterType && m.status === 'in-flight');
+          const { dropped } = applyChaosToMessages(pending, dropRate);
+          if (dropped.length > 0) {
+            setDroppedCount((c) => c + dropped.length);
+          }
+        }
+        deliverAction();
+        updateVisualization();
+      };
+
+      const { delayMultiplier } = chaosRef.current;
+      if (delayMultiplier > 1) {
+        simulation.scheduleTimeout(execute, computeDeliveryDelay(280, delayMultiplier));
+      } else {
+        execute();
+      }
+    };
+
     simulation.onEvent('start_election', (event) => {
       raft.startElection(event.data.nodeId);
       updateVisualization();
     });
 
     simulation.onEvent('request_vote', () => {
-      raft.processRequestVotes();
-      updateVisualization();
+      runWithChaos('RequestVote', () => raft.processRequestVotes());
     });
 
     simulation.onEvent('vote_response', () => {
-      raft.processVoteResponses();
-      updateVisualization();
+      runWithChaos('RequestVoteResponse', () => raft.processVoteResponses());
     });
 
     simulation.onEvent('leader_elected', () => {
@@ -515,6 +555,13 @@ export default function RaftPage() {
               <p className="text-xs text-slate-400 mt-2">Click any node to inspect or crash/recover</p>
             </div>
           </div>
+
+          <ChaosStrip
+            config={chaos}
+            droppedCount={droppedCount}
+            onChange={handleChaosChange}
+            onResetDropped={() => setDroppedCount(0)}
+          />
         </div>
       </div>
 

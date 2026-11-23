@@ -12,6 +12,13 @@ import { gossipAntiEntropyScenarios } from '@/visualizers/gossip-anti-entropy/sc
 import { GossipNode, GossipMessage, GossipMode } from '@/lib/types';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
+import ChaosStrip from '@/components/ChaosStrip';
+import {
+  ChaosConfig,
+  DEFAULT_CHAOS_CONFIG,
+  applyChaosToMessages,
+  computeDeliveryDelay,
+} from '@/lib/chaos';
 
 export default function GossipAntiEntropyPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -22,6 +29,14 @@ export default function GossipAntiEntropyPage() {
   const [showArticle, setShowArticle] = useState(false);
   const [fanout, setFanout] = useState(1);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [chaos, setChaos] = useState<ChaosConfig>(DEFAULT_CHAOS_CONFIG);
+  const [droppedCount, setDroppedCount] = useState(0);
+  const chaosRef = useRef<ChaosConfig>(DEFAULT_CHAOS_CONFIG);
+
+  const handleChaosChange = useCallback((next: ChaosConfig) => {
+    chaosRef.current = next;
+    setChaos(next);
+  }, []);
 
   const syncVisualization = useCallback(() => {
     setNodes([...gossip.getNodes()]);
@@ -45,12 +60,21 @@ export default function GossipAntiEntropyPage() {
 
     const inFlight = gossip.getMessages().filter((m) => m.status === 'in-flight');
     if (inFlight.length > 0) {
+      const delayMs = computeDeliveryDelay(500, chaosRef.current.delayMultiplier);
       simulation.scheduleTimeout(() => {
-        inFlight.forEach((msg) => {
+        const { dropRate } = chaosRef.current;
+        const { survivors, dropped } =
+          dropRate > 0
+            ? applyChaosToMessages(inFlight, dropRate)
+            : { survivors: inFlight, dropped: [] };
+        if (dropped.length > 0) {
+          setDroppedCount((c) => c + dropped.length);
+        }
+        survivors.forEach((msg) => {
           gossip.deliverGossip(msg.id);
         });
         updateVisualization();
-      }, 500);
+      }, delayMs);
     }
   }, [gossip, simulation, syncVisualization]);
 
@@ -475,6 +499,13 @@ export default function GossipAntiEntropyPage() {
               </div>
             </div>
           </div>
+
+          <ChaosStrip
+            config={chaos}
+            droppedCount={droppedCount}
+            onChange={handleChaosChange}
+            onResetDropped={() => setDroppedCount(0)}
+          />
         </div>
       </div>
 

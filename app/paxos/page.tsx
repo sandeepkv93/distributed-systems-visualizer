@@ -14,6 +14,13 @@ import { AnimatePresence } from 'framer-motion';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
+import ChaosStrip from '@/components/ChaosStrip';
+import {
+  ChaosConfig,
+  DEFAULT_CHAOS_CONFIG,
+  applyChaosToMessages,
+  computeDeliveryDelay,
+} from '@/lib/chaos';
 
 export default function PaxosPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -26,6 +33,14 @@ export default function PaxosPage() {
   const [decidedValues, setDecidedValues] = useState<any[]>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
+  const [chaos, setChaos] = useState<ChaosConfig>(DEFAULT_CHAOS_CONFIG);
+  const [droppedCount, setDroppedCount] = useState(0);
+  const chaosRef = useRef<ChaosConfig>(DEFAULT_CHAOS_CONFIG);
+
+  const handleChaosChange = useCallback((next: ChaosConfig) => {
+    chaosRef.current = next;
+    setChaos(next);
+  }, []);
 
   // Update visualization from algorithm state
   const updateVisualization = useCallback(() => {
@@ -49,6 +64,34 @@ export default function PaxosPage() {
 
   // Handle events (reading live messages from paxos instance to avoid stale closures)
   useEffect(() => {
+    const deliverWithChaos = (
+      type: PaxosMessage['type'],
+      handler: (msg: PaxosMessage) => void
+    ) => {
+      const execute = () => {
+        const pending = paxos
+          .getMessages()
+          .filter((m) => m.type === type && m.status === 'in-flight');
+        const { dropRate } = chaosRef.current;
+        const { survivors, dropped } =
+          dropRate > 0
+            ? applyChaosToMessages(pending, dropRate)
+            : { survivors: pending, dropped: [] };
+        if (dropped.length > 0) {
+          setDroppedCount((c) => c + dropped.length);
+        }
+        survivors.forEach(handler);
+        updateVisualization();
+      };
+
+      const { delayMultiplier } = chaosRef.current;
+      if (delayMultiplier > 1) {
+        simulation.scheduleTimeout(execute, computeDeliveryDelay(280, delayMultiplier));
+      } else {
+        execute();
+      }
+    };
+
     simulation.onEvent('start_proposal', (event) => {
       paxos.startProposal(
         event.data.proposerId,
@@ -59,33 +102,15 @@ export default function PaxosPage() {
     });
 
     simulation.onEvent('handle_prepare', () => {
-      const prepareMessages = paxos
-        .getMessages()
-        .filter((m) => m.type === 'Prepare' && m.status === 'in-flight');
-      prepareMessages.forEach((msg) => {
-        paxos.handlePrepare(msg.id);
-      });
-      updateVisualization();
+      deliverWithChaos('Prepare', (msg) => paxos.handlePrepare(msg.id));
     });
 
     simulation.onEvent('handle_promise', (event) => {
-      const promiseMessages = paxos
-        .getMessages()
-        .filter((m) => m.type === 'Promise' && m.status === 'in-flight');
-      promiseMessages.forEach((msg) => {
-        paxos.handlePromise(msg.id, event.data?.value);
-      });
-      updateVisualization();
+      deliverWithChaos('Promise', (msg) => paxos.handlePromise(msg.id, event.data?.value));
     });
 
     simulation.onEvent('handle_accept', () => {
-      const acceptMessages = paxos
-        .getMessages()
-        .filter((m) => m.type === 'Accept' && m.status === 'in-flight');
-      acceptMessages.forEach((msg) => {
-        paxos.handleAccept(msg.id);
-      });
-      updateVisualization();
+      deliverWithChaos('Accept', (msg) => paxos.handleAccept(msg.id));
     });
 
     simulation.onEvent('consensus_reached', (event) => {
@@ -509,6 +534,13 @@ export default function PaxosPage() {
               </div>
             </div>
           </div>
+
+          <ChaosStrip
+            config={chaos}
+            droppedCount={droppedCount}
+            onChange={handleChaosChange}
+            onResetDropped={() => setDroppedCount(0)}
+          />
         </div>
       </div>
 
