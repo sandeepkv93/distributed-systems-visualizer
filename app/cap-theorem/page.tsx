@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from 'react';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
+import PredictionCheckpoint from '@/components/PredictionCheckpoint';
+import { getCheckpointForConcept } from '@/lib/checkpoints';
 import { useProgress } from '@/hooks/useProgress';
 import { motion } from 'framer-motion';
 
@@ -106,6 +108,7 @@ export default function CAPTheoremPage() {
   );
   const [showArticle, setShowArticle] = useState(false);
   const { completeConcept } = useProgress('cap-theorem');
+  const capCheckpoint = getCheckpointForConcept('cap-theorem');
 
   // Triangle vertices
   const triangleVertices = {
@@ -246,6 +249,7 @@ export default function CAPTheoremPage() {
             </motion.div>
           )}
 
+          {capCheckpoint && <PredictionCheckpoint checkpoint={capCheckpoint} />}
         </div>
         </div>
 

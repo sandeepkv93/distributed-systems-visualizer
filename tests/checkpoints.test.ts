@@ -1,9 +1,10 @@
 import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { CONCEPTS_BY_ID } from '@/lib/catalog';
+import { CONCEPTS_BY_ID, CONCEPTS_CATALOG } from '@/lib/catalog';
 import {
   PREDICTION_CHECKPOINTS,
   TOTAL_CHECKPOINTS,
+  getCheckpointForConcept,
   getCheckpointForScenario,
 } from '@/lib/checkpoints';
 import {
@@ -46,9 +47,10 @@ describe('Prediction Checkpoints contract and persistence', () => {
     resetProgress();
   });
 
-  it('maps every checkpoint to a real catalog concept and scenario with valid options', () => {
-    assert.ok(TOTAL_CHECKPOINTS >= 12);
+  it('covers all 22 catalog concepts with valid scenarios and options', () => {
+    assert.ok(TOTAL_CHECKPOINTS >= 22);
     const seenIds = new Set<string>();
+    const coveredConcepts = new Set<string>();
 
     for (const cp of PREDICTION_CHECKPOINTS) {
       assert.equal(seenIds.has(cp.id), false, `Duplicate checkpoint id: ${cp.id}`);
@@ -56,13 +58,31 @@ describe('Prediction Checkpoints contract and persistence', () => {
 
       const concept = CONCEPTS_BY_ID.get(cp.conceptId);
       assert.ok(concept, `Unknown conceptId "${cp.conceptId}" in checkpoint ${cp.id}`);
-      assert.ok(
-        concept.scenarios.some((s) => s.id === cp.scenarioId),
-        `Unknown scenarioId "${cp.scenarioId}" for concept "${cp.conceptId}"`
-      );
+      coveredConcepts.add(cp.conceptId);
+
+      if (concept.scenarios.length > 0) {
+        assert.ok(
+          concept.scenarios.some((s) => s.id === cp.scenarioId),
+          `Unknown scenarioId "${cp.scenarioId}" for concept "${cp.conceptId}"`
+        );
+      } else {
+        assert.equal(cp.scenarioId, 'tradeoffs');
+      }
+
       assert.equal(cp.options.length, 3);
       assert.ok(cp.correctIndex >= 0 && cp.correctIndex < cp.options.length);
       assert.equal(getCheckpointForScenario(cp.conceptId, cp.scenarioId)?.id, cp.id);
+    }
+
+    for (const concept of CONCEPTS_CATALOG) {
+      assert.ok(
+        coveredConcepts.has(concept.id),
+        `Missing prediction checkpoint for concept "${concept.id}"`
+      );
+      assert.ok(
+        getCheckpointForConcept(concept.id),
+        `getCheckpointForConcept returned null for "${concept.id}"`
+      );
     }
   });
 
