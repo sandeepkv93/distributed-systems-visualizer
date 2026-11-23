@@ -10,7 +10,8 @@ import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import { consensusVariantsScenarios } from '@/visualizers/consensus-variants/scenarios';
 import { ConsensusMessage, ConsensusNode, ConsensusVariant } from '@/lib/types';
-import { motion } from 'framer-motion';
+import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
+import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 
 const variantLabels: Record<ConsensusVariant, string> = {
   'raft-joint': 'Raft Joint Consensus',
@@ -26,6 +27,7 @@ export default function ConsensusVariantsPage() {
   const [messages, setMessages] = useState<ConsensusMessage[]>(variants.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const syncVisualization = useCallback(() => {
     setNodes([...variants.getNodes(variant)]);
@@ -93,14 +95,18 @@ export default function ConsensusVariantsPage() {
     const scenario = consensusVariantsScenarios.find((s) => s.id === scenarioId);
     if (scenario) {
       variants.reset();
-      setVariant(scenario.initialState.variant as ConsensusVariant);
+      const nextVariant = scenario.initialState.variant as ConsensusVariant;
+      setVariant(nextVariant);
       simulation.setEvents(scenario.events);
-      updateVisualization();
+      setNodes([...variants.getNodes(nextVariant)]);
+      setMessages([...variants.getMessages()]);
     }
   };
 
-  const electLeader = () => {
-    variants.electLeader(variant, nodes[0].id);
+  const electLeader = (nodeId?: string) => {
+    const targetId = nodeId ?? nodes[0]?.id;
+    if (!targetId) return;
+    variants.electLeader(variant, targetId);
     updateVisualization();
   };
 
@@ -129,7 +135,17 @@ export default function ConsensusVariantsPage() {
     updateVisualization();
   };
 
+  const getNodeColor = (node: ConsensusNode): string => {
+    if (node.role === 'leader') return SCOPE_COLORS.signal;
+    if (node.role === 'proposer') return SCOPE_COLORS.amber;
+    if (variant === 'raft-joint' && node.configPhase === 'joint') return SCOPE_COLORS.cobalt;
+    return SCOPE_COLORS.emerald;
+  };
+
   const stats = variants.getStats(variant);
+  const inspectedNode = selectedNodeId
+    ? nodes.find((n) => n.id === selectedNodeId) ?? null
+    : null;
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen md:h-screen bg-slate-900">
@@ -147,7 +163,8 @@ export default function ConsensusVariantsPage() {
           simulation.reset();
           variants.reset();
           setVariant('raft-joint');
-          updateVisualization();
+          setNodes([...variants.getNodes('raft-joint')]);
+          setMessages([...variants.getMessages()]);
         }}
         onSpeedChange={simulation.setSpeed}
         currentEventIndex={simulation.state.currentEventIndex}
@@ -170,13 +187,14 @@ export default function ConsensusVariantsPage() {
               Read the theory
             </button>
           </div>
-          <div className="flex gap-2 mt-3">
+          <div className="flex flex-wrap gap-2 mt-3">
             {(['raft-joint', 'multi-paxos', 'epaxos'] as ConsensusVariant[]).map((v) => (
               <button
                 key={v}
                 onClick={() => {
                   setVariant(v);
-                  updateVisualization();
+                  setNodes([...variants.getNodes(v)]);
+                  setMessages([...variants.getMessages()]);
                 }}
                 className={`px-3 py-1 rounded text-sm ${
                   variant === v ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300'
@@ -186,7 +204,7 @@ export default function ConsensusVariantsPage() {
               </button>
             ))}
           </div>
-          <div className="flex gap-6 mt-3 text-sm">
+          <div className="flex flex-wrap gap-6 mt-3 text-sm">
             <span className="text-slate-300">
               Nodes: <span className="font-semibold text-white">{stats.nodes}</span>
             </span>
@@ -206,64 +224,27 @@ export default function ConsensusVariantsPage() {
             <ExportMenu
               svgRef={svgRef}
               concept="Consensus Variants"
-              currentState={{ scenario: selectedScenario }}
+              currentState={{ scenario: selectedScenario, variant, stats }}
             />
           </div>
 
           <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            {nodes.map((node, index) => (
-              <motion.g
-                key={node.id}
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: index * 0.08 }}
-              >
-                <circle
-                  cx={node.position.x}
-                  cy={node.position.y}
-                  r="45"
-                  fill={
-                    node.role === 'leader'
-                      ? '#3B82F6'
-                      : node.role === 'proposer'
-                        ? '#F59E0B'
-                        : '#6B7280'
-                  }
-                  stroke="#1F2937"
-                  strokeWidth="3"
+            <ScopeDefs idPrefix="cvar" />
+
+            {/* Mesh links */}
+            {nodes.map((a, i) =>
+              nodes.slice(i + 1).map((b) => (
+                <line
+                  key={`cv-mesh-${a.id}-${b.id}`}
+                  x1={a.position.x}
+                  y1={a.position.y}
+                  x2={b.position.x}
+                  y2={b.position.y}
+                  stroke={SCOPE_COLORS.hairlineSubtle}
+                  strokeWidth="0.9"
                 />
-                <text
-                  x={node.position.x}
-                  y={node.position.y - 10}
-                  textAnchor="middle"
-                  fill="#FFF"
-                  fontSize="14"
-                  fontWeight="bold"
-                >
-                  {node.id}
-                </text>
-                <text
-                  x={node.position.x}
-                  y={node.position.y + 6}
-                  textAnchor="middle"
-                  fill="#E2E8F0"
-                  fontSize="10"
-                >
-                  {node.role.toUpperCase()}
-                </text>
-                {variant === 'raft-joint' && (
-                  <text
-                    x={node.position.x}
-                    y={node.position.y + 20}
-                    textAnchor="middle"
-                    fill="#CBD5E1"
-                    fontSize="9"
-                  >
-                    {node.configPhase}
-                  </text>
-                )}
-              </motion.g>
-            ))}
+              ))
+            )}
 
             {messages
               .filter((m) => m.status === 'in-flight')
@@ -271,38 +252,96 @@ export default function ConsensusVariantsPage() {
                 const fromNode = nodes.find((n) => n.id === message.from);
                 const toNode = nodes.find((n) => n.id === message.to);
                 if (!fromNode || !toNode) return null;
+                const isFast = variant === 'epaxos';
                 return (
-                  <g key={message.id}>
-                    <motion.line
-                      x1={fromNode.position.x}
-                      y1={fromNode.position.y}
-                      x2={toNode.position.x}
-                      y2={toNode.position.y}
-                      stroke="#3B82F6"
-                      strokeWidth="2"
-                      strokeDasharray="6,6"
-                      initial={{ pathLength: 0, opacity: 0 }}
-                      animate={{ pathLength: 1, opacity: 1 }}
-                      transition={{ duration: 0.4 }}
-                    />
-                    <motion.circle
-                      cx={(fromNode.position.x + toNode.position.x) / 2}
-                      cy={(fromNode.position.y + toNode.position.y) / 2}
-                      r="6"
-                      fill="#3B82F6"
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ duration: 0.3 }}
-                    />
-                  </g>
+                  <ScopeEdge
+                    key={message.id}
+                    idPrefix="cvar"
+                    x1={fromNode.position.x}
+                    y1={fromNode.position.y}
+                    x2={toNode.position.x}
+                    y2={toNode.position.y}
+                    color={isFast ? SCOPE_COLORS.emerald : SCOPE_COLORS.cobalt}
+                    markerKey={isFast ? 'emerald' : 'cobalt'}
+                    inset={46}
+                    label={message.type.slice(0, 8).toUpperCase()}
+                  />
                 );
               })}
+
+            {nodes.map((node) => (
+              <ScopeNode
+                key={node.id}
+                x={node.position.x}
+                y={node.position.y}
+                radius={42}
+                label={node.id}
+                sublabel={node.role.toUpperCase()}
+                topTag={
+                  variant === 'raft-joint' && node.configPhase
+                    ? `CFG ${node.configPhase.toUpperCase()}`
+                    : variantLabels[variant].toUpperCase()
+                }
+                bottomLine1={`COMMIT #${node.committedIndex} · LOG ${node.log.length}`}
+                accentColor={getNodeColor(node)}
+                haloColor={
+                  variant === 'raft-joint' && node.configPhase === 'joint'
+                    ? SCOPE_COLORS.amber
+                    : undefined
+                }
+                highlighted={node.role === 'leader' || node.role === 'proposer'}
+                selected={selectedNodeId === node.id}
+                onClick={() =>
+                  setSelectedNodeId((prev) => (prev === node.id ? null : node.id))
+                }
+              />
+            ))}
           </svg>
+
+          {!inspectedNode && <WireTapHint text="Click any replica to inspect consensus variant role & commits" />}
+
+          {inspectedNode && (
+            <WireTapInspector
+              title={`REPLICA ${inspectedNode.id}`}
+              subtitle={variantLabels[variant].toUpperCase()}
+              status={
+                inspectedNode.role === 'leader'
+                  ? 'leader'
+                  : inspectedNode.role === 'proposer'
+                  ? 'candidate'
+                  : 'healthy'
+              }
+              className="top-14 left-4"
+              metrics={[
+                { label: 'Role', value: inspectedNode.role.toUpperCase(), tone: 'signal' },
+                { label: 'Commit Idx', value: inspectedNode.committedIndex, tone: 'emerald' },
+                {
+                  label: 'Config Phase',
+                  value: inspectedNode.configPhase ? inspectedNode.configPhase.toUpperCase() : 'STABLE',
+                  tone: 'amber',
+                },
+                { label: 'Term / Log', value: `T${inspectedNode.term} · ${inspectedNode.log.length}`, tone: 'cobalt' },
+              ]}
+              actions={[
+                {
+                  label: 'Elect Leader',
+                  onClick: () => electLeader(inspectedNode.id),
+                  variant: 'signal',
+                },
+                {
+                  label: 'Append Entry',
+                  onClick: appendEntry,
+                  variant: 'emerald',
+                },
+              ]}
+              onClose={() => setSelectedNodeId(null)}
+            />
+          )}
 
           <div className="absolute bottom-4 left-4 bg-slate-800 rounded-lg p-4 border border-slate-700 space-y-2 max-w-xs">
             <h3 className="text-sm font-semibold text-white">Manual Controls</h3>
             <button
-              onClick={electLeader}
+              onClick={() => electLeader()}
               className="w-full px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
             >
               Elect Leader
@@ -323,7 +362,7 @@ export default function ConsensusVariantsPage() {
                 </button>
                 <button
                   onClick={finalizeJoint}
-                  className="w-full px-3 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700"
+                  className="w-full px-3 py-2 bg-[#D9441E] text-white text-sm rounded hover:bg-[#B83412]"
                 >
                   Finalize Config
                 </button>

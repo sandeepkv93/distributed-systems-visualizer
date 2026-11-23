@@ -10,7 +10,8 @@ import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import { networkPartitionsScenarios } from '@/visualizers/network-partitions/scenarios';
 import { PartitionLink, PartitionNode } from '@/lib/types';
-import { motion } from 'framer-motion';
+import { ScopeDefs, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
+import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 
 export default function NetworkPartitionsPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -19,6 +20,7 @@ export default function NetworkPartitionsPage() {
   const [links, setLinks] = useState<PartitionLink[]>(np.getLinks());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const syncVisualization = useCallback(() => {
     setNodes([...np.getNodes()]);
@@ -97,16 +99,16 @@ export default function NetworkPartitionsPage() {
   };
 
   const getNodeColor = (node: PartitionNode): string => {
-    if (node.role === 'leader') return '#10B981';
-    if (node.role === 'candidate') return '#F59E0B';
-    return '#6B7280';
-  };
-
-  const getLinkColor = (link: PartitionLink): string => {
-    return link.status === 'up' ? '#334155' : '#EF4444';
+    if (node.role === 'leader') return SCOPE_COLORS.signal;
+    if (node.role === 'candidate') return SCOPE_COLORS.amber;
+    return node.partitionId === 'B' ? SCOPE_COLORS.amber : SCOPE_COLORS.cobalt;
   };
 
   const stats = np.getStats();
+  const isSplitBrain = stats.leaders > 1;
+  const inspectedNode = selectedNodeId
+    ? nodes.find((n) => n.id === selectedNodeId) ?? null
+    : null;
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen md:h-screen bg-slate-900">
@@ -146,12 +148,19 @@ export default function NetworkPartitionsPage() {
               Read the theory
             </button>
           </div>
-          <div className="flex gap-6 mt-3 text-sm">
+          <div className="flex flex-wrap gap-6 mt-3 text-sm">
             <span className="text-slate-300">
-              Leaders: <span className="font-semibold text-white">{stats.leaders}</span>
+              Leaders:{' '}
+              <span className={`font-semibold ${isSplitBrain ? 'text-red-400' : 'text-green-400'}`}>
+                {stats.leaders}
+                {isSplitBrain ? ' (SPLIT-BRAIN)' : ''}
+              </span>
             </span>
             <span className="text-slate-300">
-              Partitions: <span className="font-semibold text-white">{stats.partitions}</span>
+              Partitions:{' '}
+              <span className={`font-semibold ${stats.partitions > 1 ? 'text-amber-400' : 'text-white'}`}>
+                {stats.partitions}
+              </span>
             </span>
           </div>
         </div>
@@ -161,15 +170,18 @@ export default function NetworkPartitionsPage() {
             <ExportMenu
               svgRef={svgRef}
               concept="Network Partitions + Split-Brain"
-              currentState={{ scenario: selectedScenario }}
+              currentState={{ scenario: selectedScenario, stats }}
             />
           </div>
 
           <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+            <ScopeDefs idPrefix="netpart" />
+
             {links.map((link) => {
               const fromNode = nodes.find((n) => n.id === link.from);
               const toNode = nodes.find((n) => n.id === link.to);
               if (!fromNode || !toNode) return null;
+              const isDown = link.status !== 'up';
               return (
                 <line
                   key={`${link.from}-${link.to}`}
@@ -177,58 +189,93 @@ export default function NetworkPartitionsPage() {
                   y1={fromNode.position.y}
                   x2={toNode.position.x}
                   y2={toNode.position.y}
-                  stroke={getLinkColor(link)}
-                  strokeWidth="1"
+                  stroke={isDown ? SCOPE_COLORS.danger : SCOPE_COLORS.hairline}
+                  strokeWidth={isDown ? '1.3' : '1'}
+                  strokeDasharray={isDown ? '4 5' : undefined}
+                  opacity={isDown ? 0.5 : 0.75}
                 />
               );
             })}
 
-            {nodes.map((node, index) => (
-              <motion.g
-                key={node.id}
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: index * 0.08 }}
-              >
-                <circle
-                  cx={node.position.x}
-                  cy={node.position.y}
-                  r="45"
-                  fill={getNodeColor(node)}
-                  stroke="#1F2937"
-                  strokeWidth="3"
+            {nodes.map((node) => {
+              const haloColor =
+                stats.partitions > 1
+                  ? node.partitionId === 'A'
+                    ? SCOPE_COLORS.cobalt
+                    : SCOPE_COLORS.amber
+                  : undefined;
+              return (
+                <ScopeNode
+                  key={node.id}
+                  x={node.position.x}
+                  y={node.position.y}
+                  radius={42}
+                  label={node.id}
+                  sublabel={`PART ${node.partitionId}`}
+                  topTag={node.role.toUpperCase()}
+                  bottomLine1={
+                    node.role === 'leader' ? 'ELECTED LEADER' : `PARTITION ${node.partitionId}`
+                  }
+                  accentColor={getNodeColor(node)}
+                  haloColor={haloColor}
+                  highlighted={node.role === 'leader'}
+                  selected={selectedNodeId === node.id}
+                  onClick={() =>
+                    setSelectedNodeId((prev) => (prev === node.id ? null : node.id))
+                  }
                 />
-                <text
-                  x={node.position.x}
-                  y={node.position.y - 10}
-                  textAnchor="middle"
-                  fill="#FFF"
-                  fontSize="14"
-                  fontWeight="bold"
-                >
-                  {node.id}
-                </text>
-                <text
-                  x={node.position.x}
-                  y={node.position.y + 6}
-                  textAnchor="middle"
-                  fill="#E2E8F0"
-                  fontSize="10"
-                >
-                  {node.role.toUpperCase()}
-                </text>
-                <text
-                  x={node.position.x}
-                  y={node.position.y + 20}
-                  textAnchor="middle"
-                  fill="#CBD5E1"
-                  fontSize="9"
-                >
-                  partition {node.partitionId}
-                </text>
-              </motion.g>
-            ))}
+              );
+            })}
           </svg>
+
+          {!inspectedNode && <WireTapHint text="Click any node to inspect partition membership & links" />}
+
+          {inspectedNode && (
+            <WireTapInspector
+              title={`NODE ${inspectedNode.id}`}
+              subtitle={`PARTITION ${inspectedNode.partitionId}`}
+              status={
+                inspectedNode.role === 'leader'
+                  ? 'leader'
+                  : inspectedNode.role === 'candidate'
+                  ? 'candidate'
+                  : 'healthy'
+              }
+              className="top-14 left-4"
+              metrics={[
+                { label: 'Role', value: inspectedNode.role.toUpperCase(), tone: 'signal' },
+                { label: 'Partition', value: inspectedNode.partitionId, tone: 'cobalt' },
+                {
+                  label: 'Reachable',
+                  value: `${
+                    links.filter(
+                      (l) =>
+                        l.status === 'up' &&
+                        (l.from === inspectedNode.id || l.to === inspectedNode.id)
+                    ).length
+                  } peers`,
+                  tone: 'emerald',
+                },
+                {
+                  label: 'Cluster',
+                  value: isSplitBrain ? 'SPLIT-BRAIN' : stats.partitions > 1 ? 'PARTITIONED' : 'UNIFIED',
+                  tone: isSplitBrain ? 'danger' : stats.partitions > 1 ? 'amber' : 'emerald',
+                },
+              ]}
+              actions={[
+                {
+                  label: `Elect Part ${inspectedNode.partitionId}`,
+                  onClick: () =>
+                    inspectedNode.partitionId === 'B' ? electionB() : electionA(),
+                  variant: 'signal',
+                },
+                stats.partitions > 1
+                  ? { label: 'Heal Network', onClick: heal, variant: 'emerald' }
+                  : { label: 'Split Network', onClick: split, variant: 'danger' },
+              ]}
+              onClose={() => setSelectedNodeId(null)}
+            />
+          )}
 
           <div className="absolute bottom-4 left-4 bg-slate-800 rounded-lg p-4 border border-slate-700 space-y-2 max-w-xs">
             <h3 className="text-sm font-semibold text-white">Manual Controls</h3>
@@ -252,7 +299,7 @@ export default function NetworkPartitionsPage() {
             </button>
             <button
               onClick={electionB}
-              className="w-full px-3 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700"
+              className="w-full px-3 py-2 bg-[#D9441E] text-white text-sm rounded hover:bg-[#B83412]"
             >
               Election Partition B
             </button>

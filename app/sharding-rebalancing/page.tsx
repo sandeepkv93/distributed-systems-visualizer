@@ -10,7 +10,8 @@ import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import { shardingRebalancingScenarios } from '@/visualizers/sharding-rebalancing/scenarios';
 import { ShardMessage, ShardNode, ShardingStrategy } from '@/lib/types';
-import { motion } from 'framer-motion';
+import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
+import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 
 export default function ShardingRebalancingPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -20,6 +21,7 @@ export default function ShardingRebalancingPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
   const [strategy, setStrategy] = useState<ShardingStrategy>('range');
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const syncVisualization = useCallback(() => {
     setNodes([...sharding.getNodes()]);
@@ -97,10 +99,13 @@ export default function ShardingRebalancingPage() {
     updateVisualization();
   };
 
-  const removeLastNode = () => {
+  const removeLastNode = (nodeId?: string) => {
     if (nodes.length <= 1) return;
-    const target = nodes[nodes.length - 1].id;
+    const target = nodeId ?? nodes[nodes.length - 1].id;
     sharding.removeNode(target);
+    if (selectedNodeId === target) {
+      setSelectedNodeId(null);
+    }
     updateVisualization();
   };
 
@@ -110,16 +115,23 @@ export default function ShardingRebalancingPage() {
   };
 
   const getNodeColor = (node: ShardNode): string => {
-    if (node.load === 0) return '#6B7280';
-    if (node.load > 25) return '#F59E0B';
-    return '#10B981';
+    if (node.load === 0) return SCOPE_COLORS.inkMuted;
+    if (node.load > 25) return SCOPE_COLORS.amber;
+    return SCOPE_COLORS.emerald;
   };
 
-  const getMessageColor = (message: ShardMessage): string => {
-    return message.type === 'MoveShard' ? '#3B82F6' : '#8B5CF6';
+  const getMessageStyle = (
+    message: ShardMessage
+  ): { color: string; markerKey: 'cobalt' | 'signal'; label: string } => {
+    return message.type === 'MoveShard'
+      ? { color: SCOPE_COLORS.cobalt, markerKey: 'cobalt', label: 'MOVE SHARD' }
+      : { color: SCOPE_COLORS.signal, markerKey: 'signal', label: 'REBALANCE' };
   };
 
   const stats = sharding.getStats();
+  const inspectedNode = selectedNodeId
+    ? nodes.find((n) => n.id === selectedNodeId) ?? null
+    : null;
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen md:h-screen bg-slate-900">
@@ -160,12 +172,12 @@ export default function ShardingRebalancingPage() {
               Read the theory
             </button>
           </div>
-          <div className="flex gap-6 mt-3 text-sm">
+          <div className="flex flex-wrap gap-6 mt-3 text-sm">
             <span className="text-slate-300">
               Nodes: <span className="font-semibold text-white">{stats.totalNodes}</span>
             </span>
             <span className="text-slate-300">
-              Strategy: <span className="font-semibold text-white">{stats.strategy}</span>
+              Strategy: <span className="font-semibold text-blue-400">{stats.strategy.toUpperCase()}</span>
             </span>
             <span className="text-slate-300">
               Keys: <span className="font-semibold text-white">{stats.totalKeys}</span>
@@ -181,95 +193,125 @@ export default function ShardingRebalancingPage() {
             <ExportMenu
               svgRef={svgRef}
               concept="Sharding + Rebalancing"
-              currentState={{ scenario: selectedScenario }}
+              currentState={{ scenario: selectedScenario, strategy }}
             />
           </div>
 
           <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            {nodes.map((node, index) => (
-              <motion.g
-                key={node.id}
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: index * 0.08 }}
-              >
-                <circle
-                  cx={node.position.x}
-                  cy={node.position.y}
-                  r="45"
-                  fill={getNodeColor(node)}
-                  stroke="#1F2937"
-                  strokeWidth="3"
+            <ScopeDefs idPrefix="shard" />
+
+            {/* Shard cluster ring */}
+            {nodes.map((a, i) => {
+              const b = nodes[(i + 1) % nodes.length];
+              if (!b || nodes.length < 2) return null;
+              return (
+                <line
+                  key={`sh-ring-${a.id}-${b.id}`}
+                  x1={a.position.x}
+                  y1={a.position.y}
+                  x2={b.position.x}
+                  y2={b.position.y}
+                  stroke={SCOPE_COLORS.hairlineSubtle}
+                  strokeWidth="1"
                 />
-                <text
-                  x={node.position.x}
-                  y={node.position.y - 10}
-                  textAnchor="middle"
-                  fill="#FFF"
-                  fontSize="14"
-                  fontWeight="bold"
-                >
-                  {node.id}
-                </text>
-                <text
-                  x={node.position.x}
-                  y={node.position.y + 5}
-                  textAnchor="middle"
-                  fill="#FFF"
-                  fontSize="10"
-                >
-                  load {node.load}
-                </text>
-                <text
-                  x={node.position.x}
-                  y={node.position.y + 20}
-                  textAnchor="middle"
-                  fill="#CBD5E1"
-                  fontSize="9"
-                >
-                  shards {node.shards.length}
-                </text>
-              </motion.g>
-            ))}
+              );
+            })}
 
             {messages
               .filter((m) => m.status === 'in-flight')
               .map((message) => {
                 const fromNode = nodes.find((n) => n.id === message.from);
                 const toNode = nodes.find((n) => n.id === message.to);
-
                 if (!fromNode || !toNode) return null;
-
-                const midX = (fromNode.position.x + toNode.position.x) / 2;
-                const midY = (fromNode.position.y + toNode.position.y) / 2;
-
+                const style = getMessageStyle(message);
                 return (
-                  <g key={message.id}>
-                    <motion.line
-                      x1={fromNode.position.x}
-                      y1={fromNode.position.y}
-                      x2={toNode.position.x}
-                      y2={toNode.position.y}
-                      stroke={getMessageColor(message)}
-                      strokeWidth="2"
-                      strokeDasharray="6,6"
-                      initial={{ pathLength: 0, opacity: 0 }}
-                      animate={{ pathLength: 1, opacity: 1 }}
-                      transition={{ duration: 0.4 }}
-                    />
-                    <motion.circle
-                      cx={midX}
-                      cy={midY}
-                      r="6"
-                      fill={getMessageColor(message)}
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ duration: 0.3 }}
-                    />
-                  </g>
+                  <ScopeEdge
+                    key={message.id}
+                    idPrefix="shard"
+                    x1={fromNode.position.x}
+                    y1={fromNode.position.y}
+                    x2={toNode.position.x}
+                    y2={toNode.position.y}
+                    color={style.color}
+                    markerKey={style.markerKey}
+                    inset={46}
+                    label={style.label}
+                    dashed={message.type !== 'MoveShard'}
+                  />
                 );
               })}
+
+            {nodes.map((node) => (
+              <ScopeNode
+                key={node.id}
+                x={node.position.x}
+                y={node.position.y}
+                radius={42}
+                label={node.id}
+                sublabel={`LOAD ${node.load}`}
+                topTag={node.load > 25 ? 'HOT SHARD' : node.load === 0 ? 'IDLE' : 'BALANCED'}
+                bottomLine1={`${node.shards.length} ${node.shards.length === 1 ? 'SHARD' : 'SHARDS'} · ${node.keys.length} KEYS`}
+                accentColor={getNodeColor(node)}
+                highlighted={node.load > 25}
+                selected={selectedNodeId === node.id}
+                onClick={() =>
+                  setSelectedNodeId((prev) => (prev === node.id ? null : node.id))
+                }
+              />
+            ))}
           </svg>
+
+          {!inspectedNode && <WireTapHint text="Click any shard node to inspect key ranges & load" />}
+
+          {inspectedNode && (
+            <WireTapInspector
+              title={`SHARD NODE ${inspectedNode.id}`}
+              subtitle={`${strategy.toUpperCase()} PARTITIONING`}
+              status={inspectedNode.load > 25 ? 'candidate' : 'healthy'}
+              className="top-14 left-4"
+              metrics={[
+                {
+                  label: 'Load',
+                  value: inspectedNode.load,
+                  tone: inspectedNode.load > 25 ? 'amber' : 'emerald',
+                },
+                { label: 'Shards', value: inspectedNode.shards.length, tone: 'cobalt' },
+                { label: 'Keys Owned', value: inspectedNode.keys.length },
+                { label: 'Cluster Avg', value: stats.avgLoad.toFixed(1) },
+              ]}
+              actions={[
+                {
+                  label: 'Rebalance',
+                  onClick: rebalance,
+                  variant: 'signal',
+                },
+                {
+                  label: 'Remove Node',
+                  onClick: () => removeLastNode(inspectedNode.id),
+                  variant: 'danger',
+                  disabled: nodes.length <= 1,
+                },
+              ]}
+              onClose={() => setSelectedNodeId(null)}
+            >
+              <div>
+                <div className="text-[9px] uppercase tracking-[0.12em] text-[#9E9B90] mb-1">
+                  Assigned Ranges ({inspectedNode.shards.length})
+                </div>
+                {inspectedNode.shards.length === 0 ? (
+                  <div className="text-[#9E9B90]">No shards assigned</div>
+                ) : (
+                  <div className="space-y-1">
+                    {inspectedNode.shards.map((shard, index) => (
+                      <div key={index} className="text-[#F4F0E8]">
+                        [{shard.start}, {shard.end}]
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </WireTapInspector>
+          )}
 
           <div className="absolute bottom-4 left-4 bg-slate-800 rounded-lg p-4 border border-slate-700 space-y-2 max-w-xs">
             <h3 className="text-sm font-semibold text-white">Manual Controls</h3>
@@ -286,20 +328,20 @@ export default function ShardingRebalancingPage() {
               Add Node
             </button>
             <button
-              onClick={removeLastNode}
-              className="w-full px-3 py-2 bg-pink-600 text-white text-sm rounded hover:bg-pink-700"
+              onClick={() => removeLastNode()}
+              className="w-full px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700"
             >
               Remove Last Node
             </button>
             <button
               onClick={rebalance}
-              className="w-full px-3 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700"
+              className="w-full px-3 py-2 bg-[#D9441E] text-white text-sm rounded hover:bg-[#B83412]"
             >
               Rebalance Now
             </button>
           </div>
 
-          <div className="absolute top-4 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-sm max-h-96 overflow-y-auto">
+          <div className="absolute top-16 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-sm max-h-72 overflow-y-auto">
             <h3 className="text-sm font-semibold text-white mb-2">Shard Ranges</h3>
             <div className="space-y-2">
               {nodes.map((node) => (
@@ -321,15 +363,15 @@ export default function ShardingRebalancingPage() {
             <h3 className="text-sm font-semibold text-white mb-2">Legend</h3>
             <div className="space-y-1 text-xs">
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-green-600" />
+                <div className="w-3 h-3 rounded-full bg-[#34D399]" />
                 <span className="text-slate-400">Balanced load</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-amber-500" />
+                <div className="w-3 h-3 rounded-full bg-[#FBBF24]" />
                 <span className="text-slate-400">Hot shard</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-slate-500" />
+                <div className="w-3 h-3 rounded-full bg-[#9E9B90]" />
                 <span className="text-slate-400">Idle</span>
               </div>
             </div>

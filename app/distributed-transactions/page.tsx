@@ -10,7 +10,8 @@ import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import { distributedTransactionsScenarios } from '@/visualizers/distributed-transactions/scenarios';
 import { TransactionMessage, TransactionParticipant, SagaStep } from '@/lib/types';
-import { motion } from 'framer-motion';
+import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
+import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 
 export default function DistributedTransactionsPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -22,6 +23,9 @@ export default function DistributedTransactionsPage() {
   const [messages, setMessages] = useState<TransactionMessage[]>(transactions.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
+  const [selectedEntity, setSelectedEntity] = useState<
+    { kind: 'participant'; id: string } | { kind: 'saga'; id: string } | null
+  >(null);
 
   const syncVisualization = useCallback(() => {
     setParticipants([...transactions.getParticipants()]);
@@ -108,14 +112,19 @@ export default function DistributedTransactionsPage() {
     updateVisualization();
   };
 
-  const voteYes = () => {
-    participants.forEach((p) => transactions.receiveVote(p.id, 'yes'));
+  const voteYes = (participantId?: string) => {
+    if (participantId) {
+      transactions.receiveVote(participantId, 'yes');
+    } else {
+      participants.forEach((p) => transactions.receiveVote(p.id, 'yes'));
+    }
     updateVisualization();
   };
 
-  const voteNo = () => {
-    if (participants[0]) {
-      transactions.receiveVote(participants[0].id, 'no');
+  const voteNo = (participantId?: string) => {
+    const targetId = participantId ?? participants[0]?.id;
+    if (targetId) {
+      transactions.receiveVote(targetId, 'no');
     }
     updateVisualization();
   };
@@ -146,20 +155,41 @@ export default function DistributedTransactionsPage() {
   };
 
   const getParticipantColor = (participant: TransactionParticipant): string => {
-    if (participant.phase === 'abort') return '#EF4444';
-    if (participant.phase === 'commit' || participant.phase === 'done') return '#10B981';
-    if (participant.phase === 'pre-commit') return '#F59E0B';
-    if (participant.phase === 'prepare') return '#3B82F6';
-    return '#6B7280';
+    if (participant.phase === 'abort') return SCOPE_COLORS.danger;
+    if (participant.phase === 'commit' || participant.phase === 'done') return SCOPE_COLORS.emerald;
+    if (participant.phase === 'pre-commit') return SCOPE_COLORS.amber;
+    if (participant.phase === 'prepare') return SCOPE_COLORS.cobalt;
+    return SCOPE_COLORS.inkMuted;
   };
 
   const getSagaColor = (step: SagaStep): string => {
-    if (step.status === 'completed') return '#10B981';
-    if (step.status === 'compensated') return '#EF4444';
-    return '#6B7280';
+    if (step.status === 'completed') return SCOPE_COLORS.emerald;
+    if (step.status === 'compensated') return SCOPE_COLORS.danger;
+    return SCOPE_COLORS.inkMuted;
   };
 
   const stats = transactions.getStats();
+  const coordX = 460;
+  const coordY = 105;
+  const participantCoords = participants.map((p, i) => ({
+    id: p.id,
+    x: 240 + i * 220,
+    y: 250,
+  }));
+  const sagaCoords = sagaSteps.map((s, i) => ({
+    id: s.id,
+    x: 240 + i * 220,
+    y: 430,
+  }));
+
+  const inspectedParticipant =
+    selectedEntity?.kind === 'participant'
+      ? participants.find((p) => p.id === selectedEntity.id) ?? null
+      : null;
+  const inspectedSaga =
+    selectedEntity?.kind === 'saga'
+      ? sagaSteps.find((s) => s.id === selectedEntity.id) ?? null
+      : null;
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen md:h-screen bg-slate-900">
@@ -199,7 +229,7 @@ export default function DistributedTransactionsPage() {
               Read the theory
             </button>
           </div>
-          <div className="flex gap-6 mt-3 text-sm">
+          <div className="flex flex-wrap gap-6 mt-3 text-sm">
             <span className="text-slate-300">
               Prepared: <span className="font-semibold text-blue-400">{stats.prepared}</span>
             </span>
@@ -233,146 +263,335 @@ export default function DistributedTransactionsPage() {
               }}
             />
           </div>
-          <svg ref={svgRef} className="hidden" width="1200" height="800" viewBox="0 0 1200 800">
-            <rect width="1200" height="800" fill="#0f172a" />
-            <text x="40" y="70" fill="#e2e8f0" fontSize="38" fontWeight="700">
-              Distributed Transactions
+
+          <svg ref={svgRef} viewBox="0 0 920 560" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+            <ScopeDefs idPrefix="dtx" />
+
+            {/* Band labels & divider */}
+            <text
+              x={60}
+              y={52}
+              fill={SCOPE_COLORS.inkMuted}
+              fontSize="10"
+              fontFamily="var(--font-mono), monospace"
+              letterSpacing="0.14em"
+            >
+              01 · THREE-PHASE COMMIT (3PC)
             </text>
-            <text x="40" y="115" fill="#94a3b8" fontSize="20">
-              Scenario: {selectedScenario || 'manual'}
+            <line
+              x1={60}
+              y1={336}
+              x2={860}
+              y2={336}
+              stroke={SCOPE_COLORS.hairline}
+              strokeWidth="1"
+              strokeDasharray="4 4"
+            />
+            <text
+              x={60}
+              y={362}
+              fill={SCOPE_COLORS.inkMuted}
+              fontSize="10"
+              fontFamily="var(--font-mono), monospace"
+              letterSpacing="0.14em"
+            >
+              02 · SAGA WORKFLOW &amp; COMPENSATIONS
             </text>
-            <text x="40" y="160" fill="#e2e8f0" fontSize="24">
-              3PC + Saga Summary
-            </text>
-            <text x="40" y="200" fill="#93c5fd" fontSize="20">
-              Prepared: {stats.prepared}
-            </text>
-            <text x="280" y="200" fill="#86efac" fontSize="20">
-              Committed: {stats.committed}
-            </text>
-            <text x="520" y="200" fill="#fca5a5" fontSize="20">
-              Aborted: {stats.aborted}
-            </text>
-            <text x="40" y="245" fill="#86efac" fontSize="20">
-              Saga Completed: {stats.sagaCompleted}
-            </text>
-            <text x="340" y="245" fill="#fca5a5" fontSize="20">
-              Compensated: {stats.sagaCompensated}
-            </text>
+
+            {/* 3PC coordinator spokes */}
+            {participantCoords.map((pos) => (
+              <line
+                key={`3pc-spoke-${pos.id}`}
+                x1={coordX}
+                y1={coordY}
+                x2={pos.x}
+                y2={pos.y}
+                stroke={SCOPE_COLORS.hairline}
+                strokeWidth="1"
+              />
+            ))}
+
+            {/* Saga forward/compensation chain */}
+            {sagaCoords.slice(0, -1).map((pos, idx) => {
+              const next = sagaCoords[idx + 1];
+              const step = sagaSteps[idx];
+              const isComp = step?.status === 'compensated';
+              return (
+                <line
+                  key={`saga-link-${pos.id}-${next.id}`}
+                  x1={pos.x + 42}
+                  y1={pos.y}
+                  x2={next.x - 42}
+                  y2={next.y}
+                  stroke={isComp ? SCOPE_COLORS.danger : SCOPE_COLORS.cobalt}
+                  strokeWidth="1.5"
+                  strokeDasharray={isComp ? '4 4' : undefined}
+                  markerEnd={`url(#dtx-arrow-${isComp ? 'danger' : 'cobalt'})`}
+                  opacity="0.7"
+                />
+              );
+            })}
+
+            {/* In-flight 3PC / Saga messages */}
+            {messages
+              .filter((m) => m.status === 'in-flight')
+              .map((message) => {
+                const pTarget = participantCoords.find((p) => p.id === message.to);
+                if (pTarget) {
+                  const isAbort = message.type === 'Abort';
+                  const isCommit = message.type === 'Commit';
+                  return (
+                    <ScopeEdge
+                      key={message.id}
+                      idPrefix="dtx"
+                      x1={coordX}
+                      y1={coordY}
+                      x2={pTarget.x}
+                      y2={pTarget.y}
+                      color={
+                        isAbort
+                          ? SCOPE_COLORS.danger
+                          : isCommit
+                          ? SCOPE_COLORS.emerald
+                          : SCOPE_COLORS.cobalt
+                      }
+                      markerKey={isAbort ? 'danger' : isCommit ? 'emerald' : 'cobalt'}
+                      inset={42}
+                      label={message.type.toUpperCase()}
+                      dashed={isAbort}
+                    />
+                  );
+                }
+                return null;
+              })}
+
+            {/* 3PC Coordinator */}
+            <ScopeNode
+              x={coordX}
+              y={coordY}
+              radius={36}
+              label="COORD"
+              sublabel="3PC"
+              topTag={stats.committed > 0 ? 'COMMITTED' : stats.aborted > 0 ? 'ABORTED' : 'COORDINATOR'}
+              accentColor={
+                stats.aborted > 0
+                  ? SCOPE_COLORS.danger
+                  : stats.committed > 0
+                  ? SCOPE_COLORS.emerald
+                  : SCOPE_COLORS.signal
+              }
+              highlighted
+            />
+
+            {/* 3PC Participants */}
+            {participants.map((participant, idx) => {
+              const pos = participantCoords[idx];
+              return (
+                <ScopeNode
+                  key={participant.id}
+                  x={pos.x}
+                  y={pos.y}
+                  radius={38}
+                  label={participant.id}
+                  sublabel={participant.phase.toUpperCase()}
+                  topTag={participant.vote ? `VOTE ${participant.vote.toUpperCase()}` : 'PARTICIPANT'}
+                  accentColor={getParticipantColor(participant)}
+                  failed={participant.phase === 'abort'}
+                  highlighted={participant.phase === 'pre-commit'}
+                  selected={
+                    selectedEntity?.kind === 'participant' && selectedEntity.id === participant.id
+                  }
+                  onClick={() =>
+                    setSelectedEntity((prev) =>
+                      prev?.kind === 'participant' && prev.id === participant.id
+                        ? null
+                        : { kind: 'participant', id: participant.id }
+                    )
+                  }
+                />
+              );
+            })}
+
+            {/* Saga Steps */}
+            {sagaSteps.map((step, idx) => {
+              const pos = sagaCoords[idx];
+              return (
+                <ScopeNode
+                  key={step.id}
+                  x={pos.x}
+                  y={pos.y}
+                  radius={38}
+                  label={step.id}
+                  sublabel={step.status.toUpperCase()}
+                  topTag={step.name.toUpperCase()}
+                  accentColor={getSagaColor(step)}
+                  failed={step.status === 'compensated'}
+                  highlighted={step.status === 'completed'}
+                  selected={selectedEntity?.kind === 'saga' && selectedEntity.id === step.id}
+                  onClick={() =>
+                    setSelectedEntity((prev) =>
+                      prev?.kind === 'saga' && prev.id === step.id
+                        ? null
+                        : { kind: 'saga', id: step.id }
+                    )
+                  }
+                />
+              );
+            })}
           </svg>
-          <div className="grid grid-cols-2 gap-6 p-6 h-full">
-            <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 relative">
-              <h2 className="text-lg font-semibold text-white mb-4">3PC Timeline</h2>
-              <div className="space-y-3">
-                {participants.map((participant) => (
-                  <div key={participant.id} className="flex items-center gap-3">
-                    <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
-                      style={{ backgroundColor: getParticipantColor(participant) }}
-                    >
-                      {participant.id}
-                    </div>
-                    <div className="text-slate-200 text-sm">
-                      {participant.phase.toUpperCase()}
-                      {participant.vote && (
-                        <span className="text-slate-400"> · vote {participant.vote}</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
 
-              <div className="mt-4 space-y-2">
-                <button
-                  onClick={start3PC}
-                  className="w-full px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-                >
-                  Start 3PC
-                </button>
-                <button
-                  onClick={voteYes}
-                  className="w-full px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700"
-                >
-                  Vote Yes
-                </button>
-                <button
-                  onClick={voteNo}
-                  className="w-full px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700"
-                >
-                  Vote No (P0)
-                </button>
-                <button
-                  onClick={decide3PC}
-                  className="w-full px-3 py-2 bg-amber-600 text-white text-sm rounded hover:bg-amber-700"
-                >
-                  Decide (Pre-Commit/Abort)
-                </button>
-                <button
-                  onClick={commit3PC}
-                  className="w-full px-3 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700"
-                >
-                  Commit
-                </button>
-              </div>
+          {!inspectedParticipant && !inspectedSaga && (
+            <WireTapHint text="Click any 3PC participant or Saga step to inspect & act" />
+          )}
+
+          {inspectedParticipant && (
+            <WireTapInspector
+              title={`PARTICIPANT ${inspectedParticipant.id}`}
+              subtitle="THREE-PHASE COMMIT"
+              status={
+                inspectedParticipant.phase === 'abort'
+                  ? 'failed'
+                  : inspectedParticipant.phase === 'pre-commit'
+                  ? 'candidate'
+                  : 'healthy'
+              }
+              className="top-14 left-4"
+              metrics={[
+                { label: 'Phase', value: inspectedParticipant.phase.toUpperCase(), tone: 'cobalt' },
+                {
+                  label: 'Vote',
+                  value: inspectedParticipant.vote ? inspectedParticipant.vote.toUpperCase() : 'NONE',
+                  tone: inspectedParticipant.vote === 'no' ? 'danger' : 'emerald',
+                },
+                { label: 'Prepared', value: stats.prepared },
+                { label: 'Committed', value: stats.committed, tone: 'emerald' },
+              ]}
+              actions={[
+                {
+                  label: 'Vote YES',
+                  onClick: () => voteYes(inspectedParticipant.id),
+                  variant: 'emerald',
+                },
+                {
+                  label: 'Vote NO',
+                  onClick: () => voteNo(inspectedParticipant.id),
+                  variant: 'danger',
+                },
+              ]}
+              onClose={() => setSelectedEntity(null)}
+            />
+          )}
+
+          {inspectedSaga && (
+            <WireTapInspector
+              title={`SAGA ${inspectedSaga.id}`}
+              subtitle={inspectedSaga.name.toUpperCase()}
+              status={
+                inspectedSaga.status === 'compensated'
+                  ? 'failed'
+                  : inspectedSaga.status === 'completed'
+                  ? 'healthy'
+                  : 'info'
+              }
+              className="top-14 left-4"
+              metrics={[
+                { label: 'Step Name', value: inspectedSaga.name },
+                {
+                  label: 'Status',
+                  value: inspectedSaga.status.toUpperCase(),
+                  tone:
+                    inspectedSaga.status === 'compensated'
+                      ? 'danger'
+                      : inspectedSaga.status === 'completed'
+                      ? 'emerald'
+                      : 'amber',
+                },
+                { label: 'Completed', value: stats.sagaCompleted, tone: 'emerald' },
+                { label: 'Compensated', value: stats.sagaCompensated, tone: 'signal' },
+              ]}
+              actions={[
+                {
+                  label: 'Complete Step',
+                  onClick: () => completeStep(inspectedSaga.id),
+                  variant: 'emerald',
+                },
+                {
+                  label: 'Compensate',
+                  onClick: () => compensateStep(inspectedSaga.id),
+                  variant: 'danger',
+                },
+              ]}
+              onClose={() => setSelectedEntity(null)}
+            />
+          )}
+
+          {/* 3PC Manual Controls */}
+          <div className="absolute bottom-4 left-4 bg-slate-800 rounded-lg p-3.5 border border-slate-700 space-y-1.5 w-56">
+            <h3 className="text-xs font-semibold text-white uppercase tracking-wider mb-1">
+              3PC Controls
+            </h3>
+            <button
+              onClick={start3PC}
+              className="w-full px-2.5 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+            >
+              Start 3PC
+            </button>
+            <div className="flex gap-1.5">
+              <button
+                onClick={() => voteYes()}
+                className="flex-1 px-2 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700"
+              >
+                Vote Yes
+              </button>
+              <button
+                onClick={() => voteNo()}
+                className="flex-1 px-2 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+              >
+                Vote No
+              </button>
             </div>
-
-            <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 relative">
-              <h2 className="text-lg font-semibold text-white mb-4">Saga Steps</h2>
-              <div className="space-y-3">
-                {sagaSteps.map((step) => (
-                  <div key={step.id} className="flex items-center gap-3">
-                    <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
-                      style={{ backgroundColor: getSagaColor(step) }}
-                    >
-                      {step.id}
-                    </div>
-                    <div className="text-slate-200 text-sm">
-                      {step.name} · {step.status}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-4 space-y-2">
-                <button
-                  onClick={startSaga}
-                  className="w-full px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-                >
-                  Start Saga
-                </button>
-                {sagaSteps.map((step) => (
-                  <div key={`controls-${step.id}`} className="flex gap-2">
-                    <button
-                      onClick={() => completeStep(step.id)}
-                      className="flex-1 px-2 py-2 bg-green-600 text-white text-xs rounded hover:bg-green-700"
-                    >
-                      Complete {step.id}
-                    </button>
-                    <button
-                      onClick={() => compensateStep(step.id)}
-                      className="flex-1 px-2 py-2 bg-red-600 text-white text-xs rounded hover:bg-red-700"
-                    >
-                      Compensate {step.id}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <button
+              onClick={decide3PC}
+              className="w-full px-2.5 py-1.5 bg-amber-600 text-white text-xs rounded hover:bg-amber-700"
+            >
+              Decide (Pre-Commit / Abort)
+            </button>
+            <button
+              onClick={commit3PC}
+              className="w-full px-2.5 py-1.5 bg-[#D9441E] text-white text-xs rounded hover:bg-[#B83412]"
+            >
+              Commit 3PC
+            </button>
           </div>
 
-          {messages
-            .filter((m) => m.status === 'in-flight')
-            .map((message) => (
-              <motion.div
-                key={message.id}
-                className="absolute top-6 right-6 text-xs text-slate-200 bg-slate-700 px-3 py-1 rounded"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-              >
-                {message.type} → {message.to}
-              </motion.div>
+          {/* Saga Manual Controls */}
+          <div className="absolute bottom-4 right-4 bg-slate-800 rounded-lg p-3.5 border border-slate-700 space-y-1.5 w-60">
+            <h3 className="text-xs font-semibold text-white uppercase tracking-wider mb-1">
+              Saga Controls
+            </h3>
+            <button
+              onClick={startSaga}
+              className="w-full px-2.5 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+            >
+              Start Saga
+            </button>
+            {sagaSteps.map((step) => (
+              <div key={`controls-${step.id}`} className="flex gap-1.5">
+                <button
+                  onClick={() => completeStep(step.id)}
+                  className="flex-1 px-2 py-1 bg-green-600 text-white text-[11px] rounded hover:bg-green-700"
+                >
+                  Done {step.id}
+                </button>
+                <button
+                  onClick={() => compensateStep(step.id)}
+                  className="flex-1 px-2 py-1 bg-red-600 text-white text-[11px] rounded hover:bg-red-700"
+                >
+                  Undo {step.id}
+                </button>
+              </div>
             ))}
+          </div>
         </div>
       </div>
 

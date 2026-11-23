@@ -10,7 +10,8 @@ import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import { failureDetectorScenarios } from '@/visualizers/failure-detectors/scenarios';
 import { FailureDetectorMessage, FailureDetectorNode } from '@/lib/types';
-import { motion } from 'framer-motion';
+import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
+import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 
 export default function FailureDetectorsPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -19,6 +20,7 @@ export default function FailureDetectorsPage() {
   const [messages, setMessages] = useState<FailureDetectorMessage[]>(fd.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const syncVisualization = useCallback(() => {
     setNodes([...fd.getNodes()]);
@@ -110,20 +112,23 @@ export default function FailureDetectorsPage() {
     }
   };
 
-  const heartbeatRandom = () => {
+  const heartbeatRandom = (nodeId?: string) => {
     const alive = nodes.filter((n) => n.fdStatus !== 'failed');
-    if (alive.length === 0) return;
-    fd.sendHeartbeat(alive[Math.floor(Math.random() * alive.length)].id);
+    const targetId =
+      nodeId ?? (alive.length > 0 ? alive[Math.floor(Math.random() * alive.length)].id : null);
+    if (!targetId) return;
+    fd.sendHeartbeat(targetId);
     updateVisualization();
   };
 
-  const probeRandom = () => {
+  const probeRandom = (targetId?: string) => {
     if (nodes.length < 2) return;
-    const from = nodes[Math.floor(Math.random() * nodes.length)];
-    let target = nodes[Math.floor(Math.random() * nodes.length)];
-    while (target.id === from.id) {
-      target = nodes[Math.floor(Math.random() * nodes.length)];
-    }
+    const target =
+      (targetId && nodes.find((n) => n.id === targetId)) ||
+      nodes[Math.floor(Math.random() * nodes.length)];
+    const peers = nodes.filter((n) => n.id !== target.id);
+    const from = peers[Math.floor(Math.random() * peers.length)];
+    if (!from) return;
     fd.probe(target.id, from.id);
     updateVisualization();
   };
@@ -145,29 +150,38 @@ export default function FailureDetectorsPage() {
   };
 
   const getNodeColor = (node: FailureDetectorNode): string => {
-    if (node.fdStatus === 'failed') return '#EF4444';
-    if (node.fdStatus === 'suspect') return '#F59E0B';
-    return '#10B981';
+    if (node.fdStatus === 'failed') return SCOPE_COLORS.danger;
+    if (node.fdStatus === 'suspect') return SCOPE_COLORS.amber;
+    return SCOPE_COLORS.emerald;
   };
 
-  const getMessageColor = (message: FailureDetectorMessage): string => {
+  const getMessageStyle = (
+    message: FailureDetectorMessage
+  ): {
+    color: string;
+    markerKey: 'cobalt' | 'amber' | 'emerald' | 'signal' | 'danger' | 'muted';
+    label: string;
+  } => {
     switch (message.type) {
       case 'Heartbeat':
-        return '#3B82F6';
+        return { color: SCOPE_COLORS.cobalt, markerKey: 'cobalt', label: 'HBEAT' };
       case 'Probe':
-        return '#F59E0B';
+        return { color: SCOPE_COLORS.amber, markerKey: 'amber', label: 'PROBE' };
       case 'Ack':
-        return '#10B981';
+        return { color: SCOPE_COLORS.emerald, markerKey: 'emerald', label: 'ACK' };
       case 'Suspect':
-        return '#F97316';
+        return { color: SCOPE_COLORS.signal, markerKey: 'signal', label: 'SUSPECT' };
       case 'Confirm':
-        return '#EF4444';
+        return { color: SCOPE_COLORS.danger, markerKey: 'danger', label: 'CONFIRM' };
       default:
-        return '#6B7280';
+        return { color: SCOPE_COLORS.inkMuted, markerKey: 'muted', label: 'MSG' };
     }
   };
 
   const stats = fd.getStats();
+  const inspectedNode = selectedNodeId
+    ? nodes.find((n) => n.id === selectedNodeId) ?? null
+    : null;
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen md:h-screen bg-slate-900">
@@ -207,7 +221,7 @@ export default function FailureDetectorsPage() {
               Read the theory
             </button>
           </div>
-          <div className="flex gap-6 mt-3 text-sm">
+          <div className="flex flex-wrap gap-6 mt-3 text-sm">
             <span className="text-slate-300">
               Alive: <span className="font-semibold text-green-400">{stats.alive}</span>
             </span>
@@ -225,60 +239,27 @@ export default function FailureDetectorsPage() {
             <ExportMenu
               svgRef={svgRef}
               concept="Failure Detectors"
-              currentState={{ scenario: selectedScenario }}
+              currentState={{ scenario: selectedScenario, stats }}
             />
           </div>
 
           <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            {nodes.map((node, index) => (
-              <motion.g
-                key={node.id}
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: index * 0.08 }}
-              >
-                <circle
-                  cx={node.position.x}
-                  cy={node.position.y}
-                  r="45"
-                  fill={getNodeColor(node)}
-                  stroke="#1F2937"
-                  strokeWidth="3"
-                  className="cursor-pointer"
-                  onClick={() => toggleFail(node.id)}
+            <ScopeDefs idPrefix="fd" />
+
+            {/* SWIM membership mesh hairlines */}
+            {nodes.map((a, i) =>
+              nodes.slice(i + 1).map((b) => (
+                <line
+                  key={`fd-mesh-${a.id}-${b.id}`}
+                  x1={a.position.x}
+                  y1={a.position.y}
+                  x2={b.position.x}
+                  y2={b.position.y}
+                  stroke={SCOPE_COLORS.hairlineSubtle}
+                  strokeWidth="0.9"
                 />
-                <text
-                  x={node.position.x}
-                  y={node.position.y - 10}
-                  textAnchor="middle"
-                  fill="#FFF"
-                  fontSize="14"
-                  fontWeight="bold"
-                >
-                  {node.id}
-                </text>
-                <text
-                  x={node.position.x}
-                  y={node.position.y + 5}
-                  textAnchor="middle"
-                  fill="#FFF"
-                  fontSize="10"
-                >
-                  phi {node.phi.toFixed(1)}
-                </text>
-                {node.fdStatus === 'failed' && (
-                  <text
-                    x={node.position.x}
-                    y={node.position.y + 20}
-                    textAnchor="middle"
-                    fill="#FFF"
-                    fontSize="10"
-                  >
-                    FAILED
-                  </text>
-                )}
-              </motion.g>
-            ))}
+              ))
+            )}
 
             {messages
               .filter((m) => m.status === 'in-flight')
@@ -286,44 +267,125 @@ export default function FailureDetectorsPage() {
                 const fromNode = nodes.find((n) => n.id === message.from);
                 const toNode = nodes.find((n) => n.id === message.to);
                 if (!fromNode || !toNode) return null;
+                const style = getMessageStyle(message);
                 return (
-                  <g key={message.id}>
-                    <motion.line
-                      x1={fromNode.position.x}
-                      y1={fromNode.position.y}
-                      x2={toNode.position.x}
-                      y2={toNode.position.y}
-                      stroke={getMessageColor(message)}
-                      strokeWidth="2"
-                      strokeDasharray="6,6"
-                      initial={{ pathLength: 0, opacity: 0 }}
-                      animate={{ pathLength: 1, opacity: 1 }}
-                      transition={{ duration: 0.4 }}
-                    />
-                    <motion.circle
-                      cx={(fromNode.position.x + toNode.position.x) / 2}
-                      cy={(fromNode.position.y + toNode.position.y) / 2}
-                      r="6"
-                      fill={getMessageColor(message)}
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ duration: 0.3 }}
-                    />
-                  </g>
+                  <ScopeEdge
+                    key={message.id}
+                    idPrefix="fd"
+                    x1={fromNode.position.x}
+                    y1={fromNode.position.y}
+                    x2={toNode.position.x}
+                    y2={toNode.position.y}
+                    color={style.color}
+                    markerKey={style.markerKey}
+                    inset={46}
+                    label={style.label}
+                    dashed={message.type === 'Probe' || message.type === 'Suspect'}
+                  />
                 );
               })}
+
+            {nodes.map((node) => (
+              <ScopeNode
+                key={node.id}
+                x={node.position.x}
+                y={node.position.y}
+                radius={42}
+                label={node.id}
+                sublabel={`φ = ${node.phi.toFixed(1)}`}
+                topTag={node.fdStatus.toUpperCase()}
+                bottomLine1={
+                  node.fdStatus === 'failed'
+                    ? 'CONFIRMED DEAD'
+                    : node.fdStatus === 'suspect'
+                    ? 'SUSPICION RISING'
+                    : 'HEARTBEAT OK'
+                }
+                accentColor={getNodeColor(node)}
+                failed={node.fdStatus === 'failed'}
+                highlighted={node.fdStatus === 'suspect'}
+                selected={selectedNodeId === node.id}
+                onClick={() =>
+                  setSelectedNodeId((prev) => (prev === node.id ? null : node.id))
+                }
+              />
+            ))}
           </svg>
+
+          {!inspectedNode && <WireTapHint text="Click any member to inspect φ-accrual & inject probes" />}
+
+          {inspectedNode && (
+            <WireTapInspector
+              title={`MEMBER ${inspectedNode.id}`}
+              subtitle="PHI ACCRUAL / SWIM DETECTOR"
+              status={
+                inspectedNode.fdStatus === 'failed'
+                  ? 'failed'
+                  : inspectedNode.fdStatus === 'suspect'
+                  ? 'candidate'
+                  : 'healthy'
+              }
+              className="top-14 left-4"
+              metrics={[
+                {
+                  label: 'FD Status',
+                  value: inspectedNode.fdStatus.toUpperCase(),
+                  tone:
+                    inspectedNode.fdStatus === 'failed'
+                      ? 'danger'
+                      : inspectedNode.fdStatus === 'suspect'
+                      ? 'amber'
+                      : 'emerald',
+                },
+                {
+                  label: 'Phi (φ)',
+                  value: inspectedNode.phi.toFixed(2),
+                  tone: inspectedNode.phi >= 4 ? 'signal' : 'cobalt',
+                },
+                { label: 'Last Beat', value: `t=${inspectedNode.lastHeartbeat}` },
+                { label: 'Alive Peers', value: `${stats.alive}/${nodes.length}`, tone: 'emerald' },
+              ]}
+              actions={[
+                ...(inspectedNode.fdStatus !== 'failed'
+                  ? [
+                      {
+                        label: 'Send Heartbeat',
+                        onClick: () => heartbeatRandom(inspectedNode.id),
+                        variant: 'emerald' as const,
+                      },
+                      {
+                        label: 'SWIM Probe',
+                        onClick: () => probeRandom(inspectedNode.id),
+                        variant: 'signal' as const,
+                      },
+                      {
+                        label: 'Mark Failed',
+                        onClick: () => toggleFail(inspectedNode.id),
+                        variant: 'danger' as const,
+                      },
+                    ]
+                  : [
+                      {
+                        label: 'Recover Member',
+                        onClick: () => toggleFail(inspectedNode.id),
+                        variant: 'emerald' as const,
+                      },
+                    ]),
+              ]}
+              onClose={() => setSelectedNodeId(null)}
+            />
+          )}
 
           <div className="absolute bottom-4 left-4 bg-slate-800 rounded-lg p-4 border border-slate-700 space-y-2 max-w-xs">
             <h3 className="text-sm font-semibold text-white">Manual Controls</h3>
             <button
-              onClick={heartbeatRandom}
+              onClick={() => heartbeatRandom()}
               className="w-full px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
             >
               Heartbeat Random
             </button>
             <button
-              onClick={probeRandom}
+              onClick={() => probeRandom()}
               className="w-full px-3 py-2 bg-amber-600 text-white text-sm rounded hover:bg-amber-700"
             >
               Probe Random
@@ -334,7 +396,6 @@ export default function FailureDetectorsPage() {
             >
               Tick Time
             </button>
-            <p className="text-xs text-slate-400">Click a node to fail/recover.</p>
           </div>
         </div>
       </div>

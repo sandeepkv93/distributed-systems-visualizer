@@ -10,7 +10,8 @@ import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import { loadBalancingScenarios } from '@/visualizers/load-balancing/scenarios';
 import { LoadMessage, LoadRequest, LoadWorker } from '@/lib/types';
-import { motion } from 'framer-motion';
+import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
+import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 
 export default function LoadBalancingPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -20,6 +21,7 @@ export default function LoadBalancingPage() {
   const [messages, setMessages] = useState<LoadMessage[]>(lb.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
+  const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
 
   const syncVisualization = useCallback(() => {
     setWorkers([...lb.getWorkers()]);
@@ -120,12 +122,17 @@ export default function LoadBalancingPage() {
   };
 
   const getWorkerColor = (worker: LoadWorker): string => {
-    if (worker.loadStatus === 'failed') return '#EF4444';
-    if (worker.loadStatus === 'overloaded') return '#F59E0B';
-    return '#10B981';
+    if (worker.loadStatus === 'failed') return SCOPE_COLORS.danger;
+    if (worker.loadStatus === 'overloaded') return SCOPE_COLORS.amber;
+    return SCOPE_COLORS.emerald;
   };
 
   const stats = lb.getStats();
+  const inspectedWorker = selectedWorkerId
+    ? workers.find((w) => w.id === selectedWorkerId) ?? null
+    : null;
+  const hubX = 420;
+  const hubY = 340;
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen md:h-screen bg-slate-900">
@@ -165,7 +172,7 @@ export default function LoadBalancingPage() {
               Read the theory
             </button>
           </div>
-          <div className="flex gap-6 mt-3 text-sm">
+          <div className="flex flex-wrap gap-6 mt-3 text-sm">
             <span className="text-slate-300">
               Total: <span className="font-semibold text-white">{stats.totalRequests}</span>
             </span>
@@ -186,78 +193,138 @@ export default function LoadBalancingPage() {
             <ExportMenu
               svgRef={svgRef}
               concept="Load Balancing + Backpressure"
-              currentState={{ scenario: selectedScenario }}
+              currentState={{ scenario: selectedScenario, stats }}
             />
           </div>
 
           <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            {workers.map((worker, index) => (
-              <motion.g
-                key={worker.id}
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: index * 0.08 }}
-              >
-                <circle
-                  cx={worker.position.x}
-                  cy={worker.position.y}
-                  r="45"
-                  fill={getWorkerColor(worker)}
-                  stroke="#1F2937"
-                  strokeWidth="3"
-                  className="cursor-pointer"
-                  onClick={() => toggleWorker(worker.id)}
-                />
-                <text
-                  x={worker.position.x}
-                  y={worker.position.y - 10}
-                  textAnchor="middle"
-                  fill="#FFF"
-                  fontSize="14"
-                  fontWeight="bold"
-                >
-                  {worker.id}
-                </text>
-                <text
-                  x={worker.position.x}
-                  y={worker.position.y + 6}
-                  textAnchor="middle"
-                  fill="#E2E8F0"
-                  fontSize="10"
-                >
-                  q{worker.queue} / p{worker.processing}
-                </text>
-              </motion.g>
+            <ScopeDefs idPrefix="lb" />
+
+            {/* Dispatcher-to-worker spokes */}
+            {workers.map((worker) => (
+              <line
+                key={`lb-spoke-${worker.id}`}
+                x1={hubX}
+                y1={hubY}
+                x2={worker.position.x}
+                y2={worker.position.y}
+                stroke={
+                  worker.loadStatus === 'failed'
+                    ? SCOPE_COLORS.danger
+                    : SCOPE_COLORS.hairline
+                }
+                strokeWidth="1"
+                strokeDasharray={worker.loadStatus === 'failed' ? '4 4' : undefined}
+                opacity={worker.loadStatus === 'failed' ? 0.35 : 0.7}
+              />
             ))}
 
+            {/* In-flight dispatch pulses */}
             {messages
               .filter((m) => m.status === 'in-flight')
-              .map((message) => (
-                <g key={message.id}>
-                  <motion.line
-                    x1={420}
-                    y1={340}
-                    x2={workers.find((w) => w.id === message.to)?.position.x || 420}
-                    y2={workers.find((w) => w.id === message.to)?.position.y || 340}
-                    stroke="#3B82F6"
-                    strokeWidth="2"
-                    strokeDasharray="6,6"
-                    initial={{ pathLength: 0, opacity: 0 }}
-                    animate={{ pathLength: 1, opacity: 1 }}
-                    transition={{ duration: 0.4 }}
+              .map((message) => {
+                const target = workers.find((w) => w.id === message.to);
+                if (!target) return null;
+                return (
+                  <ScopeEdge
+                    key={message.id}
+                    idPrefix="lb"
+                    x1={hubX}
+                    y1={hubY}
+                    x2={target.position.x}
+                    y2={target.position.y}
+                    color={SCOPE_COLORS.cobalt}
+                    markerKey="cobalt"
+                    inset={44}
+                    label="REQ"
                   />
-                  <motion.circle
-                    cx={(workers.find((w) => w.id === message.to)?.position.x || 420 + 420) / 2}
-                    cy={(workers.find((w) => w.id === message.to)?.position.y || 340 + 340) / 2}
-                    r="6"
-                    fill="#3B82F6"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ duration: 0.3 }}
-                  />
-                </g>
-              ))}
+                );
+              })}
+
+            {/* Central Load Balancer Router */}
+            <ScopeNode
+              x={hubX}
+              y={hubY}
+              radius={38}
+              label="LB"
+              sublabel={`${stats.inFlight} ACT`}
+              topTag="DISPATCHER"
+              bottomLine1={stats.dropped > 0 ? `${stats.dropped} SHED` : 'BACKPRESSURE OK'}
+              accentColor={stats.dropped > 0 ? SCOPE_COLORS.signal : SCOPE_COLORS.cobalt}
+              highlighted={stats.inFlight > 0}
+            />
+
+            {/* Worker nodes */}
+            {workers.map((worker) => (
+              <ScopeNode
+                key={worker.id}
+                x={worker.position.x}
+                y={worker.position.y}
+                radius={42}
+                label={worker.id}
+                sublabel={`Q${worker.queue} · P${worker.processing}`}
+                topTag={worker.loadStatus.toUpperCase()}
+                bottomLine1={`CAP ${worker.capacity}`}
+                accentColor={getWorkerColor(worker)}
+                failed={worker.loadStatus === 'failed'}
+                highlighted={worker.loadStatus === 'overloaded'}
+                selected={selectedWorkerId === worker.id}
+                onClick={() =>
+                  setSelectedWorkerId((prev) => (prev === worker.id ? null : worker.id))
+                }
+              />
+            ))}
           </svg>
+
+          {!inspectedWorker && <WireTapHint text="Click any worker to inspect queue depth & inject faults" />}
+
+          {inspectedWorker && (
+            <WireTapInspector
+              title={`WORKER ${inspectedWorker.id}`}
+              subtitle="BACKPRESSURE QUEUE"
+              status={
+                inspectedWorker.loadStatus === 'failed'
+                  ? 'failed'
+                  : inspectedWorker.loadStatus === 'overloaded'
+                  ? 'candidate'
+                  : 'healthy'
+              }
+              className="top-14 left-4"
+              metrics={[
+                {
+                  label: 'State',
+                  value: inspectedWorker.loadStatus.toUpperCase(),
+                  tone:
+                    inspectedWorker.loadStatus === 'failed'
+                      ? 'danger'
+                      : inspectedWorker.loadStatus === 'overloaded'
+                      ? 'amber'
+                      : 'emerald',
+                },
+                { label: 'Queue Depth', value: inspectedWorker.queue, tone: 'cobalt' },
+                { label: 'Processing', value: inspectedWorker.processing, tone: 'signal' },
+                { label: 'Capacity', value: inspectedWorker.capacity },
+              ]}
+              actions={[
+                {
+                  label: 'Tick Queue',
+                  onClick: tick,
+                },
+                inspectedWorker.loadStatus === 'failed'
+                  ? {
+                      label: 'Recover Worker',
+                      onClick: () => toggleWorker(inspectedWorker.id),
+                      variant: 'emerald',
+                    }
+                  : {
+                      label: 'Fail Worker',
+                      onClick: () => toggleWorker(inspectedWorker.id),
+                      variant: 'danger',
+                    },
+              ]}
+              onClose={() => setSelectedWorkerId(null)}
+            />
+          )}
 
           <div className="absolute bottom-4 left-4 bg-slate-800 rounded-lg p-4 border border-slate-700 space-y-2 max-w-xs">
             <h3 className="text-sm font-semibold text-white">Manual Controls</h3>
@@ -279,17 +346,32 @@ export default function LoadBalancingPage() {
             >
               Tick
             </button>
-            <p className="text-xs text-slate-400">Click workers to fail/recover.</p>
           </div>
 
-          <div className="absolute top-4 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-sm max-h-96 overflow-y-auto">
+          <div className="absolute top-16 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-sm max-h-72 overflow-y-auto">
             <h3 className="text-sm font-semibold text-white mb-2">Requests</h3>
-            <div className="space-y-2">
-              {requests.slice(-10).map((req) => (
-                <div key={req.id} className="text-xs text-slate-300">
-                  {req.id} · {req.status} · {req.assignedTo || 'none'}
-                </div>
-              ))}
+            <div className="space-y-1.5">
+              {requests.length === 0 ? (
+                <div className="text-xs text-slate-400">No requests dispatched yet.</div>
+              ) : (
+                requests.slice(-10).map((req) => (
+                  <div key={req.id} className="text-xs text-slate-300">
+                    {req.id} ·{' '}
+                    <span
+                      className={
+                        req.status === 'dropped'
+                          ? 'text-red-400'
+                          : req.status === 'done'
+                          ? 'text-green-400'
+                          : 'text-amber-400'
+                      }
+                    >
+                      {req.status}
+                    </span>{' '}
+                    · {req.assignedTo || 'none'}
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
