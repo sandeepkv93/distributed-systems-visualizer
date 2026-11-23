@@ -12,6 +12,7 @@ import { distributedLockingScenarios } from '@/visualizers/distributed-locking/s
 import { LockMessage, LockNode } from '@/lib/types';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
+import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 
 export default function DistributedLockingPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -21,6 +22,7 @@ export default function DistributedLockingPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
 
   const syncVisualization = useCallback(() => {
     setNodes([...lock.getNodes()]);
@@ -253,95 +255,132 @@ export default function DistributedLockingPage() {
             />
           </div>
 
-          <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            <ScopeDefs idPrefix="lock" />
+          <ScopeModeToggle
+            mode={scopeMode}
+            onChange={setScopeMode}
+            frameCount={messages.length}
+          />
 
-            {/* Spokes from lock manager to clients */}
-            {manager &&
-              nodes
-                .filter((n) => n.role === 'client')
-                .map((client) => (
-                  <line
-                    key={`lk-wire-${client.id}`}
-                    x1={manager.position.x}
-                    y1={manager.position.y}
-                    x2={client.position.x}
-                    y2={client.position.y}
-                    stroke={
-                      client.holdingLock
-                        ? 'rgba(52, 211, 153, 0.35)'
-                        : SCOPE_COLORS.hairlineSubtle
-                    }
-                    strokeWidth={client.holdingLock ? '1.6' : '1'}
-                  />
-                ))}
+          {scopeMode === 'topology' ? (
+            <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+              <ScopeDefs idPrefix="lock" />
 
-            {messages
-              .filter((m) => m.status === 'in-flight')
-              .map((message) => {
-                const fromNode = nodes.find((n) => n.id === message.from);
-                const toNode = nodes.find((n) => n.id === message.to);
-                if (!fromNode || !toNode) return null;
+              {/* Spokes from lock manager to clients */}
+              {manager &&
+                nodes
+                  .filter((n) => n.role === 'client')
+                  .map((client) => (
+                    <line
+                      key={`lk-wire-${client.id}`}
+                      x1={manager.position.x}
+                      y1={manager.position.y}
+                      x2={client.position.x}
+                      y2={client.position.y}
+                      stroke={
+                        client.holdingLock
+                          ? 'rgba(52, 211, 153, 0.35)'
+                          : SCOPE_COLORS.hairlineSubtle
+                      }
+                      strokeWidth={client.holdingLock ? '1.6' : '1'}
+                    />
+                  ))}
 
+              {messages
+                .filter((m) => m.status === 'in-flight')
+                .map((message) => {
+                  const fromNode = nodes.find((n) => n.id === message.from);
+                  const toNode = nodes.find((n) => n.id === message.to);
+                  if (!fromNode || !toNode) return null;
+
+                  return (
+                    <ScopeEdge
+                      key={message.id}
+                      idPrefix="lock"
+                      x1={fromNode.position.x}
+                      y1={fromNode.position.y}
+                      x2={toNode.position.x}
+                      y2={toNode.position.y}
+                      color={getMessageColor(message)}
+                      markerKey={getMessageMarker(message)}
+                      inset={48}
+                      label={message.type.toUpperCase()}
+                      dashed={message.type === 'Heartbeat'}
+                    />
+                  );
+                })}
+
+              {nodes.map((node) => {
+                const isFailed = node.status === 'failed';
+                const isManager = node.role === 'manager';
+                const remainingSec =
+                  node.holdingLock && node.leaseExpiresAt
+                    ? Math.max(0, Math.ceil((node.leaseExpiresAt - Date.now()) / 1000))
+                    : null;
                 return (
-                  <ScopeEdge
-                    key={message.id}
-                    idPrefix="lock"
-                    x1={fromNode.position.x}
-                    y1={fromNode.position.y}
-                    x2={toNode.position.x}
-                    y2={toNode.position.y}
-                    color={getMessageColor(message)}
-                    markerKey={getMessageMarker(message)}
-                    inset={48}
-                    label={message.type.toUpperCase()}
-                    dashed={message.type === 'Heartbeat'}
+                  <ScopeNode
+                    key={node.id}
+                    x={node.position.x}
+                    y={node.position.y}
+                    radius={isManager ? 48 : 38}
+                    label={node.id}
+                    sublabel={
+                      isFailed
+                        ? 'OFFLINE'
+                        : isManager
+                        ? 'MANAGER'
+                        : node.holdingLock
+                        ? 'LEASED'
+                        : 'IDLE'
+                    }
+                    topTag={isManager ? 'COORDINATOR' : node.holdingLock ? 'LOCK OWNER' : 'CLIENT'}
+                    bottomLine1={
+                      remainingSec !== null
+                        ? `TTL ${remainingSec}s`
+                        : isManager
+                        ? `OWNER ${stats.leaseOwner || 'NONE'}`
+                        : undefined
+                    }
+                    accentColor={getNodeColor(node)}
+                    failed={isFailed}
+                    highlighted={node.holdingLock || isManager}
+                    selected={selectedNodeId === node.id}
+                    onClick={() =>
+                      setSelectedNodeId((prev) => (prev === node.id ? null : node.id))
+                    }
                   />
                 );
               })}
-
-            {nodes.map((node) => {
-              const isFailed = node.status === 'failed';
-              const isManager = node.role === 'manager';
-              const remainingSec =
-                node.holdingLock && node.leaseExpiresAt
-                  ? Math.max(0, Math.ceil((node.leaseExpiresAt - Date.now()) / 1000))
-                  : null;
-              return (
-                <ScopeNode
-                  key={node.id}
-                  x={node.position.x}
-                  y={node.position.y}
-                  radius={isManager ? 48 : 38}
-                  label={node.id}
-                  sublabel={
-                    isFailed
-                      ? 'OFFLINE'
-                      : isManager
-                      ? 'MANAGER'
-                      : node.holdingLock
-                      ? 'LEASED'
-                      : 'IDLE'
-                  }
-                  topTag={isManager ? 'COORDINATOR' : node.holdingLock ? 'LOCK OWNER' : 'CLIENT'}
-                  bottomLine1={
-                    remainingSec !== null
-                      ? `TTL ${remainingSec}s`
-                      : isManager
-                      ? `OWNER ${stats.leaseOwner || 'NONE'}`
-                      : undefined
-                  }
-                  accentColor={getNodeColor(node)}
-                  failed={isFailed}
-                  highlighted={node.holdingLock || isManager}
-                  selected={selectedNodeId === node.id}
-                  onClick={() =>
-                    setSelectedNodeId((prev) => (prev === node.id ? null : node.id))
-                  }
-                />
-              );
-            })}
-          </svg>
+            </svg>
+          ) : (
+            <SpaceTimeScope
+              svgRef={svgRef}
+              title="DISTRIBUTED LOCKING · LEASE & RENEWAL TRACE"
+              idPrefix="lock-st"
+              actors={nodes.map((node) => ({
+                id: node.id,
+                label: node.id,
+                sublabel:
+                  node.status === 'failed'
+                    ? 'DOWN'
+                    : node.role === 'manager'
+                    ? 'MGR'
+                    : node.holdingLock
+                    ? 'OWNER'
+                    : 'CLIENT',
+                color: getNodeColor(node),
+                failed: node.status === 'failed',
+              }))}
+              frames={messages.map((msg) => ({
+                id: msg.id,
+                from: msg.from,
+                to: msg.to,
+                label: msg.type.toUpperCase(),
+                color: getMessageColor(msg),
+                status: msg.status,
+                dashed: msg.type === 'Heartbeat',
+              }))}
+            />
+          )}
 
           {!inspectedNode && <WireTapHint text="Click manager or client to inspect lease state" />}
 

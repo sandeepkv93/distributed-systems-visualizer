@@ -12,6 +12,7 @@ import { chandyLamportScenarios } from '@/visualizers/chandy-lamport/scenarios';
 import { SnapshotNode, SnapshotMessage } from '@/lib/types';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
+import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 
 export default function ChandyLamportPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -21,6 +22,7 @@ export default function ChandyLamportPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
 
   const syncVisualization = useCallback(() => {
     setNodes([...snapshot.getNodes()]);
@@ -173,76 +175,113 @@ export default function ChandyLamportPage() {
             />
           </div>
 
-          <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            <ScopeDefs idPrefix="cl" />
+          <ScopeModeToggle
+            mode={scopeMode}
+            onChange={setScopeMode}
+            frameCount={messages.length}
+          />
 
-            {nodes.map((a, i) =>
-              nodes.slice(i + 1).map((b) => (
-                <line
-                  key={`cl-mesh-${a.id}-${b.id}`}
-                  x1={a.position.x}
-                  y1={a.position.y}
-                  x2={b.position.x}
-                  y2={b.position.y}
-                  stroke={SCOPE_COLORS.hairlineSubtle}
-                  strokeWidth="1"
-                />
-              ))
-            )}
+          {scopeMode === 'topology' ? (
+            <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+              <ScopeDefs idPrefix="cl" />
 
-            {messages
-              .filter((m) => m.status === 'in-flight')
-              .map((message) => {
-                const fromNode = nodes.find((n) => n.id === message.from);
-                const toNode = nodes.find((n) => n.id === message.to);
-                if (!fromNode || !toNode) return null;
-                const isMarker = message.type === 'Marker';
-                return (
-                  <ScopeEdge
-                    key={message.id}
-                    idPrefix="cl"
-                    x1={fromNode.position.x}
-                    y1={fromNode.position.y}
-                    x2={toNode.position.x}
-                    y2={toNode.position.y}
-                    color={getMessageColor(message)}
-                    markerKey={isMarker ? 'signal' : 'cobalt'}
-                    inset={46}
-                    label={isMarker ? 'MARKER' : 'APP'}
-                    dashed={isMarker}
+              {nodes.map((a, i) =>
+                nodes.slice(i + 1).map((b) => (
+                  <line
+                    key={`cl-mesh-${a.id}-${b.id}`}
+                    x1={a.position.x}
+                    y1={a.position.y}
+                    x2={b.position.x}
+                    y2={b.position.y}
+                    stroke={SCOPE_COLORS.hairlineSubtle}
+                    strokeWidth="1"
                   />
-                );
-              })}
+                ))
+              )}
 
-            {nodes.map((node) => (
-              <ScopeNode
-                key={node.id}
-                x={node.position.x}
-                y={node.position.y}
-                radius={40}
-                label={node.id}
-                sublabel={`STATE ${node.localState}`}
-                topTag={
-                  node.snapshot
-                    ? node.snapshot.complete
-                      ? 'DONE'
-                      : 'RECORDING'
-                    : 'PROCESS'
-                }
-                bottomLine1={
-                  node.snapshot
-                    ? `REC ${node.snapshot.localState} · CH ${Object.keys(node.snapshot.channels).length}`
-                    : 'IDLE'
-                }
-                accentColor={getNodeColor(node)}
-                highlighted={Boolean(node.snapshot && !node.snapshot.complete)}
-                selected={selectedNodeId === node.id}
-                onClick={() =>
-                  setSelectedNodeId((prev) => (prev === node.id ? null : node.id))
-                }
-              />
-            ))}
-          </svg>
+              {messages
+                .filter((m) => m.status === 'in-flight')
+                .map((message) => {
+                  const fromNode = nodes.find((n) => n.id === message.from);
+                  const toNode = nodes.find((n) => n.id === message.to);
+                  if (!fromNode || !toNode) return null;
+                  const isMarker = message.type === 'Marker';
+                  return (
+                    <ScopeEdge
+                      key={message.id}
+                      idPrefix="cl"
+                      x1={fromNode.position.x}
+                      y1={fromNode.position.y}
+                      x2={toNode.position.x}
+                      y2={toNode.position.y}
+                      color={getMessageColor(message)}
+                      markerKey={isMarker ? 'signal' : 'cobalt'}
+                      inset={46}
+                      label={isMarker ? 'MARKER' : 'APP'}
+                      dashed={isMarker}
+                    />
+                  );
+                })}
+
+              {nodes.map((node) => (
+                <ScopeNode
+                  key={node.id}
+                  x={node.position.x}
+                  y={node.position.y}
+                  radius={40}
+                  label={node.id}
+                  sublabel={`STATE ${node.localState}`}
+                  topTag={
+                    node.snapshot
+                      ? node.snapshot.complete
+                        ? 'DONE'
+                        : 'RECORDING'
+                      : 'PROCESS'
+                  }
+                  bottomLine1={
+                    node.snapshot
+                      ? `REC ${node.snapshot.localState} · CH ${Object.keys(node.snapshot.channels).length}`
+                      : 'IDLE'
+                  }
+                  accentColor={getNodeColor(node)}
+                  highlighted={Boolean(node.snapshot && !node.snapshot.complete)}
+                  selected={selectedNodeId === node.id}
+                  onClick={() =>
+                    setSelectedNodeId((prev) => (prev === node.id ? null : node.id))
+                  }
+                />
+              ))}
+            </svg>
+          ) : (
+            <SpaceTimeScope
+              svgRef={svgRef}
+              title="CHANDY-LAMPORT · MARKER & CHANNEL TRACE"
+              idPrefix="cl-st"
+              actors={nodes.map((node) => ({
+                id: node.id,
+                label: node.id,
+                sublabel: node.snapshot
+                  ? node.snapshot.complete
+                    ? 'DONE'
+                    : 'REC'
+                  : `S=${node.localState}`,
+                color: getNodeColor(node),
+              }))}
+              frames={messages.map((msg) => ({
+                id: msg.id,
+                from: msg.from,
+                to: msg.to,
+                label: msg.type === 'Marker' ? 'MARKER' : 'APP',
+                sublabel:
+                  msg.type === 'Marker'
+                    ? msg.payload.snapshotId ?? 'snap'
+                    : String(msg.payload.value ?? ''),
+                color: getMessageColor(msg),
+                status: msg.status,
+                dashed: msg.type === 'Marker',
+              }))}
+            />
+          )}
 
           {!inspectedNode && <WireTapHint text="Click any node to inspect recorded channels" />}
 

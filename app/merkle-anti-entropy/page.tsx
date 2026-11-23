@@ -12,6 +12,7 @@ import { merkleAntiEntropyScenarios } from '@/visualizers/merkle-anti-entropy/sc
 import { MerkleMessage, MerkleReplica } from '@/lib/types';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
+import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 
 export default function MerkleAntiEntropyPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -21,6 +22,7 @@ export default function MerkleAntiEntropyPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
   const [selectedReplicaId, setSelectedReplicaId] = useState<string | null>(null);
+  const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
 
   const syncVisualization = useCallback(() => {
     setReplicas([...merkle.getReplicas()]);
@@ -179,76 +181,109 @@ export default function MerkleAntiEntropyPage() {
             />
           </div>
 
-          <svg ref={svgRef} viewBox="0 0 840 420" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            <ScopeDefs idPrefix="merkle" />
+          <ScopeModeToggle
+            mode={scopeMode}
+            onChange={setScopeMode}
+            frameCount={messages.length}
+          />
 
-            {/* Sync channel rail between replicas */}
-            <line
-              x1={220}
-              y1={200}
-              x2={620}
-              y2={200}
-              stroke={rootsMatch ? SCOPE_COLORS.emerald : SCOPE_COLORS.amber}
-              strokeWidth="1"
-              strokeDasharray="4 4"
-              opacity="0.45"
-            />
-            <text
-              x={420}
-              y={178}
-              textAnchor="middle"
-              fill={rootsMatch ? SCOPE_COLORS.emerald : SCOPE_COLORS.amber}
-              fontSize="10"
-              fontFamily="var(--font-mono), monospace"
-              letterSpacing="0.12em"
-            >
-              {rootsMatch ? 'MERKLE ROOTS CONVERGED' : `${stats.mismatchedKeys} DIVERGENT LEAF KEYS`}
-            </text>
+          {scopeMode === 'topology' ? (
+            <svg ref={svgRef} viewBox="0 0 840 420" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+              <ScopeDefs idPrefix="merkle" />
 
-            {messages
-              .filter((m) => m.status === 'in-flight')
-              .map((message) => {
-                const style = getMessageStyle(message);
-                const fromLeft = message.from === replicas[0]?.id;
+              {/* Sync channel rail between replicas */}
+              <line
+                x1={220}
+                y1={200}
+                x2={620}
+                y2={200}
+                stroke={rootsMatch ? SCOPE_COLORS.emerald : SCOPE_COLORS.amber}
+                strokeWidth="1"
+                strokeDasharray="4 4"
+                opacity="0.45"
+              />
+              <text
+                x={420}
+                y={178}
+                textAnchor="middle"
+                fill={rootsMatch ? SCOPE_COLORS.emerald : SCOPE_COLORS.amber}
+                fontSize="10"
+                fontFamily="var(--font-mono), monospace"
+                letterSpacing="0.12em"
+              >
+                {rootsMatch ? 'MERKLE ROOTS CONVERGED' : `${stats.mismatchedKeys} DIVERGENT LEAF KEYS`}
+              </text>
+
+              {messages
+                .filter((m) => m.status === 'in-flight')
+                .map((message) => {
+                  const style = getMessageStyle(message);
+                  const fromLeft = message.from === replicas[0]?.id;
+                  return (
+                    <ScopeEdge
+                      key={message.id}
+                      idPrefix="merkle"
+                      x1={fromLeft ? 220 : 620}
+                      y1={200}
+                      x2={fromLeft ? 620 : 220}
+                      y2={200}
+                      color={style.color}
+                      markerKey={style.markerKey}
+                      inset={58}
+                      label={style.label}
+                      dashed={message.type === 'CompareNode'}
+                    />
+                  );
+                })}
+
+              {replicas.map((replica, index) => {
+                const cx = 220 + index * 400;
                 return (
-                  <ScopeEdge
-                    key={message.id}
-                    idPrefix="merkle"
-                    x1={fromLeft ? 220 : 620}
-                    y1={200}
-                    x2={fromLeft ? 620 : 220}
-                    y2={200}
-                    color={style.color}
-                    markerKey={style.markerKey}
-                    inset={58}
-                    label={style.label}
-                    dashed={message.type === 'CompareNode'}
+                  <ScopeNode
+                    key={replica.id}
+                    x={cx}
+                    y={200}
+                    radius={52}
+                    label={replica.id}
+                    sublabel={`#${replica.root?.hash?.slice(0, 6) || 'n/a'}`}
+                    topTag={rootsMatch ? 'SYNCED TREE' : 'DIVERGENT TREE'}
+                    bottomLine1={`${replica.data.size} LEAF KEYS`}
+                    accentColor={rootsMatch ? SCOPE_COLORS.emerald : SCOPE_COLORS.amber}
+                    highlighted={!rootsMatch}
+                    selected={selectedReplicaId === replica.id}
+                    onClick={() =>
+                      setSelectedReplicaId((prev) => (prev === replica.id ? null : replica.id))
+                    }
                   />
                 );
               })}
-
-            {replicas.map((replica, index) => {
-              const cx = 220 + index * 400;
-              return (
-                <ScopeNode
-                  key={replica.id}
-                  x={cx}
-                  y={200}
-                  radius={52}
-                  label={replica.id}
-                  sublabel={`#${replica.root?.hash?.slice(0, 6) || 'n/a'}`}
-                  topTag={rootsMatch ? 'SYNCED TREE' : 'DIVERGENT TREE'}
-                  bottomLine1={`${replica.data.size} LEAF KEYS`}
-                  accentColor={rootsMatch ? SCOPE_COLORS.emerald : SCOPE_COLORS.amber}
-                  highlighted={!rootsMatch}
-                  selected={selectedReplicaId === replica.id}
-                  onClick={() =>
-                    setSelectedReplicaId((prev) => (prev === replica.id ? null : replica.id))
-                  }
-                />
-              );
-            })}
-          </svg>
+            </svg>
+          ) : (
+            <SpaceTimeScope
+              svgRef={svgRef}
+              title="MERKLE ANTI-ENTROPY · HASH EXCHANGE TRACE"
+              idPrefix="merkle-st"
+              actors={replicas.map((replica) => ({
+                id: replica.id,
+                label: replica.id,
+                sublabel: `#${replica.root?.hash?.slice(0, 6) || 'n/a'}`,
+                color: rootsMatch ? SCOPE_COLORS.emerald : SCOPE_COLORS.amber,
+              }))}
+              frames={messages.map((msg) => {
+                const style = getMessageStyle(msg);
+                return {
+                  id: msg.id,
+                  from: msg.from,
+                  to: msg.to,
+                  label: style.label,
+                  sublabel: msg.type,
+                  color: style.color,
+                  status: msg.status,
+                  dashed: msg.type === 'CompareNode',
+                };
+              })}
+            />
+          )}
 
           {!inspectedReplica && <WireTapHint text="Click any replica to inspect Merkle root & keys" />}
 

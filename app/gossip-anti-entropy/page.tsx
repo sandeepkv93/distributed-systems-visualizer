@@ -12,6 +12,7 @@ import { gossipAntiEntropyScenarios } from '@/visualizers/gossip-anti-entropy/sc
 import { GossipNode, GossipMessage, GossipMode } from '@/lib/types';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
+import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 import ChaosStrip from '@/components/ChaosStrip';
 import {
   ChaosConfig,
@@ -29,6 +30,7 @@ export default function GossipAntiEntropyPage() {
   const [showArticle, setShowArticle] = useState(false);
   const [fanout, setFanout] = useState(1);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
   const [chaos, setChaos] = useState<ChaosConfig>(DEFAULT_CHAOS_CONFIG);
   const [droppedCount, setDroppedCount] = useState(0);
   const chaosRef = useRef<ChaosConfig>(DEFAULT_CHAOS_CONFIG);
@@ -255,71 +257,105 @@ export default function GossipAntiEntropyPage() {
             />
           </div>
 
-          <svg ref={svgRef} viewBox="0 0 840 700" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            <ScopeDefs idPrefix="gossip" />
+          <ScopeModeToggle
+            mode={scopeMode}
+            onChange={setScopeMode}
+            frameCount={messages.length}
+          />
 
-            {/* Peer mesh hairlines */}
-            {nodes.map((a, i) =>
-              nodes.slice(i + 1).map((b) => (
-                <line
-                  key={`g-mesh-${a.id}-${b.id}`}
-                  x1={a.position.x}
-                  y1={a.position.y}
-                  x2={b.position.x}
-                  y2={b.position.y}
-                  stroke={SCOPE_COLORS.hairlineSubtle}
-                  strokeWidth="0.9"
-                />
-              ))
-            )}
+          {scopeMode === 'topology' ? (
+            <svg ref={svgRef} viewBox="0 0 840 700" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+              <ScopeDefs idPrefix="gossip" />
 
-            {messages
-              .filter((m) => m.status === 'in-flight')
-              .map((message) => {
-                const fromNode = nodes.find((n) => n.id === message.from);
-                const toNode = nodes.find((n) => n.id === message.to);
-                if (!fromNode || !toNode) return null;
-                const style = getMessageStyle(message);
+              {/* Peer mesh hairlines */}
+              {nodes.map((a, i) =>
+                nodes.slice(i + 1).map((b) => (
+                  <line
+                    key={`g-mesh-${a.id}-${b.id}`}
+                    x1={a.position.x}
+                    y1={a.position.y}
+                    x2={b.position.x}
+                    y2={b.position.y}
+                    stroke={SCOPE_COLORS.hairlineSubtle}
+                    strokeWidth="0.9"
+                  />
+                ))
+              )}
+
+              {messages
+                .filter((m) => m.status === 'in-flight')
+                .map((message) => {
+                  const fromNode = nodes.find((n) => n.id === message.from);
+                  const toNode = nodes.find((n) => n.id === message.to);
+                  if (!fromNode || !toNode) return null;
+                  const style = getMessageStyle(message);
+                  return (
+                    <ScopeEdge
+                      key={message.id}
+                      idPrefix="gossip"
+                      x1={fromNode.position.x}
+                      y1={fromNode.position.y}
+                      x2={toNode.position.x}
+                      y2={toNode.position.y}
+                      color={style.color}
+                      markerKey={style.markerKey}
+                      inset={46}
+                      label={style.label}
+                      dashed={message.payload.mode === 'pull'}
+                    />
+                  );
+                })}
+
+              {nodes.map((node) => {
+                const syncState = getNodeSyncState(node);
                 return (
-                  <ScopeEdge
-                    key={message.id}
-                    idPrefix="gossip"
-                    x1={fromNode.position.x}
-                    y1={fromNode.position.y}
-                    x2={toNode.position.x}
-                    y2={toNode.position.y}
-                    color={style.color}
-                    markerKey={style.markerKey}
-                    inset={46}
-                    label={style.label}
-                    dashed={message.payload.mode === 'pull'}
+                  <ScopeNode
+                    key={node.id}
+                    x={node.position.x}
+                    y={node.position.y}
+                    radius={42}
+                    label={node.id}
+                    sublabel={`v${node.version}`}
+                    topTag={syncState.toUpperCase()}
+                    bottomLine1={`${node.data.size} ${node.data.size === 1 ? 'RUMOR' : 'RUMORS'}`}
+                    accentColor={getNodeColor(node)}
+                    failed={node.status === 'failed'}
+                    highlighted={syncState === 'stale'}
+                    selected={selectedNodeId === node.id}
+                    onClick={() =>
+                      setSelectedNodeId((prev) => (prev === node.id ? null : node.id))
+                    }
                   />
                 );
               })}
-
-            {nodes.map((node) => {
-              const syncState = getNodeSyncState(node);
-              return (
-                <ScopeNode
-                  key={node.id}
-                  x={node.position.x}
-                  y={node.position.y}
-                  radius={42}
-                  label={node.id}
-                  sublabel={`v${node.version}`}
-                  topTag={syncState.toUpperCase()}
-                  bottomLine1={`${node.data.size} ${node.data.size === 1 ? 'RUMOR' : 'RUMORS'}`}
-                  accentColor={getNodeColor(node)}
-                  failed={node.status === 'failed'}
-                  highlighted={syncState === 'stale'}
-                  selected={selectedNodeId === node.id}
-                  onClick={() =>
-                    setSelectedNodeId((prev) => (prev === node.id ? null : node.id))
-                  }
-                />
-              );
-            })}
-          </svg>
+            </svg>
+          ) : (
+            <SpaceTimeScope
+              svgRef={svgRef}
+              title="GOSSIP ANTI-ENTROPY · WIRE TRACE"
+              idPrefix="gossip-st"
+              actors={nodes.map((node) => ({
+                id: node.id,
+                label: node.id,
+                sublabel: node.status === 'failed' ? 'DOWN' : `v${node.version}`,
+                color: getNodeColor(node),
+                failed: node.status === 'failed',
+              }))}
+              frames={messages.map((msg) => {
+                const style = getMessageStyle(msg);
+                return {
+                  id: msg.id,
+                  from: msg.from,
+                  to: msg.to,
+                  label: style.label,
+                  sublabel: msg.payload.mode,
+                  color: style.color,
+                  status: msg.status,
+                  dashed: msg.payload.mode === 'pull',
+                };
+              })}
+            />
+          )}
 
           {!inspectedNode && <WireTapHint text="Click any peer to inspect rumors & inject faults" />}
 

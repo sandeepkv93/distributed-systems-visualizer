@@ -12,6 +12,7 @@ import { replicationLogScenarios } from '@/visualizers/replication-log/scenarios
 import { LogMessage, LogPartition } from '@/lib/types';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
+import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 
 export default function ReplicationLogPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -21,6 +22,7 @@ export default function ReplicationLogPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
   const [selectedReplicaId, setSelectedReplicaId] = useState<string | null>(null);
+  const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
 
   const syncVisualization = useCallback(() => {
     setPartition({
@@ -204,70 +206,103 @@ export default function ReplicationLogPage() {
             />
           </div>
 
-          <svg ref={svgRef} viewBox="0 0 840 360" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            <ScopeDefs idPrefix="repllog" />
+          <ScopeModeToggle
+            mode={scopeMode}
+            onChange={setScopeMode}
+            frameCount={messages.length}
+          />
 
-            {/* Replication bus rail */}
-            {partition.replicas.length > 1 && (
-              <line
-                x1={160}
-                y1={160}
-                x2={160 + (partition.replicas.length - 1) * 260}
-                y2={160}
-                stroke={SCOPE_COLORS.hairline}
-                strokeWidth="1"
-                strokeDasharray="4 4"
-              />
-            )}
+          {scopeMode === 'topology' ? (
+            <svg ref={svgRef} viewBox="0 0 840 360" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+              <ScopeDefs idPrefix="repllog" />
 
-            {messages
-              .filter((m) => m.status === 'in-flight')
-              .map((message) => {
-                const fromIndex = partition.replicas.findIndex((r) => r.id === message.from);
-                const toIndex = partition.replicas.findIndex((r) => r.id === message.to);
-                if (fromIndex === -1 || toIndex === -1) return null;
-                const x1 = 160 + fromIndex * 260;
-                const x2 = 160 + toIndex * 260;
-                const style = getMessageStyle(message);
+              {/* Replication bus rail */}
+              {partition.replicas.length > 1 && (
+                <line
+                  x1={160}
+                  y1={160}
+                  x2={160 + (partition.replicas.length - 1) * 260}
+                  y2={160}
+                  stroke={SCOPE_COLORS.hairline}
+                  strokeWidth="1"
+                  strokeDasharray="4 4"
+                />
+              )}
+
+              {messages
+                .filter((m) => m.status === 'in-flight')
+                .map((message) => {
+                  const fromIndex = partition.replicas.findIndex((r) => r.id === message.from);
+                  const toIndex = partition.replicas.findIndex((r) => r.id === message.to);
+                  if (fromIndex === -1 || toIndex === -1) return null;
+                  const x1 = 160 + fromIndex * 260;
+                  const x2 = 160 + toIndex * 260;
+                  const style = getMessageStyle(message);
+                  return (
+                    <ScopeEdge
+                      key={message.id}
+                      idPrefix="repllog"
+                      x1={x1}
+                      y1={160}
+                      x2={x2}
+                      y2={160}
+                      color={style.color}
+                      markerKey={style.markerKey}
+                      inset={48}
+                      label={style.label}
+                      dashed={message.type === 'Fetch'}
+                    />
+                  );
+                })}
+
+              {partition.replicas.map((replica, index) => {
+                const cx = 160 + index * 260;
                 return (
-                  <ScopeEdge
-                    key={message.id}
-                    idPrefix="repllog"
-                    x1={x1}
-                    y1={160}
-                    x2={x2}
-                    y2={160}
-                    color={style.color}
-                    markerKey={style.markerKey}
-                    inset={48}
-                    label={style.label}
-                    dashed={message.type === 'Fetch'}
+                  <ScopeNode
+                    key={replica.id}
+                    x={cx}
+                    y={160}
+                    radius={44}
+                    label={replica.id}
+                    sublabel={`HW ${replica.highWatermark}`}
+                    topTag={replica.role === 'leader' ? 'LEADER · ISR' : replica.inSync ? 'FOLLOWER · ISR' : 'OUT OF SYNC'}
+                    bottomLine1={`LEO ${replica.log.length}`}
+                    accentColor={getReplicaColor(replica)}
+                    highlighted={replica.role === 'leader'}
+                    selected={selectedReplicaId === replica.id}
+                    onClick={() =>
+                      setSelectedReplicaId((prev) => (prev === replica.id ? null : replica.id))
+                    }
                   />
                 );
               })}
-
-            {partition.replicas.map((replica, index) => {
-              const cx = 160 + index * 260;
-              return (
-                <ScopeNode
-                  key={replica.id}
-                  x={cx}
-                  y={160}
-                  radius={44}
-                  label={replica.id}
-                  sublabel={`HW ${replica.highWatermark}`}
-                  topTag={replica.role === 'leader' ? 'LEADER · ISR' : replica.inSync ? 'FOLLOWER · ISR' : 'OUT OF SYNC'}
-                  bottomLine1={`LEO ${replica.log.length}`}
-                  accentColor={getReplicaColor(replica)}
-                  highlighted={replica.role === 'leader'}
-                  selected={selectedReplicaId === replica.id}
-                  onClick={() =>
-                    setSelectedReplicaId((prev) => (prev === replica.id ? null : replica.id))
-                  }
-                />
-              );
-            })}
-          </svg>
+            </svg>
+          ) : (
+            <SpaceTimeScope
+              svgRef={svgRef}
+              title="REPLICATION LOG · ISR FETCH & ACK TRACE"
+              idPrefix="repllog-st"
+              actors={partition.replicas.map((replica) => ({
+                id: replica.id,
+                label: replica.id,
+                sublabel: replica.role === 'leader' ? 'LEADER' : `HW ${replica.highWatermark}`,
+                color: getReplicaColor(replica),
+              }))}
+              frames={messages.map((msg) => {
+                const style = getMessageStyle(msg);
+                return {
+                  id: msg.id,
+                  from: msg.from,
+                  to: msg.to,
+                  label: style.label,
+                  sublabel: msg.type,
+                  color: style.color,
+                  status: msg.status,
+                  dashed: msg.type === 'Fetch',
+                };
+              })}
+            />
+          )}
 
           {!inspectedReplica && <WireTapHint text="Click any replica to inspect log offsets & ISR status" />}
 

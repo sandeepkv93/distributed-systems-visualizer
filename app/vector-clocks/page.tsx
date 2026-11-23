@@ -13,6 +13,8 @@ import { evaluateVectorClockInvariants } from '@/lib/invariants';
 import { vectorClockScenarios } from '@/visualizers/vector-clocks/scenarios';
 import { VectorClockProcess, VectorClockEvent, VectorClock } from '@/lib/types';
 import { motion } from 'framer-motion';
+import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
+import { SCOPE_COLORS } from '@/components/ScopeSvgKit';
 
 export default function VectorClocksPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -21,6 +23,7 @@ export default function VectorClocksPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set());
   const [showArticle, setShowArticle] = useState(false);
+  const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
 
   // Update visualization
   const updateVisualization = useCallback(() => {
@@ -230,6 +233,11 @@ export default function VectorClocksPage() {
             protocolLabel="Vector Clock Causality"
             checks={evaluateVectorClockInvariants(processes, stats.concurrentPairs)}
           />
+          <ScopeModeToggle
+            mode={scopeMode}
+            onChange={setScopeMode}
+            frameCount={vc.getAllEvents().length}
+          />
           <div className="absolute top-4 right-4 z-20">
             <ExportMenu
               svgRef={svgRef}
@@ -246,26 +254,63 @@ export default function VectorClocksPage() {
               }}
             />
           </div>
-          <svg ref={svgRef} className="hidden" width="1200" height="800" viewBox="0 0 1200 800">
-            <rect width="1200" height="800" fill="#111413" />
-            <text x="40" y="70" fill="#F4F0E8" fontSize="38" fontWeight="700">
-              Vector Clocks
-            </text>
-            <text x="40" y="115" fill="#9E9B90" fontSize="20">
-              Scenario: {selectedScenario || 'manual'}
-            </text>
-            <text x="40" y="160" fill="#F4F0E8" fontSize="24">
-              Summary
-            </text>
-            <text x="40" y="200" fill="#60A5FA" fontSize="20">
-              Total Events: {stats.totalEvents}
-            </text>
-            <text x="300" y="200" fill="#FBBF24" fontSize="20">
-              Concurrent Pairs: {stats.concurrentPairs}
-            </text>
-          </svg>
-          {/* Process timelines */}
-          <div className="space-y-14 max-w-5xl">
+          {scopeMode === 'spacetime' ? (
+            <div className="w-full h-full min-h-[420px]">
+              <SpaceTimeScope
+                svgRef={svgRef}
+                title="VECTOR CLOCKS · CAUSAL SPACE-TIME TRACE"
+                idPrefix="vc-st"
+                actors={processes.map((proc) => ({
+                  id: proc.id,
+                  label: proc.id,
+                  sublabel: formatClock(proc.vectorClock),
+                  color: proc.status === 'failed' ? SCOPE_COLORS.danger : SCOPE_COLORS.cobalt,
+                  failed: proc.status === 'failed',
+                }))}
+                frames={(() => {
+                  const allEvents = vc.getAllEvents();
+                  const byId = new Map(allEvents.map((e) => [e.id, e]));
+                  return allEvents
+                    .filter((evt) => evt.type !== 'send')
+                    .map((evt) => {
+                      const sender = evt.relatedEvent ? byId.get(evt.relatedEvent) : undefined;
+                      const isRecv = evt.type === 'receive' && Boolean(sender);
+                      return {
+                        id: evt.id,
+                        from: isRecv && sender ? sender.processId : evt.processId,
+                        to: evt.processId,
+                        label: isRecv
+                          ? `MSG ${formatClock(evt.vectorClock)}`
+                          : `LOCAL ${formatClock(evt.vectorClock)}`,
+                        color: isRecv ? SCOPE_COLORS.emerald : SCOPE_COLORS.cobalt,
+                        status: 'success' as const,
+                      };
+                    });
+                })()}
+              />
+            </div>
+          ) : (
+            <>
+              <svg ref={svgRef} className="hidden" width="1200" height="800" viewBox="0 0 1200 800">
+                <rect width="1200" height="800" fill="#111413" />
+                <text x="40" y="70" fill="#F4F0E8" fontSize="38" fontWeight="700">
+                  Vector Clocks
+                </text>
+                <text x="40" y="115" fill="#9E9B90" fontSize="20">
+                  Scenario: {selectedScenario || 'manual'}
+                </text>
+                <text x="40" y="160" fill="#F4F0E8" fontSize="24">
+                  Summary
+                </text>
+                <text x="40" y="200" fill="#60A5FA" fontSize="20">
+                  Total Events: {stats.totalEvents}
+                </text>
+                <text x="300" y="200" fill="#FBBF24" fontSize="20">
+                  Concurrent Pairs: {stats.concurrentPairs}
+                </text>
+              </svg>
+              {/* Process timelines */}
+              <div className="space-y-14 max-w-5xl pt-10">
             {processes.map((process, processIndex) => (
               <div key={process.id} className="relative">
                 {/* Process label and current clock */}
@@ -398,6 +443,8 @@ export default function VectorClocksPage() {
               </div>
               <p className="text-sm text-[#F4F0E8]">{getEventComparison()}</p>
             </div>
+          )}
+            </>
           )}
 
           {/* Manual controls */}
