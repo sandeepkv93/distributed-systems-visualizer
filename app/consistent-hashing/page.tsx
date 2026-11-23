@@ -10,6 +10,7 @@ import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import { consistentHashingScenarios } from '@/visualizers/consistent-hashing/scenarios';
 import { motion } from 'framer-motion';
+import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 
 export default function ConsistentHashingPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -20,6 +21,7 @@ export default function ConsistentHashingPage() {
   );
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
+  const [selectedVNodeId, setSelectedVNodeId] = useState<string | null>(null);
 
   // Update visualization
   const updateVisualization = useCallback(() => {
@@ -365,21 +367,28 @@ export default function ConsistentHashingPage() {
             {ring.nodes.map((node) => {
               const pos = getPositionOnRing(node.hashValue);
               const color = getServerColor(node.physicalNodeId || '');
+              const isSelected = selectedVNodeId === node.id;
               const labelPos = {
                 x: centerX + (pos.x - centerX) * 1.11,
                 y: centerY + (pos.y - centerY) * 1.11,
               };
 
               return (
-                <g key={node.id}>
+                <g
+                  key={node.id}
+                  onClick={() =>
+                    setSelectedVNodeId((prev) => (prev === node.id ? null : node.id))
+                  }
+                  className="cursor-pointer"
+                >
                   <circle
                     cx={pos.x}
                     cy={pos.y}
-                    r="12"
+                    r={isSelected ? '15' : '12'}
                     fill="none"
-                    stroke={color}
-                    strokeWidth="0.9"
-                    opacity="0.45"
+                    stroke={isSelected ? '#F4F0E8' : color}
+                    strokeWidth={isSelected ? '1.5' : '0.9'}
+                    opacity={isSelected ? '0.95' : '0.45'}
                   />
                   <motion.circle
                     cx={pos.x}
@@ -397,7 +406,7 @@ export default function ConsistentHashingPage() {
                     y={labelPos.y}
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    fill={color}
+                    fill={isSelected ? '#F4F0E8' : color}
                     fontSize="8.5"
                     fontWeight="600"
                     className="pointer-events-none"
@@ -439,6 +448,71 @@ export default function ConsistentHashingPage() {
               {stats.loadStats.imbalance.toFixed(2)}× IMBAL
             </text>
           </svg>
+
+          {!selectedVNodeId && <WireTapHint text="Click any ring pin to inspect vnode & keys" />}
+
+          {(() => {
+            const inspected = selectedVNodeId
+              ? ring.nodes.find((n) => n.id === selectedVNodeId) ?? null
+              : null;
+            if (!inspected) return null;
+            const physicalId = inspected.physicalNodeId || inspected.id;
+            const vnodeKeys = ring.keys.filter((k) => k.nodeId === inspected.id);
+            const serverTotalKeys = stats.loadDistribution.get(physicalId) || 0;
+            const pct = stats.totalKeys > 0 ? ((serverTotalKeys / stats.totalKeys) * 100).toFixed(1) : '0.0';
+            const hexHash = `0x${(inspected.hashValue >>> 0).toString(16).padStart(8, '0').toUpperCase()}`;
+
+            return (
+              <WireTapInspector
+                title={inspected.id.toUpperCase()}
+                subtitle={`PHYSICAL ${physicalId.toUpperCase()} · RING PIN`}
+                status="info"
+                className="top-4 left-4"
+                metrics={[
+                  { label: 'Hash Position', value: hexHash, tone: 'cobalt' },
+                  { label: 'VNode Keys', value: vnodeKeys.length, tone: 'emerald' },
+                  { label: 'Server Load', value: `${serverTotalKeys} (${pct}%)`, tone: 'amber' },
+                  { label: 'VNodes / Srv', value: ring.virtualNodesPerNode },
+                ]}
+                actions={[
+                  {
+                    label: `Remove ${physicalId}`,
+                    onClick: () => {
+                      removeServer(physicalId);
+                      setSelectedVNodeId(null);
+                    },
+                    variant: 'danger',
+                  },
+                ]}
+                onClose={() => setSelectedVNodeId(null)}
+              >
+                <div>
+                  <div className="text-[9px] uppercase tracking-[0.12em] text-[#9E9B90] mb-1">
+                    Keys Routed Here ({vnodeKeys.length})
+                  </div>
+                  {vnodeKeys.length === 0 ? (
+                    <div className="text-[#6E6B62]">No keys mapped to this vnode</div>
+                  ) : (
+                    <div className="flex flex-wrap gap-1">
+                      {vnodeKeys.slice(0, 18).map((k) => (
+                        <span
+                          key={k.key}
+                          className="px-1.5 py-0.5 bg-[#0E1110] border border-[rgba(244,240,232,0.12)] text-[10px] text-[#D6D2C7]"
+                        >
+                          {k.key}
+                        </span>
+                      ))}
+                      {vnodeKeys.length > 18 && (
+                        <span className="text-[10px] text-[#9E9B90]">
+                          +{vnodeKeys.length - 18} more
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </WireTapInspector>
+            );
+          })()}
 
           {/* Manual controls */}
           <div className="absolute bottom-4 left-4 bg-slate-800 rounded-lg p-4 border border-slate-700 space-y-2 max-w-xs">

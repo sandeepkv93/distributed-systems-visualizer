@@ -12,6 +12,7 @@ import { raftScenarios } from '@/visualizers/raft/scenarios';
 import { RaftNode as RaftNodeType, RaftMessage } from '@/lib/types';
 import { AnimatePresence } from 'framer-motion';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
+import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 
 export default function RaftPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -21,6 +22,7 @@ export default function RaftPage() {
   const [partitions, setPartitions] = useState<string[][]>([]);
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   // Update visualization from algorithm state
   const updateVisualization = useCallback(() => {
@@ -120,8 +122,8 @@ export default function RaftPage() {
     updateVisualization();
   };
 
-  // Handle node click (fail/recover)
-  const handleNodeClick = (nodeId: string) => {
+  // Handle node fail/recover toggle
+  const toggleNodeHealth = (nodeId: string) => {
     const node = nodes.find((n) => n.id === nodeId);
     if (node) {
       if (node.status === 'healthy') {
@@ -132,6 +134,18 @@ export default function RaftPage() {
       updateVisualization();
     }
   };
+
+  // Handle node click (select in Wire Tap Inspector)
+  const handleNodeClick = (nodeId: string) => {
+    setSelectedNodeId((prev) => (prev === nodeId ? null : nodeId));
+  };
+
+  const inspectedNode = selectedNodeId
+    ? nodes.find((n) => n.id === selectedNodeId) ?? null
+    : null;
+  const inspectedMessages = inspectedNode
+    ? messages.filter((m) => m.from === inspectedNode.id || m.to === inspectedNode.id).slice(-5)
+    : [];
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen md:h-screen bg-slate-900">
@@ -304,12 +318,112 @@ export default function RaftPage() {
                   accentColor={accentColor}
                   failed={isFailed}
                   highlighted={isLeader}
+                  selected={selectedNodeId === node.id}
                   haloColor={haloColor}
                   onClick={() => handleNodeClick(node.id)}
                 />
               );
             })}
           </svg>
+
+          {!inspectedNode && <WireTapHint text="Click any node to inspect log & state" />}
+
+          {inspectedNode && (
+            <WireTapInspector
+              title={`NODE N${inspectedNode.id.replace('node-', '')}`}
+              subtitle={`${inspectedNode.state.toUpperCase()} · ${inspectedNode.status.toUpperCase()}`}
+              status={
+                inspectedNode.status === 'failed'
+                  ? 'failed'
+                  : inspectedNode.state === 'leader'
+                  ? 'leader'
+                  : inspectedNode.state === 'candidate'
+                  ? 'candidate'
+                  : 'healthy'
+              }
+              metrics={[
+                { label: 'Term', value: inspectedNode.term, tone: 'cobalt' },
+                {
+                  label: 'Commit Index',
+                  value: inspectedNode.commitIndex,
+                  tone: inspectedNode.commitIndex > 0 ? 'emerald' : 'default',
+                },
+                {
+                  label: 'Voted For',
+                  value: inspectedNode.votedFor ? inspectedNode.votedFor.replace('node-', 'N') : '—',
+                },
+                {
+                  label: 'Votes',
+                  value: inspectedNode.votesReceived,
+                  tone: inspectedNode.votesReceived > 0 ? 'amber' : 'default',
+                },
+              ]}
+              actions={[
+                {
+                  label: inspectedNode.status === 'healthy' ? 'Crash Node' : 'Recover Node',
+                  onClick: () => toggleNodeHealth(inspectedNode.id),
+                  variant: inspectedNode.status === 'healthy' ? 'danger' : 'emerald',
+                },
+                {
+                  label: 'Start Election',
+                  onClick: () => triggerElection(inspectedNode.id),
+                  variant: 'signal',
+                  disabled: inspectedNode.status === 'failed',
+                },
+              ]}
+              onClose={() => setSelectedNodeId(null)}
+            >
+              <div className="space-y-2.5">
+                <div>
+                  <div className="text-[9px] uppercase tracking-[0.12em] text-[#9E9B90] mb-1">
+                    Replicated Log ({inspectedNode.log.length})
+                  </div>
+                  {inspectedNode.log.length === 0 ? (
+                    <div className="text-[#6E6B62]">Empty log</div>
+                  ) : (
+                    <div className="space-y-1">
+                      {inspectedNode.log.map((entry) => {
+                        const committed = entry.index <= inspectedNode.commitIndex;
+                        return (
+                          <div
+                            key={`${entry.index}-${entry.term}`}
+                            className="flex items-center justify-between gap-2 px-2 py-1 bg-[#0E1110] border border-[rgba(244,240,232,0.1)]"
+                          >
+                            <span className="text-[#9E9B90]">
+                              #{entry.index} T{entry.term}
+                            </span>
+                            <span className="text-[#F4F0E8] truncate flex-1">{entry.command}</span>
+                            <span
+                              className={`text-[9px] uppercase ${
+                                committed ? 'text-[#34D399]' : 'text-[#FBBF24]'
+                              }`}
+                            >
+                              {committed ? 'CMT' : 'UNCMT'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                {inspectedMessages.length > 0 && (
+                  <div>
+                    <div className="text-[9px] uppercase tracking-[0.12em] text-[#9E9B90] mb-1">
+                      Active Wire Frames ({inspectedMessages.length})
+                    </div>
+                    <div className="space-y-1">
+                      {inspectedMessages.map((msg) => (
+                        <div key={msg.id} className="text-[10px] text-[#D6D2C7] truncate">
+                          {msg.from.replace('node-', 'N')} → {msg.to.replace('node-', 'N')} ·{' '}
+                          <span className="text-[#60A5FA]">{msg.type}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </WireTapInspector>
+          )}
 
           {/* Manual controls overlay */}
           <div className="absolute bottom-4 left-4 bg-slate-800 rounded-lg p-4 border border-slate-700">
@@ -344,7 +458,7 @@ export default function RaftPage() {
               >
                 Add Client Request
               </button>
-              <p className="text-xs text-slate-400 mt-2">Click nodes to fail/recover them</p>
+              <p className="text-xs text-slate-400 mt-2">Click any node to inspect or crash/recover</p>
             </div>
           </div>
         </div>

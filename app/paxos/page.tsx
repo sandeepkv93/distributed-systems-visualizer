@@ -12,6 +12,7 @@ import { paxosScenarios } from '@/visualizers/paxos/scenarios';
 import { PaxosNode, PaxosMessage } from '@/lib/types';
 import { AnimatePresence } from 'framer-motion';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
+import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 
 export default function PaxosPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -22,6 +23,7 @@ export default function PaxosPage() {
   const [showArticle, setShowArticle] = useState(false);
   const [decidedValue, setDecidedValue] = useState<any>(null);
   const [decidedValues, setDecidedValues] = useState<any[]>([]);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   // Update visualization from algorithm state
   const updateVisualization = useCallback(() => {
@@ -111,8 +113,8 @@ export default function PaxosPage() {
     }
   };
 
-  // Handle node click (fail/recover)
-  const handleNodeClick = (nodeId: string) => {
+  // Handle node fail/recover toggle
+  const toggleNodeHealth = (nodeId: string) => {
     const node = nodes.find((n) => n.id === nodeId);
     if (node) {
       if (node.status === 'healthy') {
@@ -123,6 +125,20 @@ export default function PaxosPage() {
       updateVisualization();
     }
   };
+
+  // Handle node click (select in Wire Tap Inspector)
+  const handleNodeClick = (nodeId: string) => {
+    setSelectedNodeId((prev) => (prev === nodeId ? null : nodeId));
+  };
+
+  const inspectedNode = selectedNodeId
+    ? nodes.find((n) => n.id === selectedNodeId) ?? null
+    : null;
+  const inspectedMessages = inspectedNode
+    ? messages
+        .filter((m) => m.from === inspectedNode.id || m.to === inspectedNode.id)
+        .slice(-5)
+    : [];
 
   // Manual proposal
   const triggerProposal = (proposerId: string, value: string) => {
@@ -331,11 +347,86 @@ export default function PaxosPage() {
                   accentColor={nodeColor}
                   failed={isFailed}
                   highlighted={Boolean(node.acceptedValue)}
+                  selected={selectedNodeId === node.id}
                   onClick={() => handleNodeClick(node.id)}
                 />
               );
             })}
           </svg>
+
+          {!inspectedNode && <WireTapHint text="Click any node to inspect Paxos tuples" />}
+
+          {inspectedNode && (
+            <WireTapInspector
+              title={inspectedNode.id.toUpperCase()}
+              subtitle={`${inspectedNode.role.toUpperCase()} · ${inspectedNode.status.toUpperCase()}`}
+              status={
+                inspectedNode.status === 'failed'
+                  ? 'failed'
+                  : inspectedNode.acceptedValue
+                  ? 'healthy'
+                  : 'info'
+              }
+              metrics={[
+                { label: 'Role', value: inspectedNode.role.toUpperCase(), tone: 'cobalt' },
+                {
+                  label: 'Proposal #',
+                  value: inspectedNode.proposalNumber ?? '—',
+                  tone: inspectedNode.proposalNumber ? 'amber' : 'default',
+                },
+                {
+                  label: 'Promised #',
+                  value: inspectedNode.promisedProposal ?? '—',
+                  tone: inspectedNode.promisedProposal ? 'cobalt' : 'default',
+                },
+                {
+                  label: 'Accepted',
+                  value: inspectedNode.acceptedValue
+                    ? `${inspectedNode.acceptedValue} (#${inspectedNode.acceptedProposal ?? '?'})`
+                    : '—',
+                  tone: inspectedNode.acceptedValue ? 'emerald' : 'default',
+                },
+              ]}
+              actions={[
+                {
+                  label: inspectedNode.status === 'healthy' ? 'Crash Node' : 'Recover Node',
+                  onClick: () => toggleNodeHealth(inspectedNode.id),
+                  variant: inspectedNode.status === 'healthy' ? 'danger' : 'emerald',
+                },
+                ...(inspectedNode.role === 'proposer'
+                  ? [
+                      {
+                        label: 'Send Proposal',
+                        onClick: () =>
+                          triggerProposal(inspectedNode.id, `Val-${Date.now() % 100}`),
+                        variant: 'signal' as const,
+                        disabled: inspectedNode.status === 'failed',
+                      },
+                    ]
+                  : []),
+              ]}
+              onClose={() => setSelectedNodeId(null)}
+            >
+              <div>
+                <div className="text-[9px] uppercase tracking-[0.12em] text-[#9E9B90] mb-1">
+                  Wire Frames ({inspectedMessages.length})
+                </div>
+                {inspectedMessages.length === 0 ? (
+                  <div className="text-[#6E6B62]">No recent messages</div>
+                ) : (
+                  <div className="space-y-1">
+                    {inspectedMessages.map((msg) => (
+                      <div key={msg.id} className="text-[10px] text-[#D6D2C7] truncate">
+                        {msg.from} → {msg.to} ·{' '}
+                        <span className="text-[#FBBF24]">{msg.type}</span>{' '}
+                        (#{msg.payload.proposalNumber})
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </WireTapInspector>
+          )}
 
           {/* Manual controls overlay */}
           <div className="absolute bottom-4 left-4 bg-slate-800 rounded-lg p-4 border border-slate-700">
@@ -353,7 +444,7 @@ export default function PaxosPage() {
               >
                 Proposer 1: Propose
               </button>
-              <p className="text-xs text-slate-400 mt-2">Click nodes to fail/recover them</p>
+              <p className="text-xs text-slate-400 mt-2">Click any node to inspect or crash/recover</p>
             </div>
           </div>
 

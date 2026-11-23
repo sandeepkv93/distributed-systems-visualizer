@@ -11,6 +11,7 @@ import ExportMenu from '@/components/ExportMenu';
 import { pbftScenarios } from '@/visualizers/pbft/scenarios';
 import { PBFTNode, PBFTMessage } from '@/lib/types';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
+import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 
 export default function PBFTPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -19,6 +20,7 @@ export default function PBFTPage() {
   const [messages, setMessages] = useState<PBFTMessage[]>(pbft.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const syncVisualization = useCallback(() => {
     setNodes([...pbft.getNodes()]);
@@ -276,13 +278,83 @@ export default function PBFTPage() {
                   accentColor={getNodeColor(node)}
                   failed={isFailed}
                   highlighted={isPrimary}
+                  selected={selectedNodeId === node.id}
                   onClick={() =>
-                    isFailed ? recoverNode(node.id) : failNode(node.id)
+                    setSelectedNodeId((prev) => (prev === node.id ? null : node.id))
                   }
                 />
               );
             })}
           </svg>
+
+          {!selectedNodeId && <WireTapHint text="Click any replica to open Wire Tap" />}
+
+          {(() => {
+            const inspected = selectedNodeId
+              ? nodes.find((n) => n.id === selectedNodeId) ?? null
+              : null;
+            if (!inspected) return null;
+            const entries = Array.from(inspected.log.values());
+            return (
+              <WireTapInspector
+                title={inspected.id.toUpperCase()}
+                subtitle={`${inspected.role.toUpperCase()} · VIEW v${stats.view}`}
+                status={
+                  inspected.status === 'failed'
+                    ? 'failed'
+                    : inspected.role === 'primary'
+                    ? 'leader'
+                    : 'healthy'
+                }
+                className="top-16 left-4"
+                metrics={[
+                  { label: 'Role', value: inspected.role.toUpperCase(), tone: 'signal' },
+                  {
+                    label: 'Status',
+                    value: inspected.status.toUpperCase(),
+                    tone: inspected.status === 'failed' ? 'danger' : 'emerald',
+                  },
+                  { label: 'Log Entries', value: entries.length, tone: 'cobalt' },
+                  { label: 'Quorum 2f+1', value: stats.quorum, tone: 'amber' },
+                ]}
+                actions={[
+                  {
+                    label: inspected.status === 'failed' ? 'Recover Replica' : 'Fail Replica',
+                    onClick: () =>
+                      inspected.status === 'failed'
+                        ? recoverNode(inspected.id)
+                        : failNode(inspected.id),
+                    variant: inspected.status === 'failed' ? 'emerald' : 'danger',
+                  },
+                ]}
+                onClose={() => setSelectedNodeId(null)}
+              >
+                <div>
+                  <div className="text-[9px] uppercase tracking-[0.12em] text-[#9E9B90] mb-1">
+                    PBFT Phase Log ({entries.length})
+                  </div>
+                  {entries.length === 0 ? (
+                    <div className="text-[#6E6B62]">No logged requests</div>
+                  ) : (
+                    <div className="space-y-1">
+                      {entries.map((entry) => (
+                        <div
+                          key={`${inspected.id}-${entry.requestId}`}
+                          className="flex items-center justify-between gap-2 px-2 py-1 bg-[#0E1110] border border-[rgba(244,240,232,0.1)]"
+                        >
+                          <span className="text-[#F4F0E8] truncate">{entry.requestId}</span>
+                          <span className="text-[#9E9B90]">
+                            v{entry.view}·s{entry.seq}
+                          </span>
+                          <span className="text-[#34D399] uppercase text-[9px]">{entry.phase}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </WireTapInspector>
+            );
+          })()}
 
           <div className="absolute bottom-4 left-4 bg-slate-800 rounded-lg p-4 border border-slate-700 space-y-2 max-w-xs">
             <h3 className="text-sm font-semibold text-white">Manual Controls</h3>
@@ -298,7 +370,7 @@ export default function PBFTPage() {
             >
               Trigger View Change
             </button>
-            <p className="text-xs text-slate-400">Click nodes to fail/recover.</p>
+            <p className="text-xs text-slate-400">Click any replica to inspect or fail/recover.</p>
           </div>
 
           <div className="absolute top-16 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-xs max-h-72 overflow-y-auto">
