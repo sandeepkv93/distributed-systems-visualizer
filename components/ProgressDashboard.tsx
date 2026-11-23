@@ -138,7 +138,7 @@ export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
 
         <div className="p-6 space-y-8">
           {/* Summary Spec Row */}
-          <div className="grid grid-cols-1 md:grid-cols-4 border border-[var(--ink)] divide-y md:divide-y-0 md:divide-x divide-[var(--rule)] bg-[var(--paper)]">
+          <div className="grid grid-cols-2 md:grid-cols-5 border border-[var(--ink)] divide-y md:divide-y-0 md:divide-x divide-[var(--rule)] bg-[var(--paper)]">
             <div className="p-4">
               <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">
                 Completion
@@ -166,6 +166,15 @@ export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
               </div>
             </div>
             <div className="p-4">
+              <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">
+                Intuition Checks
+              </div>
+              <div className="font-editorial text-3xl text-[var(--emerald)] mt-1 tabular-nums">
+                {stats.checkpointsSolved}
+                <span className="text-lg text-[var(--ink-muted)]">/{stats.totalCheckpoints}</span>
+              </div>
+            </div>
+            <div className="p-4 col-span-2 md:col-span-1">
               <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">
                 Bench Time
               </div>

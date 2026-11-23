@@ -599,4 +599,5 @@ export interface UserProgress {
   scenariosCompleted: string[];
   timeSpent: { [concept: string]: number };
   achievements: string[];
+  checkpointsSolved?: string[];
 }

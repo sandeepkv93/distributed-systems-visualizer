@@ -6,6 +6,7 @@ import {
   getScenarioKey,
   normalizeConceptId,
 } from './catalog';
+import { TOTAL_CHECKPOINTS } from './checkpoints';
 
 const PROGRESS_KEY = 'distributed_systems_progress';
 const SESSION_START_KEY = 'session_start_time';
@@ -38,6 +39,8 @@ export interface ProgressStats {
   totalTimeSpent: number;
   achievementsUnlocked: number;
   totalAchievements: number;
+  checkpointsSolved: number;
+  totalCheckpoints: number;
 }
 
 export interface ProgressStoreSnapshot {
@@ -59,6 +62,7 @@ export function createDefaultProgress(): UserProgress {
     scenariosCompleted: [],
     timeSpent: {},
     achievements: [],
+    checkpointsSolved: [],
   };
 }
 
@@ -80,7 +84,7 @@ export function validateProgressData(input: unknown): UserProgress | null {
     return null;
   }
 
-  const { conceptsCompleted, scenariosCompleted, timeSpent, achievements } = input;
+  const { conceptsCompleted, scenariosCompleted, timeSpent, achievements, checkpointsSolved } = input;
 
   if (!isStringArray(conceptsCompleted)) {
     return null;
@@ -92,6 +96,9 @@ export function validateProgressData(input: unknown): UserProgress | null {
     return null;
   }
   if (!isStringArray(achievements)) {
+    return null;
+  }
+  if (checkpointsSolved !== undefined && !isStringArray(checkpointsSolved)) {
     return null;
   }
 
@@ -109,6 +116,7 @@ export function validateProgressData(input: unknown): UserProgress | null {
     scenariosCompleted: dedupe(scenariosCompleted),
     timeSpent: normalizedTimeSpent,
     achievements: dedupe(achievements),
+    checkpointsSolved: checkpointsSolved ? dedupe(checkpointsSolved) : [],
   };
 }
 
@@ -143,6 +151,12 @@ const ACHIEVEMENTS: AchievementDefinition[] = [
     name: 'Concept Master',
     description: `Complete all ${TOTAL_CONCEPTS} concepts`,
     condition: (progress: UserProgress) => progress.conceptsCompleted.length >= TOTAL_CONCEPTS,
+  },
+  {
+    id: 'intuition_verified',
+    name: 'Intuition Verified',
+    description: 'Solve 3 prediction checkpoints before running failure scenarios',
+    condition: (progress: UserProgress) => (progress.checkpointsSolved?.length ?? 0) >= 3,
   },
   {
     id: 'dedicated_learner',
@@ -184,6 +198,8 @@ function computeStats(progress: UserProgress): ProgressStats {
     totalTimeSpent,
     achievementsUnlocked: progress.achievements.length,
     totalAchievements: ACHIEVEMENTS.length,
+    checkpointsSolved: progress.checkpointsSolved?.length ?? 0,
+    totalCheckpoints: TOTAL_CHECKPOINTS,
   };
 }
 
@@ -295,11 +311,26 @@ export function saveProgress(progress: UserProgress): void {
       scenariosCompleted: dedupe(progress.scenariosCompleted),
       timeSpent: { ...progress.timeSpent },
       achievements: dedupe(progress.achievements),
+      checkpointsSolved: dedupe(progress.checkpointsSolved ?? []),
     };
     localStorage.setItem(PROGRESS_KEY, JSON.stringify(normalized));
     notifyProgressListeners();
   } catch (error) {
     console.error('Error saving progress:', error);
+  }
+}
+
+// Mark a prediction checkpoint as solved
+export function markCheckpointSolved(checkpointId: string): void {
+  const trimmed = checkpointId.trim();
+  if (!trimmed) return;
+
+  const progress = getProgress();
+  const solved = progress.checkpointsSolved ?? [];
+  if (!solved.includes(trimmed)) {
+    progress.checkpointsSolved = [...solved, trimmed];
+    saveProgress(progress);
+    checkAchievements(progress);
   }
 }
 

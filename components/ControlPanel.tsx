@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import {
   Play,
   Pause,
@@ -12,6 +13,8 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { Scenario, SimulationEvent } from '@/lib/types';
+import { getCheckpointForScenario } from '@/lib/checkpoints';
+import PredictionCheckpoint from './PredictionCheckpoint';
 
 interface ControlPanelProps {
   isPlaying: boolean;
@@ -50,12 +53,19 @@ export default function ControlPanel({
   onScenarioChange,
   onJumpToStep,
 }: ControlPanelProps) {
+  const pathname = usePathname();
   const [showObjectives, setShowObjectives] = useState(false);
 
   const activeScenario = useMemo(
     () => scenarios.find((s) => s.id === selectedScenario) ?? null,
     [scenarios, selectedScenario]
   );
+
+  const activeCheckpoint = useMemo(() => {
+    const conceptId = pathname?.replace(/^\/|\/$/g, '') || '';
+    if (!conceptId || !selectedScenario) return null;
+    return getCheckpointForScenario(conceptId, selectedScenario);
+  }, [pathname, selectedScenario]);
 
   const timelineEvents = useMemo(
     () => (events && events.length > 0 ? events : activeScenario?.events ?? []),
@@ -229,6 +239,10 @@ export default function ControlPanel({
                   </div>
                 )}
               </div>
+            )}
+
+            {activeCheckpoint && (
+              <PredictionCheckpoint key={activeCheckpoint.id} checkpoint={activeCheckpoint} />
             )}
           </div>
         )}
