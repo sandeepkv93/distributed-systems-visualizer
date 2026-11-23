@@ -8,6 +8,8 @@ import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
+import InvariantMonitor from '@/components/InvariantMonitor';
+import { evaluateQuorumInvariants } from '@/lib/invariants';
 import { quorumReplicationScenarios } from '@/visualizers/quorum-replication/scenarios';
 import { QuorumNode, QuorumMessage } from '@/lib/types';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
@@ -241,6 +243,11 @@ export default function QuorumReplicationPage() {
               currentState={{ scenario: selectedScenario, quorumWrite, quorumRead }}
             />
           </div>
+
+          <InvariantMonitor
+            protocolLabel="Dynamo Quorum Invariants"
+            checks={evaluateQuorumInvariants(nodes, quorumWrite, quorumRead)}
+          />
 
           <ScopeModeToggle
             mode={scopeMode}

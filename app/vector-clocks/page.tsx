@@ -8,6 +8,8 @@ import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
+import InvariantMonitor from '@/components/InvariantMonitor';
+import { evaluateVectorClockInvariants } from '@/lib/invariants';
 import { vectorClockScenarios } from '@/visualizers/vector-clocks/scenarios';
 import { VectorClockProcess, VectorClockEvent, VectorClock } from '@/lib/types';
 import { motion } from 'framer-motion';
@@ -224,6 +226,10 @@ export default function VectorClocksPage() {
 
         {/* Visualization Canvas */}
         <div className="flex-1 relative bg-slate-900 overflow-auto p-6">
+          <InvariantMonitor
+            protocolLabel="Vector Clock Causality"
+            checks={evaluateVectorClockInvariants(processes, stats.concurrentPairs)}
+          />
           <div className="absolute top-4 right-4 z-20">
             <ExportMenu
               svgRef={svgRef}

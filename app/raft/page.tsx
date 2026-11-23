@@ -8,6 +8,8 @@ import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
+import InvariantMonitor from '@/components/InvariantMonitor';
+import { evaluateRaftInvariants } from '@/lib/invariants';
 import { raftScenarios } from '@/visualizers/raft/scenarios';
 import { RaftNode as RaftNodeType, RaftMessage } from '@/lib/types';
 import { AnimatePresence } from 'framer-motion';
@@ -259,6 +261,10 @@ export default function RaftPage() {
 
         {/* Visualization Canvas */}
         <div className="flex-1 relative bg-slate-900 overflow-hidden min-h-[420px]">
+          <InvariantMonitor
+            protocolLabel="Raft Formal Safety"
+            checks={evaluateRaftInvariants(nodes, partitions)}
+          />
           <ScopeModeToggle
             mode={scopeMode}
             onChange={setScopeMode}

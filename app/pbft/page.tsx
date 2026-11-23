@@ -8,6 +8,8 @@ import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
+import InvariantMonitor from '@/components/InvariantMonitor';
+import { evaluatePBFTInvariants } from '@/lib/invariants';
 import { pbftScenarios } from '@/visualizers/pbft/scenarios';
 import { PBFTNode, PBFTMessage } from '@/lib/types';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
@@ -210,6 +212,11 @@ export default function PBFTPage() {
               currentState={{ scenario: selectedScenario }}
             />
           </div>
+
+          <InvariantMonitor
+            protocolLabel="PBFT Byzantine Safety"
+            checks={evaluatePBFTInvariants(nodes)}
+          />
 
           <ScopeModeToggle
             mode={scopeMode}

@@ -8,6 +8,8 @@ import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
+import InvariantMonitor from '@/components/InvariantMonitor';
+import { evaluateTwoPhaseCommitInvariants } from '@/lib/invariants';
 import { twoPhaseCommitScenarios } from '@/visualizers/two-phase-commit/scenarios';
 import { TwoPhaseCommitNode, TwoPhaseCommitMessage } from '@/lib/types';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
@@ -335,6 +337,11 @@ export default function TwoPhaseCommitPage() {
               currentState={{ scenario: selectedScenario }}
             />
           </div>
+
+          <InvariantMonitor
+            protocolLabel="2PC Atomicity & Liveness"
+            checks={evaluateTwoPhaseCommitInvariants(coordinator, participants)}
+          />
 
           <ScopeModeToggle
             mode={scopeMode}

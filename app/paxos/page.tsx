@@ -8,6 +8,8 @@ import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
+import InvariantMonitor from '@/components/InvariantMonitor';
+import { evaluatePaxosInvariants } from '@/lib/invariants';
 import { paxosScenarios } from '@/visualizers/paxos/scenarios';
 import { PaxosNode, PaxosMessage } from '@/lib/types';
 import { AnimatePresence } from 'framer-motion';
@@ -272,6 +274,10 @@ export default function PaxosPage() {
 
         {/* Visualization Canvas */}
         <div className="flex-1 relative bg-slate-900 overflow-hidden min-h-[420px]">
+          <InvariantMonitor
+            protocolLabel="Paxos Formal Safety"
+            checks={evaluatePaxosInvariants(nodes, decidedValues)}
+          />
           <ScopeModeToggle
             mode={scopeMode}
             onChange={setScopeMode}
