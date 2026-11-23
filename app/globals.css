@@ -351,3 +351,10 @@ main[data-view="visualizer"] div.flex-1.relative.bg-slate-900 button.bg-purple-6
   margin-bottom: 0.65rem !important;
 }
 
+/* Global oscilloscope SVG typography polish across all 22 plates */
+main[data-view="visualizer"] svg text {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+

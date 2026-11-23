@@ -284,53 +284,124 @@ export default function CAPTheoremPage() {
         {/* Canvas */}
         <div className="flex-1 relative bg-slate-900 flex items-center justify-center min-h-[420px]">
           <svg ref={svgRef} viewBox="0 0 800 660" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            {/* Triangle */}
+            {/* Subtle geometric altitude construction lines */}
+            <g stroke="rgba(244,240,232,0.08)" strokeWidth="1" strokeDasharray="3 5">
+              <line x1={triangleVertices.C.x} y1={triangleVertices.C.y} x2={midpoints.AP.x} y2={midpoints.AP.y} />
+              <line x1={triangleVertices.A.x} y1={triangleVertices.A.y} x2={midpoints.CP.x} y2={midpoints.CP.y} />
+              <line x1={triangleVertices.P.x} y1={triangleVertices.P.y} x2={midpoints.CA.x} y2={midpoints.CA.y} />
+            </g>
+
+            {/* Triangle base frame */}
             <motion.polygon
               points={`${triangleVertices.C.x},${triangleVertices.C.y} ${triangleVertices.A.x},${triangleVertices.A.y} ${triangleVertices.P.x},${triangleVertices.P.y}`}
-              fill="none"
-              stroke="#475569"
-              strokeWidth="3"
+              fill="rgba(244,240,232,0.02)"
+              stroke="rgba(244,240,232,0.28)"
+              strokeWidth="2"
               initial={{ pathLength: 0 }}
               animate={{ pathLength: 1 }}
-              transition={{ duration: 1 }}
+              transition={{ duration: 0.8 }}
             />
 
-            {/* Vertices - C, A, P */}
+            {/* Highlighted active trade-off edge */}
+            {selectedCombination && (
+              <motion.line
+                key={`edge-${selectedCombination}`}
+                x1={
+                  selectedCombination === 'CA'
+                    ? triangleVertices.C.x
+                    : selectedCombination === 'CP'
+                    ? triangleVertices.C.x
+                    : triangleVertices.A.x
+                }
+                y1={
+                  selectedCombination === 'CA'
+                    ? triangleVertices.C.y
+                    : selectedCombination === 'CP'
+                    ? triangleVertices.C.y
+                    : triangleVertices.A.y
+                }
+                x2={
+                  selectedCombination === 'CA'
+                    ? triangleVertices.A.x
+                    : selectedCombination === 'CP'
+                    ? triangleVertices.P.x
+                    : triangleVertices.P.x
+                }
+                y2={
+                  selectedCombination === 'CA'
+                    ? triangleVertices.A.y
+                    : selectedCombination === 'CP'
+                    ? triangleVertices.P.y
+                    : triangleVertices.P.y
+                }
+                stroke={
+                  selectedCombination === 'CA'
+                    ? '#60A5FA'
+                    : selectedCombination === 'CP'
+                    ? '#D9441E'
+                    : '#34D399'
+                }
+                strokeWidth="3.5"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+                transition={{ duration: 0.35 }}
+              />
+            )}
+
+            {/* Vertices - C, A, P (precision double-ring instrument bezels) */}
             {(['C', 'A', 'P'] as CAPProperty[]).map((property) => {
               const vertex = triangleVertices[property];
-              const colors = { C: '#2563EB', A: '#10B981', P: '#D9441E' };
+              const colors = { C: '#60A5FA', A: '#34D399', P: '#D9441E' };
               const labels = {
-                C: 'Consistency',
-                A: 'Availability',
-                P: 'Partition Tolerance',
+                C: 'CONSISTENCY',
+                A: 'AVAILABILITY',
+                P: 'PARTITION TOLERANCE',
               };
 
               return (
                 <motion.g
                   key={property}
-                  initial={{ opacity: 0, scale: 0 }}
+                  initial={{ opacity: 0, scale: 0.85 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5, delay: 0.3 }}
+                  transition={{ duration: 0.4 }}
                 >
-                  <circle cx={vertex.x} cy={vertex.y} r="50" fill={colors[property]} opacity="0.9" />
+                  <circle
+                    cx={vertex.x}
+                    cy={vertex.y}
+                    r="52"
+                    fill="none"
+                    stroke={colors[property]}
+                    strokeWidth="1"
+                    strokeDasharray="4 4"
+                    opacity="0.45"
+                  />
+                  <circle
+                    cx={vertex.x}
+                    cy={vertex.y}
+                    r="44"
+                    fill="#161A18"
+                    stroke={colors[property]}
+                    strokeWidth="2.5"
+                  />
                   <text
                     x={vertex.x}
                     y={vertex.y}
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    fill="#FFF"
+                    fill="#F4F0E8"
                     fontSize="24"
-                    fontWeight="bold"
+                    fontWeight="600"
                   >
                     {property}
                   </text>
                   <text
                     x={vertex.x}
-                    y={vertex.y + (property === 'C' ? -70 : 70)}
+                    y={vertex.y + (property === 'C' ? -68 : 70)}
                     textAnchor="middle"
                     fill={colors[property]}
-                    fontSize="14"
-                    fontWeight="semibold"
+                    fontSize="11.5"
+                    fontWeight="600"
+                    letterSpacing="0.14em"
                   >
                     {labels[property]}
                   </text>
@@ -343,33 +414,34 @@ export default function CAPTheoremPage() {
               if (!combo) return null;
               const midpoint = midpoints[combo];
               const isSelected = selectedCombination === combo;
+              const comboColor =
+                combo === 'CA' ? '#60A5FA' : combo === 'CP' ? '#D9441E' : '#34D399';
 
               return (
                 <motion.g
                   key={combo}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ duration: 0.5, delay: 0.6 }}
+                  transition={{ duration: 0.35 }}
                   className="cursor-pointer"
                   onClick={() => handleCombinationClick(combo)}
                 >
                   <circle
                     cx={midpoint.x}
                     cy={midpoint.y}
-                    r={isSelected ? 35 : 30}
-                    fill={isSelected ? '#F59E0B' : '#1F2937'}
-                    stroke={isSelected ? '#F59E0B' : '#475569'}
-                    strokeWidth="2"
-                    opacity={isSelected ? 1 : 0.7}
+                    r={isSelected ? 34 : 28}
+                    fill={isSelected ? comboColor : '#151917'}
+                    stroke={comboColor}
+                    strokeWidth={isSelected ? '2.5' : '1.6'}
                   />
                   <text
                     x={midpoint.x}
                     y={midpoint.y}
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    fill="#FFF"
-                    fontSize="16"
-                    fontWeight="bold"
+                    fill={isSelected ? '#111413' : '#F4F0E8'}
+                    fontSize="14"
+                    fontWeight="700"
                   >
                     {combo}
                   </text>
@@ -385,33 +457,54 @@ export default function CAPTheoremPage() {
               )
               .map((system, index) => {
                 const isSelected = selectedSystem?.name === system.name;
-                const colors = { CA: '#3B82F6', CP: '#8B5CF6', AP: '#10B981' };
+                const colors = { CA: '#60A5FA', CP: '#D9441E', AP: '#34D399' };
 
                 return (
                   <motion.g
                     key={system.name}
-                    initial={{ opacity: 0, scale: 0 }}
+                    initial={{ opacity: 0, scale: 0.7 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.5, delay: 0.8 + index * 0.1 }}
+                    transition={{ duration: 0.35, delay: index * 0.05 }}
                     className="cursor-pointer"
                     onClick={() => handleSystemClick(system)}
                   >
+                    {isSelected && (
+                      <circle
+                        cx={system.position.x}
+                        cy={system.position.y}
+                        r="27"
+                        fill="none"
+                        stroke="#F4F0E8"
+                        strokeWidth="1.2"
+                        strokeDasharray="3 3"
+                      />
+                    )}
                     <circle
                       cx={system.position.x}
                       cy={system.position.y}
-                      r={isSelected ? 25 : 20}
-                      fill={colors[system.category]}
-                      stroke="#1F2937"
-                      strokeWidth="2"
-                      opacity={isSelected ? 1 : 0.8}
+                      r={isSelected ? 21 : 17}
+                      fill="#171B19"
+                      stroke={colors[system.category]}
+                      strokeWidth={isSelected ? '2.4' : '1.8'}
                     />
                     <text
                       x={system.position.x}
-                      y={system.position.y + 35}
+                      y={system.position.y}
                       textAnchor="middle"
+                      dominantBaseline="middle"
                       fill={colors[system.category]}
-                      fontSize="11"
-                      fontWeight={isSelected ? 'bold' : 'normal'}
+                      fontSize="9"
+                      fontWeight="600"
+                    >
+                      {system.category}
+                    </text>
+                    <text
+                      x={system.position.x}
+                      y={system.position.y + 32}
+                      textAnchor="middle"
+                      fill={isSelected ? '#F4F0E8' : colors[system.category]}
+                      fontSize="10.5"
+                      fontWeight={isSelected ? '700' : '500'}
                     >
                       {system.name}
                     </text>
@@ -420,25 +513,25 @@ export default function CAPTheoremPage() {
               })}
 
             {/* Legend */}
-            <g transform="translate(50, 50)">
-              <text x="0" y="0" fill="#CBD5E1" fontSize="12" fontWeight="semibold">
-                Real-World Systems:
+            <g transform="translate(36, 44)">
+              <text x="0" y="0" fill="#9E9B90" fontSize="10" fontWeight="600" letterSpacing="0.12em">
+                REAL-WORLD SYSTEMS
               </text>
               <g transform="translate(0, 20)">
-                <circle cx="5" cy="0" r="5" fill="#3B82F6" />
-                <text x="15" y="5" fill="#CBD5E1" fontSize="11">
+                <circle cx="5" cy="0" r="4.5" fill="#171B19" stroke="#60A5FA" strokeWidth="1.8" />
+                <text x="16" y="4" fill="#D6D2C7" fontSize="10.5">
                   CA Systems
                 </text>
               </g>
-              <g transform="translate(0, 35)">
-                <circle cx="5" cy="0" r="5" fill="#8B5CF6" />
-                <text x="15" y="5" fill="#CBD5E1" fontSize="11">
+              <g transform="translate(0, 38)">
+                <circle cx="5" cy="0" r="4.5" fill="#171B19" stroke="#D9441E" strokeWidth="1.8" />
+                <text x="16" y="4" fill="#D6D2C7" fontSize="10.5">
                   CP Systems
                 </text>
               </g>
-              <g transform="translate(0, 50)">
-                <circle cx="5" cy="0" r="5" fill="#10B981" />
-                <text x="15" y="5" fill="#CBD5E1" fontSize="11">
+              <g transform="translate(0, 56)">
+                <circle cx="5" cy="0" r="4.5" fill="#171B19" stroke="#34D399" strokeWidth="1.8" />
+                <text x="16" y="4" fill="#D6D2C7" fontSize="10.5">
                   AP Systems
                 </text>
               </g>
@@ -454,11 +547,11 @@ export default function CAPTheoremPage() {
             </p>
             <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside">
               <li>
-                <span className="font-semibold text-purple-400">CP</span>: Reject writes during partition to maintain
+                <span className="font-semibold text-[#F97316]">CP</span>: Reject writes during partition to maintain
                 consistency (sacrifice availability)
               </li>
               <li>
-                <span className="font-semibold text-green-400">AP</span>: Accept writes on both sides of partition,
+                <span className="font-semibold text-[#34D399]">AP</span>: Accept writes on both sides of partition,
                 deal with conflicts later (sacrifice consistency)
               </li>
             </ul>

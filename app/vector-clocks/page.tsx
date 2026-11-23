@@ -154,16 +154,16 @@ export default function VectorClocksPage() {
 
   // Get event color based on type
   const getEventColor = (event: VectorClockEvent): string => {
-    if (selectedEvents.has(event.id)) return '#F59E0B'; // amber if selected
+    if (selectedEvents.has(event.id)) return '#FBBF24'; // amber if selected
     switch (event.type) {
       case 'local':
-        return '#3B82F6'; // blue
+        return '#60A5FA'; // cobalt
       case 'send':
-        return '#10B981'; // green
+        return '#34D399'; // emerald
       case 'receive':
-        return '#8B5CF6'; // purple
+        return '#D9441E'; // signal vermilion
       default:
-        return '#6B7280';
+        return '#9E9B90';
     }
   };
 
@@ -241,54 +241,63 @@ export default function VectorClocksPage() {
             />
           </div>
           <svg ref={svgRef} className="hidden" width="1200" height="800" viewBox="0 0 1200 800">
-            <rect width="1200" height="800" fill="#0f172a" />
-            <text x="40" y="70" fill="#e2e8f0" fontSize="38" fontWeight="700">
+            <rect width="1200" height="800" fill="#111413" />
+            <text x="40" y="70" fill="#F4F0E8" fontSize="38" fontWeight="700">
               Vector Clocks
             </text>
-            <text x="40" y="115" fill="#94a3b8" fontSize="20">
+            <text x="40" y="115" fill="#9E9B90" fontSize="20">
               Scenario: {selectedScenario || 'manual'}
             </text>
-            <text x="40" y="160" fill="#e2e8f0" fontSize="24">
+            <text x="40" y="160" fill="#F4F0E8" fontSize="24">
               Summary
             </text>
-            <text x="40" y="200" fill="#93c5fd" fontSize="20">
+            <text x="40" y="200" fill="#60A5FA" fontSize="20">
               Total Events: {stats.totalEvents}
             </text>
-            <text x="300" y="200" fill="#fbbf24" fontSize="20">
+            <text x="300" y="200" fill="#FBBF24" fontSize="20">
               Concurrent Pairs: {stats.concurrentPairs}
             </text>
           </svg>
           {/* Process timelines */}
-          <div className="space-y-12">
+          <div className="space-y-14 max-w-5xl">
             {processes.map((process, processIndex) => (
               <div key={process.id} className="relative">
                 {/* Process label and current clock */}
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between gap-4 mb-3">
+                  <div className="flex items-center gap-3">
                     <div
-                      className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white ${
-                        process.status === 'failed' ? 'bg-red-600' : 'bg-blue-600'
+                      className={`w-10 h-10 border-2 flex items-center justify-center font-mono text-xs font-bold bg-[#171C1A] ${
+                        process.status === 'failed'
+                          ? 'border-[#F87171] text-[#F87171]'
+                          : 'border-[#60A5FA] text-[#F4F0E8]'
                       }`}
                     >
                       {process.id}
                     </div>
                     <div>
-                      <div className="text-white font-semibold">{process.id}</div>
-                      <div className="text-sm text-slate-400">
-                        Clock: {formatClock(process.vectorClock)}
+                      <div className="font-mono text-xs uppercase tracking-wider text-[#F4F0E8] font-semibold">
+                        Process {process.id}
+                      </div>
+                      <div className="font-mono text-xs text-[#9E9B90] tabular-nums">
+                        VC = <span className="text-[#34D399]">{formatClock(process.vectorClock)}</span>
                       </div>
                     </div>
                   </div>
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-[#9E9B90]">
+                    {process.events.length} EVENT{process.events.length === 1 ? '' : 'S'}
+                  </div>
                 </div>
 
-                {/* Timeline */}
-                <div className="relative h-20 bg-slate-800 rounded-lg border border-slate-700">
-                  {/* Timeline line */}
-                  <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-slate-600" />
+                {/* Oscilloscope timeline lane */}
+                <div className="relative h-24 bg-[#161A18] border border-[rgba(244,240,232,0.14)]">
+                  {/* Calibrated rail line */}
+                  <div className="absolute top-1/2 left-4 right-4 h-px bg-[rgba(244,240,232,0.2)]" />
 
                   {/* Events */}
                   {process.events.map((event, eventIndex) => {
-                    const xPos = 50 + eventIndex * 120;
+                    const xPos = 56 + eventIndex * 124;
+                    const eventColor = getEventColor(event);
+                    const isSelected = selectedEvents.has(event.id);
                     return (
                       <motion.div
                         key={event.id}
@@ -300,32 +309,39 @@ export default function VectorClocksPage() {
                         }}
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        transition={{ duration: 0.3 }}
+                        transition={{ duration: 0.25 }}
                       >
                         <div
-                          className="cursor-pointer"
+                          className="cursor-pointer group"
                           onClick={() => toggleEventSelection(event.id)}
                         >
-                          {/* Event circle */}
+                          {/* Double-ring event pin */}
                           <div
-                            className="w-8 h-8 rounded-full border-4 border-slate-900 flex items-center justify-center"
-                            style={{ backgroundColor: getEventColor(event) }}
+                            className={`w-8 h-8 rounded-full bg-[#111413] flex items-center justify-center transition-transform group-hover:scale-110 ${
+                              isSelected ? 'ring-2 ring-[#FBBF24] ring-offset-2 ring-offset-[#161A18]' : ''
+                            }`}
+                            style={{ border: `2px solid ${eventColor}` }}
                           >
-                            <span className="text-xs text-white font-bold">
+                            <span
+                              className="font-mono text-[11px] font-bold"
+                              style={{ color: eventColor }}
+                            >
                               {event.type[0].toUpperCase()}
                             </span>
                           </div>
 
-                          {/* Event info */}
-                          <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-slate-700 px-2 py-1 rounded text-xs whitespace-nowrap">
-                            <div className="text-white font-mono">
+                          {/* Monospace vector clock chip */}
+                          <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-[#111413] border border-[rgba(244,240,232,0.18)] px-2 py-0.5 text-[11px] whitespace-nowrap">
+                            <div className="text-[#F4F0E8] font-mono tabular-nums">
                               {formatClock(event.vectorClock)}
                             </div>
-                            <div className="text-slate-300">{event.type}</div>
+                            <div className="text-[#9E9B90] font-mono text-[9px] uppercase text-center">
+                              {event.type}
+                            </div>
                           </div>
                         </div>
 
-                        {/* Message arrow */}
+                        {/* Causal message arrow */}
                         {event.type === 'send' && event.relatedEvent && (
                           <svg
                             className="absolute pointer-events-none"
@@ -338,14 +354,14 @@ export default function VectorClocksPage() {
                           >
                             <defs>
                               <marker
-                                id="arrowhead"
-                                markerWidth="10"
-                                markerHeight="7"
-                                refX="9"
-                                refY="3.5"
+                                id={`vc-arrow-${event.id}`}
+                                markerWidth="8"
+                                markerHeight="6"
+                                refX="7"
+                                refY="3"
                                 orient="auto"
                               >
-                                <polygon points="0 0, 10 3.5, 0 7" fill="#10B981" />
+                                <polygon points="0 0, 8 3, 0 6" fill="#34D399" />
                               </marker>
                             </defs>
                             <line
@@ -353,10 +369,10 @@ export default function VectorClocksPage() {
                               y1="0"
                               x2="60"
                               y2={`${(processIndex + 1) * 120 - 40}`}
-                              stroke="#10B981"
-                              strokeWidth="2"
-                              strokeDasharray="5,5"
-                              markerEnd="url(#arrowhead)"
+                              stroke="#34D399"
+                              strokeWidth="1.6"
+                              strokeDasharray="4 4"
+                              markerEnd={`url(#vc-arrow-${event.id})`}
                             />
                           </svg>
                         )}
@@ -370,9 +386,11 @@ export default function VectorClocksPage() {
 
           {/* Comparison result */}
           {selectedEvents.size === 2 && (
-            <div className="mt-6 bg-amber-900/20 border border-amber-700 rounded-lg p-4">
-              <h3 className="text-amber-400 font-semibold mb-2">Event Comparison</h3>
-              <p className="text-white">{getEventComparison()}</p>
+            <div className="mt-10 max-w-2xl bg-[#181C1A] border border-[#FBBF24] p-4 font-mono">
+              <div className="text-[10px] uppercase tracking-widest text-[#FBBF24] mb-1">
+                Causal Ordering Comparison
+              </div>
+              <p className="text-sm text-[#F4F0E8]">{getEventComparison()}</p>
             </div>
           )}
 
@@ -410,28 +428,28 @@ export default function VectorClocksPage() {
                 P2 → P0
               </button>
             </div>
-            <p className="text-xs text-slate-400 mt-2">Click events to compare</p>
+            <p className="text-xs text-slate-400 mt-2">Click 2 events to compare causality</p>
           </div>
 
           {/* Legend */}
           <div className="absolute bottom-4 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700">
-            <h3 className="text-sm font-semibold text-white mb-2">Event Types</h3>
-            <div className="space-y-1 text-xs">
+            <h3 className="text-sm font-semibold text-white mb-2">Event Pins</h3>
+            <div className="space-y-1.5 text-xs font-mono">
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-blue-600" />
-                <span className="text-slate-400">Local (L)</span>
+                <div className="w-3 h-3 rounded-full border-2 border-[#60A5FA] bg-[#111413]" />
+                <span className="text-slate-300">Local (L)</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-green-600" />
-                <span className="text-slate-400">Send (S)</span>
+                <div className="w-3 h-3 rounded-full border-2 border-[#34D399] bg-[#111413]" />
+                <span className="text-slate-300">Send (S)</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-purple-600" />
-                <span className="text-slate-400">Receive (R)</span>
+                <div className="w-3 h-3 rounded-full border-2 border-[#D9441E] bg-[#111413]" />
+                <span className="text-slate-300">Receive (R)</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-amber-600" />
-                <span className="text-slate-400">Selected</span>
+                <div className="w-3 h-3 rounded-full border-2 border-[#FBBF24] bg-[#111413]" />
+                <span className="text-slate-300">Selected</span>
               </div>
             </div>
           </div>

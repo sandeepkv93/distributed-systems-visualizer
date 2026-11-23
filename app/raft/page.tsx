@@ -10,7 +10,8 @@ import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import { raftScenarios } from '@/visualizers/raft/scenarios';
 import { RaftNode as RaftNodeType, RaftMessage } from '@/lib/types';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
+import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 
 export default function RaftPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -203,137 +204,109 @@ export default function RaftPage() {
         {/* Visualization Canvas */}
         <div className="flex-1 relative bg-slate-900 overflow-hidden min-h-[420px]">
           <svg ref={svgRef} viewBox="0 0 840 640" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            {/* Draw messages */}
+            <ScopeDefs idPrefix="raft" />
+
+            {/* Subtle cluster topology mesh */}
+            {nodes.map((a, i) =>
+              nodes.slice(i + 1).map((b) => {
+                const aPart = partitions.findIndex((g) => g.includes(a.id));
+                const bPart = partitions.findIndex((g) => g.includes(b.id));
+                const severed = partitions.length > 0 && aPart !== bPart;
+                return (
+                  <line
+                    key={`mesh-${a.id}-${b.id}`}
+                    x1={a.position.x}
+                    y1={a.position.y}
+                    x2={b.position.x}
+                    y2={b.position.y}
+                    stroke={severed ? 'rgba(217, 68, 30, 0.16)' : SCOPE_COLORS.hairlineSubtle}
+                    strokeWidth="1"
+                    strokeDasharray={severed ? '4 6' : undefined}
+                  />
+                );
+              })
+            )}
+
+            {/* Draw animated directional messages */}
             <AnimatePresence>
               {messages.map((message) => {
                 const fromNode = nodes.find((n) => n.id === message.from);
                 const toNode = nodes.find((n) => n.id === message.to);
                 if (!fromNode || !toNode) return null;
 
-                const color =
-                  message.type === 'RequestVote'
-                    ? '#F59E0B'
-                    : message.type === 'AppendEntries'
-                    ? '#3B82F6'
-                    : '#10B981';
+                const isVote = message.type === 'RequestVote';
+                const isAppend = message.type === 'AppendEntries';
+                const color = isVote
+                  ? SCOPE_COLORS.amber
+                  : isAppend
+                  ? SCOPE_COLORS.cobalt
+                  : SCOPE_COLORS.emerald;
+                const markerKey = isVote ? 'amber' : isAppend ? 'cobalt' : 'emerald';
+                const shortLabel = isVote ? 'RV' : isAppend ? 'AE' : 'ACK';
 
                 return (
-                  <motion.line
+                  <ScopeEdge
                     key={message.id}
+                    idPrefix="raft"
                     x1={fromNode.position.x}
                     y1={fromNode.position.y}
                     x2={toNode.position.x}
                     y2={toNode.position.y}
-                    stroke={color}
-                    strokeWidth="2"
-                    strokeDasharray="5,5"
-                    initial={{ pathLength: 0, opacity: 0 }}
-                    animate={{ pathLength: 1, opacity: 0.6 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.5 }}
+                    color={color}
+                    markerKey={markerKey}
+                    inset={44}
+                    label={shortLabel}
+                    dashed={isVote}
                   />
                 );
               })}
             </AnimatePresence>
 
-            {/* Draw nodes */}
+            {/* Draw double-ring oscilloscope nodes */}
             {nodes.map((node) => {
-              let nodeColor = '#10B981'; // healthy - green
-              if (node.status === 'failed') nodeColor = '#EF4444'; // failed - red
-              else if (node.state === 'leader') nodeColor = '#3B82F6'; // leader - blue
-              else if (node.state === 'candidate') nodeColor = '#8B5CF6'; // candidate - purple
+              const isFailed = node.status === 'failed';
+              const isLeader = !isFailed && node.state === 'leader';
+              const isCandidate = !isFailed && node.state === 'candidate';
+
+              const accentColor = isFailed
+                ? SCOPE_COLORS.danger
+                : isLeader
+                ? SCOPE_COLORS.signal
+                : isCandidate
+                ? SCOPE_COLORS.amber
+                : SCOPE_COLORS.emerald;
 
               const partitionIndex = partitions.findIndex((group) => group.includes(node.id));
+              const haloColor =
+                partitionIndex === 0
+                  ? SCOPE_COLORS.amber
+                  : partitionIndex === 1
+                  ? SCOPE_COLORS.cobalt
+                  : undefined;
+
+              const nodeNum = node.id.replace('node-', '');
+              const bottomLine2 =
+                isCandidate
+                  ? `LOG ${node.log.length} · VOTES ${node.votesReceived}`
+                  : `LOG ${node.log.length} · CMT ${node.commitIndex}`;
 
               return (
-                <g key={node.id}>
-                  {/* Node circle */}
-                  <motion.circle
-                    cx={node.position.x}
-                    cy={node.position.y}
-                    r="40"
-                    fill={nodeColor}
-                    stroke={partitionIndex === 0 ? '#F59E0B' : partitionIndex === 1 ? '#06B6D4' : '#1F2937'}
-                    strokeWidth={partitionIndex >= 0 ? '4' : '3'}
-                    className="cursor-pointer"
-                    onClick={() => handleNodeClick(node.id)}
-                    whileHover={{ scale: 1.1 }}
-                    animate={{
-                      scale: node.state === 'leader' ? [1, 1.05, 1] : 1,
-                    }}
-                    transition={{
-                      scale: {
-                        repeat: node.state === 'leader' ? Infinity : 0,
-                        duration: 2,
-                      },
-                    }}
-                  />
-
-                  {/* Node label */}
-                  <text
-                    x={node.position.x}
-                    y={node.position.y}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    fill="white"
-                    fontSize="12"
-                    fontWeight="bold"
-                    className="pointer-events-none"
-                  >
-                    {node.id.replace('node-', '')}
-                  </text>
-
-                  {/* Node state */}
-                  <text
-                    x={node.position.x}
-                    y={node.position.y - 55}
-                    textAnchor="middle"
-                    fill="white"
-                    fontSize="10"
-                    className="pointer-events-none"
-                  >
-                    {node.state.toUpperCase()}
-                  </text>
-
-                  {/* Term number */}
-                  <text
-                    x={node.position.x}
-                    y={node.position.y + 55}
-                    textAnchor="middle"
-                    fill="white"
-                    fontSize="10"
-                    className="pointer-events-none"
-                  >
-                    Term: {node.term}
-                  </text>
-
-                  {/* Log entries */}
-                  <text
-                    x={node.position.x}
-                    y={node.position.y + 70}
-                    textAnchor="middle"
-                    fill="white"
-                    fontSize="10"
-                    className="pointer-events-none"
-                  >
-                    Log: {node.log.length}
-                  </text>
-
-                  {/* Votes (if candidate) */}
-                  {node.state === 'candidate' && (
-                    <text
-                      x={node.position.x}
-                      y={node.position.y + 85}
-                      textAnchor="middle"
-                      fill="#F59E0B"
-                      fontSize="10"
-                      fontWeight="bold"
-                      className="pointer-events-none"
-                    >
-                      Votes: {node.votesReceived}
-                    </text>
-                  )}
-                </g>
+                <ScopeNode
+                  key={node.id}
+                  x={node.position.x}
+                  y={node.position.y}
+                  radius={38}
+                  label={`N${nodeNum}`}
+                  sublabel={isFailed ? 'OFFLINE' : `T${node.term}`}
+                  topTag={isFailed ? 'FAILED' : node.state.toUpperCase()}
+                  bottomLine1={`TERM ${node.term}`}
+                  bottomLine2={bottomLine2}
+                  accentColor={accentColor}
+                  failed={isFailed}
+                  highlighted={isLeader}
+                  haloColor={haloColor}
+                  onClick={() => handleNodeClick(node.id)}
+                />
               );
             })}
           </svg>

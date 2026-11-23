@@ -10,7 +10,8 @@ import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import { paxosScenarios } from '@/visualizers/paxos/scenarios';
 import { PaxosNode, PaxosMessage } from '@/lib/types';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
+import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 
 export default function PaxosPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -131,17 +132,21 @@ export default function PaxosPage() {
 
   // Get node color based on role and status
   const getNodeColor = (node: PaxosNode): string => {
-    if (node.status === 'failed') return '#EF4444'; // red
+    if (node.status === 'failed') return SCOPE_COLORS.danger;
 
     switch (node.role) {
       case 'proposer':
-        return '#3B82F6'; // blue
+        return SCOPE_COLORS.cobalt;
       case 'acceptor':
-        return node.acceptedValue ? '#10B981' : '#6B7280'; // green if accepted, gray otherwise
+        return node.acceptedValue
+          ? SCOPE_COLORS.emerald
+          : node.promisedProposal
+          ? SCOPE_COLORS.amber
+          : SCOPE_COLORS.inkMuted;
       case 'learner':
-        return '#8B5CF6'; // purple
+        return SCOPE_COLORS.signal;
       default:
-        return '#6B7280'; // gray
+        return SCOPE_COLORS.inkMuted;
     }
   };
 
@@ -225,7 +230,38 @@ export default function PaxosPage() {
         {/* Visualization Canvas */}
         <div className="flex-1 relative bg-slate-900 overflow-hidden min-h-[420px]">
           <svg ref={svgRef} viewBox="0 0 820 620" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            {/* Draw messages */}
+            <ScopeDefs idPrefix="paxos" />
+
+            {/* Architectural role swimlanes */}
+            {[
+              { y: 100, label: 'PROPOSERS' },
+              { y: 300, label: 'ACCEPTORS' },
+              { y: 500, label: 'LEARNERS' },
+            ].map((lane) => (
+              <g key={lane.label} className="pointer-events-none">
+                <line
+                  x1="18"
+                  y1={lane.y}
+                  x2="802"
+                  y2={lane.y}
+                  stroke={SCOPE_COLORS.hairlineSubtle}
+                  strokeWidth="1"
+                  strokeDasharray="3 5"
+                />
+                <text
+                  x="22"
+                  y={lane.y - 10}
+                  fill={SCOPE_COLORS.inkMuted}
+                  fontSize="10"
+                  fontWeight="600"
+                  letterSpacing="0.14em"
+                >
+                  {lane.label}
+                </text>
+              </g>
+            ))}
+
+            {/* Draw animated directional messages */}
             <AnimatePresence>
               {messages.map((message) => {
                 const fromNode = nodes.find((n) => n.id === message.from);
@@ -240,133 +276,65 @@ export default function PaxosPage() {
 
                 if (!fromNode || toNodes.length === 0) return null;
 
-                const color =
-                  message.type === 'Prepare' || message.type === 'Promise'
-                    ? '#8B5CF6' // purple for phase 1
-                    : '#F59E0B'; // amber for phase 2
+                const isPhase1 = message.type === 'Prepare' || message.type === 'Promise';
+                const color = isPhase1 ? SCOPE_COLORS.cobalt : SCOPE_COLORS.amber;
+                const markerKey = isPhase1 ? 'cobalt' : 'amber';
 
                 return toNodes.map((toNode) => (
-                  <motion.line
+                  <ScopeEdge
                     key={`${message.id}-${toNode.id}`}
+                    idPrefix="paxos"
                     x1={fromNode.position.x}
                     y1={fromNode.position.y}
                     x2={toNode.position.x}
                     y2={toNode.position.y}
-                    stroke={color}
-                    strokeWidth="2"
-                    strokeDasharray="5,5"
-                    initial={{ pathLength: 0, opacity: 0 }}
-                    animate={{ pathLength: 1, opacity: 0.6 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.5 }}
+                    color={color}
+                    markerKey={markerKey}
+                    inset={39}
+                    dashed={isPhase1}
                   />
                 ));
               })}
             </AnimatePresence>
 
-            {/* Draw nodes */}
+            {/* Draw double-ring oscilloscope nodes */}
             {nodes.map((node) => {
               const nodeColor = getNodeColor(node);
+              const isFailed = node.status === 'failed';
+              const shortId = `${node.id.split('-')[0][0].toUpperCase()}${node.id.split('-')[1]}`;
+
+              let bottomLine1: string | undefined;
+              let bottomLine2: string | undefined;
+
+              if (node.role === 'proposer' && node.proposalNumber !== undefined && node.proposalNumber > 0) {
+                bottomLine1 = `PROP #${node.proposalNumber}`;
+              } else if (node.role === 'acceptor') {
+                if (node.promisedProposal !== undefined && node.promisedProposal > 0) {
+                  bottomLine1 = `PROM #${node.promisedProposal}`;
+                }
+                if (node.acceptedValue) {
+                  bottomLine2 = `✓ ${node.acceptedValue}`;
+                }
+              }
 
               return (
-                <g key={node.id}>
-                  {/* Node circle */}
-                  <motion.circle
-                    cx={node.position.x}
-                    cy={node.position.y}
-                    r="35"
-                    fill={nodeColor}
-                    stroke="#1F2937"
-                    strokeWidth="3"
-                    className="cursor-pointer"
-                    onClick={() => handleNodeClick(node.id)}
-                    whileHover={{ scale: 1.1 }}
-                  />
-
-                  {/* Node label */}
-                  <text
-                    x={node.position.x}
-                    y={node.position.y}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    fill="white"
-                    fontSize="10"
-                    fontWeight="bold"
-                    className="pointer-events-none"
-                  >
-                    {node.id.split('-')[0][0].toUpperCase()}
-                    {node.id.split('-')[1]}
-                  </text>
-
-                  {/* Role label */}
-                  <text
-                    x={node.position.x}
-                    y={node.position.y - 50}
-                    textAnchor="middle"
-                    fill="white"
-                    fontSize="9"
-                    className="pointer-events-none uppercase"
-                  >
-                    {node.role}
-                  </text>
-
-                  {/* Additional info */}
-                  {node.role === 'proposer' && node.proposalNumber !== undefined && node.proposalNumber > 0 && (
-                    <text
-                      x={node.position.x}
-                      y={node.position.y + 50}
-                      textAnchor="middle"
-                      fill="white"
-                      fontSize="9"
-                      className="pointer-events-none"
-                    >
-                      P#{node.proposalNumber}
-                    </text>
-                  )}
-
-                  {node.role === 'acceptor' && (
-                    <>
-                      {node.promisedProposal !== undefined && node.promisedProposal > 0 && (
-                        <text
-                          x={node.position.x}
-                          y={node.position.y + 50}
-                          textAnchor="middle"
-                          fill="#8B5CF6"
-                          fontSize="8"
-                          className="pointer-events-none"
-                        >
-                          Promised: {node.promisedProposal}
-                        </text>
-                      )}
-                      {node.acceptedValue && (
-                        <text
-                          x={node.position.x}
-                          y={node.position.y + 65}
-                          textAnchor="middle"
-                          fill="#10B981"
-                          fontSize="8"
-                          fontWeight="bold"
-                          className="pointer-events-none"
-                        >
-                          ✓ {node.acceptedValue}
-                        </text>
-                      )}
-                    </>
-                  )}
-                </g>
+                <ScopeNode
+                  key={node.id}
+                  x={node.position.x}
+                  y={node.position.y}
+                  radius={33}
+                  label={shortId}
+                  sublabel={isFailed ? 'DOWN' : node.role.slice(0, 3).toUpperCase()}
+                  topTag={isFailed ? 'FAILED' : node.role.toUpperCase()}
+                  bottomLine1={bottomLine1}
+                  bottomLine2={bottomLine2}
+                  accentColor={nodeColor}
+                  failed={isFailed}
+                  highlighted={Boolean(node.acceptedValue)}
+                  onClick={() => handleNodeClick(node.id)}
+                />
               );
             })}
-
-            {/* Role section labels */}
-            <text x="20" y="100" fill="white" fontSize="14" fontWeight="bold">
-              Proposers
-            </text>
-            <text x="20" y="300" fill="white" fontSize="14" fontWeight="bold">
-              Acceptors
-            </text>
-            <text x="20" y="500" fill="white" fontSize="14" fontWeight="bold">
-              Learners
-            </text>
           </svg>
 
           {/* Manual controls overlay */}
@@ -391,15 +359,15 @@ export default function PaxosPage() {
 
           {/* Legend */}
           <div className="absolute bottom-4 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700">
-            <h3 className="text-sm font-semibold text-white mb-2">Message Types</h3>
-            <div className="space-y-1 text-xs">
+            <h3 className="text-sm font-semibold text-white mb-2">Wire Phases</h3>
+            <div className="space-y-1.5 text-xs font-mono">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-0.5 bg-purple-500" />
-                <span className="text-slate-400">Phase 1 (Prepare/Promise)</span>
+                <div className="w-6 h-0.5 bg-[#60A5FA]" />
+                <span className="text-slate-300">Phase 1 · Prepare / Promise</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-0.5 bg-amber-500" />
-                <span className="text-slate-400">Phase 2 (Accept/Accepted)</span>
+                <div className="w-6 h-0.5 bg-[#FBBF24]" />
+                <span className="text-slate-300">Phase 2 · Accept / Accepted</span>
               </div>
             </div>
           </div>

@@ -144,13 +144,13 @@ export default function ConsistentHashingPage() {
 
   // Get color for server
   const serverColors = [
-    '#3B82F6', // blue
-    '#10B981', // green
-    '#F59E0B', // amber
-    '#8B5CF6', // purple
-    '#EF4444', // red
-    '#06B6D4', // cyan
-    '#F97316', // orange
+    '#60A5FA', // cobalt
+    '#34D399', // emerald
+    '#FBBF24', // amber
+    '#D9441E', // signal vermilion
+    '#F87171', // coral red
+    '#2DD4BF', // teal
+    '#FB923C', // orange
   ];
 
   const getServerColor = (serverId: string): string => {
@@ -241,110 +241,202 @@ export default function ConsistentHashingPage() {
           </div>
 
           <svg ref={svgRef} viewBox="0 0 820 700" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            {/* Ring circle */}
+            {/* Outer calibrated compass ticks (24 divisions around 2^32 space) */}
+            {Array.from({ length: 24 }, (_, idx) => {
+              const angle = (idx / 24) * 2 * Math.PI - Math.PI / 2;
+              const isMajor = idx % 6 === 0;
+              const r1 = radius + (isMajor ? 2 : 5);
+              const r2 = radius + (isMajor ? 14 : 10);
+              return (
+                <line
+                  key={`tick-${idx}`}
+                  x1={centerX + r1 * Math.cos(angle)}
+                  y1={centerY + r1 * Math.sin(angle)}
+                  x2={centerX + r2 * Math.cos(angle)}
+                  y2={centerY + r2 * Math.sin(angle)}
+                  stroke={isMajor ? 'rgba(244,240,232,0.45)' : 'rgba(244,240,232,0.16)'}
+                  strokeWidth={isMajor ? '1.5' : '1'}
+                />
+              );
+            })}
+
+            {/* Concentric guide rings */}
+            <circle
+              cx={centerX}
+              cy={centerY}
+              r={radius * 0.84}
+              fill="none"
+              stroke="rgba(244,240,232,0.08)"
+              strokeWidth="1"
+              strokeDasharray="3 5"
+            />
             <circle
               cx={centerX}
               cy={centerY}
               r={radius}
               fill="none"
-              stroke="#475569"
-              strokeWidth="2"
-              strokeDasharray="10,5"
+              stroke="rgba(244,240,232,0.3)"
+              strokeWidth="1.75"
+            />
+            <circle
+              cx={centerX}
+              cy={centerY}
+              r={68}
+              fill="#151917"
+              stroke="rgba(244,240,232,0.14)"
+              strokeWidth="1"
             />
 
-            {/* Hash space labels */}
+            {/* Hash space quadrant labels */}
             <text
               x={centerX}
-              y={centerY - radius - 20}
+              y={centerY - radius - 22}
               textAnchor="middle"
-              fill="#94A3B8"
-              fontSize="12"
+              fill="#9E9B90"
+              fontSize="11"
             >
-              0
+              0x00000000
             </text>
             <text
-              x={centerX + radius + 20}
-              y={centerY + 5}
+              x={centerX + radius + 22}
+              y={centerY + 4}
               textAnchor="start"
-              fill="#94A3B8"
-              fontSize="12"
+              fill="#9E9B90"
+              fontSize="11"
+            >
+              2³⁰
+            </text>
+            <text
+              x={centerX}
+              y={centerY + radius + 28}
+              textAnchor="middle"
+              fill="#9E9B90"
+              fontSize="11"
             >
               2³¹
             </text>
+            <text
+              x={centerX - radius - 22}
+              y={centerY + 4}
+              textAnchor="end"
+              fill="#9E9B90"
+              fontSize="11"
+            >
+              3·2³⁰
+            </text>
 
-            {/* Virtual nodes on ring */}
-            {ring.nodes.map((node) => {
-              const pos = getPositionOnRing(node.hashValue);
-              const color = getServerColor(node.physicalNodeId || '');
-
-              return (
-                <g key={node.id}>
-                  <motion.circle
-                    cx={pos.x}
-                    cy={pos.y}
-                    r="8"
-                    fill={color}
-                    stroke="#1F2937"
-                    strokeWidth="2"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ duration: 0.3 }}
-                  />
-                  {/* Node label */}
-                  <text
-                    x={pos.x}
-                    y={pos.y + 20}
-                    textAnchor="middle"
-                    fill={color}
-                    fontSize="8"
-                    className="pointer-events-none"
-                  >
-                    {node.id}
-                  </text>
-                </g>
-              );
-            })}
-
-            {/* Keys on ring */}
+            {/* Keys on inner orbit with subtle radial ticks */}
             {ring.keys.map((key) => {
               const pos = getPositionOnRing(key.hashValue);
               const node = ring.nodes.find((n) => n.id === key.nodeId);
               const color = node ? getServerColor(node.physicalNodeId || '') : '#6B7280';
 
-              // Offset keys slightly inward
               const keyPos = {
-                x: centerX + (pos.x - centerX) * 0.85,
-                y: centerY + (pos.y - centerY) * 0.85,
+                x: centerX + (pos.x - centerX) * 0.84,
+                y: centerY + (pos.y - centerY) * 0.84,
               };
 
               return (
-                <motion.circle
-                  key={key.key}
-                  cx={keyPos.x}
-                  cy={keyPos.y}
-                  r="3"
-                  fill={color}
-                  opacity="0.6"
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ duration: 0.2 }}
-                />
+                <g key={key.key}>
+                  <line
+                    x1={keyPos.x}
+                    y1={keyPos.y}
+                    x2={pos.x}
+                    y2={pos.y}
+                    stroke={color}
+                    strokeWidth="0.75"
+                    opacity="0.28"
+                  />
+                  <motion.circle
+                    cx={keyPos.x}
+                    cy={keyPos.y}
+                    r="3.2"
+                    fill={color}
+                    opacity="0.85"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ duration: 0.2 }}
+                  />
+                </g>
               );
             })}
 
-            {/* Center info */}
+            {/* Virtual nodes on ring (double-ring instrument pins) */}
+            {ring.nodes.map((node) => {
+              const pos = getPositionOnRing(node.hashValue);
+              const color = getServerColor(node.physicalNodeId || '');
+              const labelPos = {
+                x: centerX + (pos.x - centerX) * 1.11,
+                y: centerY + (pos.y - centerY) * 1.11,
+              };
+
+              return (
+                <g key={node.id}>
+                  <circle
+                    cx={pos.x}
+                    cy={pos.y}
+                    r="12"
+                    fill="none"
+                    stroke={color}
+                    strokeWidth="0.9"
+                    opacity="0.45"
+                  />
+                  <motion.circle
+                    cx={pos.x}
+                    cy={pos.y}
+                    r="7.5"
+                    fill="#151917"
+                    stroke={color}
+                    strokeWidth="2.4"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                  />
+                  <text
+                    x={labelPos.x}
+                    y={labelPos.y}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fill={color}
+                    fontSize="8.5"
+                    fontWeight="600"
+                    className="pointer-events-none"
+                  >
+                    {node.id.replace('server-', 'S')}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Center calibrated readout */}
             <text
               x={centerX}
-              y={centerY - 10}
+              y={centerY - 14}
               textAnchor="middle"
-              fill="#FFF"
-              fontSize="16"
-              fontWeight="bold"
+              fill="#9E9B90"
+              fontSize="9"
+              letterSpacing="0.14em"
             >
-              Hash Ring
+              RING 2³²
             </text>
-            <text x={centerX} y={centerY + 10} textAnchor="middle" fill="#94A3B8" fontSize="12">
-              {stats.totalKeys} keys
+            <text
+              x={centerX}
+              y={centerY + 6}
+              textAnchor="middle"
+              fill="#F4F0E8"
+              fontSize="18"
+              fontWeight="600"
+            >
+              {stats.totalKeys} KEYS
+            </text>
+            <text
+              x={centerX}
+              y={centerY + 24}
+              textAnchor="middle"
+              fill={stats.loadStats.imbalance > 1.5 ? '#FBBF24' : '#34D399'}
+              fontSize="10"
+            >
+              {stats.loadStats.imbalance.toFixed(2)}× IMBAL
             </text>
           </svg>
 

@@ -10,7 +10,7 @@ import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import { pbftScenarios } from '@/visualizers/pbft/scenarios';
 import { PBFTNode, PBFTMessage } from '@/lib/types';
-import { motion } from 'framer-motion';
+import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 
 export default function PBFTPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -102,23 +102,40 @@ export default function PBFTPage() {
   };
 
   const getNodeColor = (node: PBFTNode): string => {
-    if (node.status === 'failed') return '#EF4444';
-    if (node.role === 'primary') return '#3B82F6';
-    return '#10B981';
+    if (node.status === 'failed') return SCOPE_COLORS.danger;
+    if (node.role === 'primary') return SCOPE_COLORS.signal;
+    return SCOPE_COLORS.emerald;
   };
 
   const getMessageColor = (message: PBFTMessage): string => {
     switch (message.type) {
       case 'PrePrepare':
-        return '#6366F1';
+        return SCOPE_COLORS.cobalt;
       case 'Prepare':
-        return '#F59E0B';
+        return SCOPE_COLORS.amber;
       case 'Commit':
-        return '#10B981';
+        return SCOPE_COLORS.emerald;
       case 'ViewChange':
-        return '#EC4899';
+        return SCOPE_COLORS.signal;
       default:
-        return '#94A3B8';
+        return SCOPE_COLORS.inkMuted;
+    }
+  };
+
+  const getMessageMarker = (
+    message: PBFTMessage
+  ): 'cobalt' | 'amber' | 'emerald' | 'signal' | 'muted' => {
+    switch (message.type) {
+      case 'PrePrepare':
+        return 'cobalt';
+      case 'Prepare':
+        return 'amber';
+      case 'Commit':
+        return 'emerald';
+      case 'ViewChange':
+        return 'signal';
+      default:
+        return 'muted';
     }
   };
 
@@ -191,105 +208,80 @@ export default function PBFTPage() {
           </div>
 
           <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-            {nodes.map((node, index) => (
-              <motion.g
-                key={node.id}
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: index * 0.08 }}
-              >
-                <circle
-                  cx={node.position.x}
-                  cy={node.position.y}
-                  r="45"
-                  fill={getNodeColor(node)}
-                  stroke="#1F2937"
-                  strokeWidth="3"
-                  className="cursor-pointer"
-                  onClick={() =>
-                    node.status === 'failed' ? recoverNode(node.id) : failNode(node.id)
-                  }
-                />
-                <text
-                  x={node.position.x}
-                  y={node.position.y - 10}
-                  textAnchor="middle"
-                  fill="#FFF"
-                  fontSize="14"
-                  fontWeight="bold"
-                >
-                  {node.id}
-                </text>
-                <text
-                  x={node.position.x}
-                  y={node.position.y + 6}
-                  textAnchor="middle"
-                  fill="#E2E8F0"
-                  fontSize="10"
-                >
-                  {node.role.toUpperCase()}
-                </text>
-                <text
-                  x={node.position.x}
-                  y={node.position.y + 20}
-                  textAnchor="middle"
-                  fill="#CBD5E1"
-                  fontSize="9"
-                >
-                  log {node.log.size}
-                </text>
-                {node.status === 'failed' && (
-                  <text
-                    x={node.position.x}
-                    y={node.position.y + 35}
-                    textAnchor="middle"
-                    fill="#FFF"
-                    fontSize="11"
-                    fontWeight="bold"
-                  >
-                    FAILED
-                  </text>
-                )}
-              </motion.g>
-            ))}
+            <ScopeDefs idPrefix="pbft" />
 
+            {/* Full Byzantine all-to-all mesh */}
+            {nodes.map((a, i) =>
+              nodes.slice(i + 1).map((b) => (
+                <line
+                  key={`pbft-mesh-${a.id}-${b.id}`}
+                  x1={a.position.x}
+                  y1={a.position.y}
+                  x2={b.position.x}
+                  y2={b.position.y}
+                  stroke={SCOPE_COLORS.hairlineSubtle}
+                  strokeWidth="1"
+                />
+              ))
+            )}
+
+            {/* Animated directional in-flight messages */}
             {messages
               .filter((m) => m.status === 'in-flight')
               .map((message) => {
                 const fromNode = nodes.find((n) => n.id === message.from);
                 const toNode = nodes.find((n) => n.id === message.to);
-
                 if (!fromNode || !toNode) return null;
 
-                const midX = (fromNode.position.x + toNode.position.x) / 2;
-                const midY = (fromNode.position.y + toNode.position.y) / 2;
+                const tag =
+                  message.type === 'PrePrepare'
+                    ? 'PP'
+                    : message.type === 'Prepare'
+                    ? 'PR'
+                    : message.type === 'Commit'
+                    ? 'CM'
+                    : 'VC';
 
                 return (
-                  <g key={message.id}>
-                    <motion.line
-                      x1={fromNode.position.x}
-                      y1={fromNode.position.y}
-                      x2={toNode.position.x}
-                      y2={toNode.position.y}
-                      stroke={getMessageColor(message)}
-                      strokeWidth="2"
-                      strokeDasharray="6,6"
-                      initial={{ pathLength: 0, opacity: 0 }}
-                      animate={{ pathLength: 1, opacity: 1 }}
-                      transition={{ duration: 0.4 }}
-                    />
-                    <motion.circle
-                      cx={midX}
-                      cy={midY}
-                      r="6"
-                      fill={getMessageColor(message)}
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ duration: 0.3 }}
-                    />
-                  </g>
+                  <ScopeEdge
+                    key={message.id}
+                    idPrefix="pbft"
+                    x1={fromNode.position.x}
+                    y1={fromNode.position.y}
+                    x2={toNode.position.x}
+                    y2={toNode.position.y}
+                    color={getMessageColor(message)}
+                    markerKey={getMessageMarker(message)}
+                    inset={46}
+                    label={tag}
+                    dashed={message.type === 'ViewChange'}
+                  />
                 );
               })}
+
+            {/* Double-ring Byzantine replicas */}
+            {nodes.map((node) => {
+              const isFailed = node.status === 'failed';
+              const isPrimary = !isFailed && node.role === 'primary';
+              return (
+                <ScopeNode
+                  key={node.id}
+                  x={node.position.x}
+                  y={node.position.y}
+                  radius={42}
+                  label={node.id.toUpperCase()}
+                  sublabel={isFailed ? 'OFFLINE' : `LOG ${node.log.size}`}
+                  topTag={isFailed ? 'FAILED' : node.role.toUpperCase()}
+                  bottomLine1={isPrimary ? `VIEW v${stats.view}` : `QUORUM 2f+1=${stats.quorum}`}
+                  accentColor={getNodeColor(node)}
+                  failed={isFailed}
+                  highlighted={isPrimary}
+                  onClick={() =>
+                    isFailed ? recoverNode(node.id) : failNode(node.id)
+                  }
+                />
+              );
+            })}
           </svg>
 
           <div className="absolute bottom-4 left-4 bg-slate-800 rounded-lg p-4 border border-slate-700 space-y-2 max-w-xs">
@@ -302,20 +294,20 @@ export default function PBFTPage() {
             </button>
             <button
               onClick={triggerViewChange}
-              className="w-full px-3 py-2 bg-pink-600 text-white text-sm rounded hover:bg-pink-700"
+              className="w-full px-3 py-2 bg-[#D9441E] text-white text-sm rounded hover:bg-[#B83412]"
             >
               Trigger View Change
             </button>
             <p className="text-xs text-slate-400">Click nodes to fail/recover.</p>
           </div>
 
-          <div className="absolute top-4 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-sm max-h-96 overflow-y-auto">
+          <div className="absolute top-16 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-xs max-h-72 overflow-y-auto">
             <h3 className="text-sm font-semibold text-white mb-2">Replica Log</h3>
             <div className="space-y-2">
               {nodes.map((node) => (
-                <div key={`log-${node.id}`} className="text-xs">
-                  <div className="font-semibold text-white mb-1">{node.id}</div>
-                  <div className="pl-2 space-y-1 text-slate-300">
+                <div key={`log-${node.id}`} className="text-xs font-mono">
+                  <div className="font-semibold text-[#F4F0E8] mb-0.5">{node.id}</div>
+                  <div className="pl-2 space-y-0.5 text-slate-300">
                     {node.log.size === 0 && <div className="text-slate-500">No entries</div>}
                     {Array.from(node.log.values()).map((entry) => (
                       <div key={`${node.id}-${entry.requestId}`}>
@@ -329,31 +321,23 @@ export default function PBFTPage() {
           </div>
 
           <div className="absolute bottom-4 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700">
-            <h3 className="text-sm font-semibold text-white mb-2">Legend</h3>
-            <div className="space-y-1 text-xs">
+            <h3 className="text-sm font-semibold text-white mb-2">Phases</h3>
+            <div className="space-y-1.5 text-xs font-mono">
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-blue-600" />
-                <span className="text-slate-400">Primary</span>
+                <div className="w-3 h-3 rounded-full bg-[#D9441E]" />
+                <span className="text-slate-300">Primary / View Change</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-green-600" />
-                <span className="text-slate-400">Replica</span>
+                <div className="w-3 h-3 rounded-full bg-[#60A5FA]" />
+                <span className="text-slate-300">Pre-prepare (PP)</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-red-600" />
-                <span className="text-slate-400">Failed</span>
+                <div className="w-3 h-3 rounded-full bg-[#FBBF24]" />
+                <span className="text-slate-300">Prepare (PR)</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-indigo-500" />
-                <span className="text-slate-400">Pre-prepare</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-amber-500" />
-                <span className="text-slate-400">Prepare</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-green-500" />
-                <span className="text-slate-400">Commit</span>
+                <div className="w-3 h-3 rounded-full bg-[#34D399]" />
+                <span className="text-slate-300">Commit (CM) / Replica</span>
               </div>
             </div>
           </div>
