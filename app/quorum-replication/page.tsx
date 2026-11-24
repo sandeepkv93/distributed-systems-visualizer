@@ -9,6 +9,7 @@ import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import InvariantMonitor from '@/components/InvariantMonitor';
+import WireLogDrawer from '@/components/WireLogDrawer';
 import { evaluateQuorumInvariants } from '@/lib/invariants';
 import { quorumReplicationScenarios } from '@/visualizers/quorum-replication/scenarios';
 import { QuorumNode, QuorumMessage } from '@/lib/types';
@@ -247,6 +248,20 @@ export default function QuorumReplicationPage() {
           <InvariantMonitor
             protocolLabel="Dynamo Quorum Invariants"
             checks={evaluateQuorumInvariants(nodes, quorumWrite, quorumRead)}
+          />
+
+          <WireLogDrawer
+            protocol="Quorum Replication"
+            scenario={selectedScenario}
+            invariants={evaluateQuorumInvariants(nodes, quorumWrite, quorumRead)}
+            frames={messages.map((m) => ({
+              id: m.id,
+              from: m.from,
+              to: m.to,
+              type: m.type,
+              status: m.status,
+              detail: `${m.payload.key}${m.payload.version !== undefined ? ` v${m.payload.version}` : ''}`,
+            }))}
           />
 
           <ScopeModeToggle

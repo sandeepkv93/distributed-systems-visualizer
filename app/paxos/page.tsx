@@ -9,6 +9,7 @@ import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import InvariantMonitor from '@/components/InvariantMonitor';
+import WireLogDrawer from '@/components/WireLogDrawer';
 import { evaluatePaxosInvariants } from '@/lib/invariants';
 import { paxosScenarios } from '@/visualizers/paxos/scenarios';
 import { PaxosNode, PaxosMessage } from '@/lib/types';
@@ -277,6 +278,20 @@ export default function PaxosPage() {
           <InvariantMonitor
             protocolLabel="Paxos Formal Safety"
             checks={evaluatePaxosInvariants(nodes, decidedValues)}
+          />
+          <WireLogDrawer
+            protocol="Paxos Consensus"
+            scenario={selectedScenario}
+            className="top-3.5 right-4"
+            invariants={evaluatePaxosInvariants(nodes, decidedValues)}
+            frames={messages.map((m) => ({
+              id: m.id,
+              from: m.from,
+              to: m.to,
+              type: m.type,
+              status: m.status,
+              detail: `#${m.payload.proposalNumber}${m.payload.value ? ` val=${m.payload.value}` : ''}`,
+            }))}
           />
           <ScopeModeToggle
             mode={scopeMode}

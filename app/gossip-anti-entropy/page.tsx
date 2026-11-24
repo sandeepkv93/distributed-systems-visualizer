@@ -8,6 +8,7 @@ import ControlPanel from '@/components/ControlPanel';
 import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
+import WireLogDrawer from '@/components/WireLogDrawer';
 import { gossipAntiEntropyScenarios } from '@/visualizers/gossip-anti-entropy/scenarios';
 import { GossipNode, GossipMessage, GossipMode } from '@/lib/types';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
@@ -256,6 +257,18 @@ export default function GossipAntiEntropyPage() {
               currentState={{ scenario: selectedScenario, fanout }}
             />
           </div>
+
+          <WireLogDrawer
+            protocol="Gossip Anti-Entropy"
+            scenario={selectedScenario}
+            frames={messages.map((m) => ({
+              id: m.id,
+              from: m.from,
+              to: m.to,
+              type: m.payload.mode.toUpperCase(),
+              status: m.status,
+            }))}
+          />
 
           <ScopeModeToggle
             mode={scopeMode}

@@ -9,6 +9,7 @@ import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import InvariantMonitor from '@/components/InvariantMonitor';
+import WireLogDrawer from '@/components/WireLogDrawer';
 import { evaluatePBFTInvariants } from '@/lib/invariants';
 import { pbftScenarios } from '@/visualizers/pbft/scenarios';
 import { PBFTNode, PBFTMessage } from '@/lib/types';
@@ -216,6 +217,20 @@ export default function PBFTPage() {
           <InvariantMonitor
             protocolLabel="PBFT Byzantine Safety"
             checks={evaluatePBFTInvariants(nodes)}
+          />
+
+          <WireLogDrawer
+            protocol="PBFT Consensus"
+            scenario={selectedScenario}
+            invariants={evaluatePBFTInvariants(nodes)}
+            frames={messages.map((m) => ({
+              id: m.id,
+              from: m.from,
+              to: m.to,
+              type: m.type,
+              status: m.status,
+              detail: `v${m.payload.view ?? 0}${m.payload.seq !== undefined ? ` seq=${m.payload.seq}` : ''}`,
+            }))}
           />
 
           <ScopeModeToggle

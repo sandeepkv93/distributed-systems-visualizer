@@ -9,6 +9,7 @@ import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import InvariantMonitor from '@/components/InvariantMonitor';
+import WireLogDrawer from '@/components/WireLogDrawer';
 import { evaluateTwoPhaseCommitInvariants } from '@/lib/invariants';
 import { twoPhaseCommitScenarios } from '@/visualizers/two-phase-commit/scenarios';
 import { TwoPhaseCommitNode, TwoPhaseCommitMessage } from '@/lib/types';
@@ -341,6 +342,19 @@ export default function TwoPhaseCommitPage() {
           <InvariantMonitor
             protocolLabel="2PC Atomicity & Liveness"
             checks={evaluateTwoPhaseCommitInvariants(coordinator, participants)}
+          />
+
+          <WireLogDrawer
+            protocol="Two-Phase Commit"
+            scenario={selectedScenario}
+            invariants={evaluateTwoPhaseCommitInvariants(coordinator, participants)}
+            frames={messages.map((m) => ({
+              id: m.id,
+              from: m.from,
+              to: m.to,
+              type: m.type,
+              status: m.status,
+            }))}
           />
 
           <ScopeModeToggle

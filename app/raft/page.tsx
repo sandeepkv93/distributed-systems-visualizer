@@ -9,6 +9,7 @@ import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import InvariantMonitor from '@/components/InvariantMonitor';
+import WireLogDrawer from '@/components/WireLogDrawer';
 import { evaluateRaftInvariants } from '@/lib/invariants';
 import { raftScenarios } from '@/visualizers/raft/scenarios';
 import { RaftNode as RaftNodeType, RaftMessage } from '@/lib/types';
@@ -264,6 +265,20 @@ export default function RaftPage() {
           <InvariantMonitor
             protocolLabel="Raft Formal Safety"
             checks={evaluateRaftInvariants(nodes, partitions)}
+          />
+          <WireLogDrawer
+            protocol="Raft Consensus"
+            scenario={selectedScenario}
+            className="top-3.5 right-4"
+            invariants={evaluateRaftInvariants(nodes, partitions)}
+            frames={messages.map((m) => ({
+              id: m.id,
+              from: m.from,
+              to: m.to,
+              type: m.type,
+              status: m.status,
+              detail: `term=${m.payload.term}`,
+            }))}
           />
           <ScopeModeToggle
             mode={scopeMode}
