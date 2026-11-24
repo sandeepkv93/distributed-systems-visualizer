@@ -8,6 +8,7 @@ import {
 } from './catalog';
 import { TOTAL_CHECKPOINTS } from './checkpoints';
 import { TOTAL_INCIDENTS } from './incidents';
+import { EXAM_PASS_THRESHOLD, TOTAL_EXAM_QUESTIONS } from './exam';
 
 const PROGRESS_KEY = 'distributed_systems_progress';
 const SESSION_START_KEY = 'session_start_time';
@@ -44,6 +45,8 @@ export interface ProgressStats {
   totalCheckpoints: number;
   incidentsSolved: number;
   totalIncidents: number;
+  examBestScore: number;
+  examTotalQuestions: number;
 }
 
 export interface ProgressStoreSnapshot {
@@ -67,6 +70,7 @@ export function createDefaultProgress(): UserProgress {
     achievements: [],
     checkpointsSolved: [],
     incidentsSolved: [],
+    examBestScore: 0,
   };
 }
 
@@ -95,6 +99,7 @@ export function validateProgressData(input: unknown): UserProgress | null {
     achievements,
     checkpointsSolved,
     incidentsSolved,
+    examBestScore,
   } = input;
 
   if (!isStringArray(conceptsCompleted)) {
@@ -115,6 +120,15 @@ export function validateProgressData(input: unknown): UserProgress | null {
   if (incidentsSolved !== undefined && !isStringArray(incidentsSolved)) {
     return null;
   }
+  if (
+    examBestScore !== undefined &&
+    (typeof examBestScore !== 'number' ||
+      !Number.isInteger(examBestScore) ||
+      examBestScore < 0 ||
+      examBestScore > TOTAL_EXAM_QUESTIONS)
+  ) {
+    return null;
+  }
 
   const normalizedTimeSpent: Record<string, number> = {};
   for (const [conceptKey, duration] of Object.entries(timeSpent)) {
@@ -132,6 +146,7 @@ export function validateProgressData(input: unknown): UserProgress | null {
     achievements: dedupe(achievements),
     checkpointsSolved: checkpointsSolved ? dedupe(checkpointsSolved) : [],
     incidentsSolved: incidentsSolved ? dedupe(incidentsSolved) : [],
+    examBestScore: examBestScore ?? 0,
   };
 }
 
@@ -180,6 +195,12 @@ const ACHIEVEMENTS: AchievementDefinition[] = [
     condition: (progress: UserProgress) => (progress.incidentsSolved?.length ?? 0) >= 3,
   },
   {
+    id: 'atlas_fellow',
+    name: 'Atlas Fellow',
+    description: `Pass the Systems Mastery Assessment (${EXAM_PASS_THRESHOLD}/${TOTAL_EXAM_QUESTIONS} or higher)`,
+    condition: (progress: UserProgress) => (progress.examBestScore ?? 0) >= EXAM_PASS_THRESHOLD,
+  },
+  {
     id: 'dedicated_learner',
     name: 'Dedicated Learner',
     description: 'Spend 1 hour learning',
@@ -223,6 +244,8 @@ function computeStats(progress: UserProgress): ProgressStats {
     totalCheckpoints: TOTAL_CHECKPOINTS,
     incidentsSolved: progress.incidentsSolved?.length ?? 0,
     totalIncidents: TOTAL_INCIDENTS,
+    examBestScore: progress.examBestScore ?? 0,
+    examTotalQuestions: TOTAL_EXAM_QUESTIONS,
   };
 }
 
@@ -329,6 +352,10 @@ export function saveProgress(progress: UserProgress): void {
   if (typeof window === 'undefined') return;
 
   try {
+    const safeExamScore =
+      typeof progress.examBestScore === 'number' && Number.isFinite(progress.examBestScore)
+        ? Math.max(0, Math.min(TOTAL_EXAM_QUESTIONS, Math.floor(progress.examBestScore)))
+        : 0;
     const normalized: UserProgress = {
       conceptsCompleted: dedupe(progress.conceptsCompleted.map(normalizeConceptId)),
       scenariosCompleted: dedupe(progress.scenariosCompleted),
@@ -336,6 +363,7 @@ export function saveProgress(progress: UserProgress): void {
       achievements: dedupe(progress.achievements),
       checkpointsSolved: dedupe(progress.checkpointsSolved ?? []),
       incidentsSolved: dedupe(progress.incidentsSolved ?? []),
+      examBestScore: safeExamScore,
     };
     localStorage.setItem(PROGRESS_KEY, JSON.stringify(normalized));
     notifyProgressListeners();
@@ -370,6 +398,23 @@ export function markIncidentSolved(incidentId: string): void {
     saveProgress(progress);
     checkAchievements(progress);
   }
+}
+
+// Record a Systems Mastery Assessment score (keeps personal best and checks Atlas Fellow seal)
+export function recordExamScore(score: number): number {
+  if (!Number.isFinite(score)) return getProgress().examBestScore ?? 0;
+  const clamped = Math.max(0, Math.min(TOTAL_EXAM_QUESTIONS, Math.floor(score)));
+  const progress = getProgress();
+  const prevBest = progress.examBestScore ?? 0;
+  const nextBest = Math.max(prevBest, clamped);
+
+  if (nextBest > prevBest || (nextBest >= EXAM_PASS_THRESHOLD && !progress.achievements.includes('atlas_fellow'))) {
+    progress.examBestScore = nextBest;
+    saveProgress(progress);
+    checkAchievements(progress);
+  }
+
+  return nextBest;
 }
 
 // Mark a concept as completed

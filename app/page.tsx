@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   Compass,
   Layers,
+  Award,
 } from 'lucide-react';
 
 export default function Home() {
@@ -67,6 +68,14 @@ export default function Home() {
               >
                 <Layers className="w-3.5 h-3.5 text-[var(--signal)]" />
                 <span>Real Systems</span>
+              </Link>
+
+              <Link
+                href="/exam"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--paper-elevated)] hover:bg-[var(--chassis)] text-[var(--ink)] border border-[var(--ink)] font-mono text-xs uppercase tracking-[0.1em] transition-colors"
+              >
+                <Award className="w-3.5 h-3.5 text-[var(--emerald)]" />
+                <span>Mastery Exam</span>
               </Link>
 
               <Link
@@ -162,11 +171,15 @@ export default function Home() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3 uppercase tracking-wider">
+            <Link href="/exam" className="text-[var(--emerald)] font-semibold hover:underline">
+              Mastery Exam
+            </Link>
+            <span>·</span>
             <Link href="/systems" className="text-[var(--signal)] hover:underline">
               Real Systems
             </Link>
             <span>·</span>
-            <Link href="/advisor" className="text-[var(--emerald)] hover:underline">
+            <Link href="/advisor" className="text-[var(--cobalt)] hover:underline">
               Advisor
             </Link>
             <span>·</span>

@@ -8,6 +8,7 @@ import {
   getAllAchievements,
   markScenarioCompleted,
   markConceptCompleted,
+  recordExamScore,
   startSession,
   endSession,
   importProgress,
@@ -169,5 +170,27 @@ describe('Progress & Achievements system', () => {
     );
     assert.deepEqual(getProgress().conceptsCompleted, ['raft', 'cap-theorem']);
     assert.equal(getProgress().timeSpent.raft, 2000);
+  });
+
+  it('records best exam score and unlocks atlas_fellow seal at 8/10 or higher', () => {
+    const unlockedIds: string[] = [];
+    const unsub = subscribeAchievements((list) => {
+      list.forEach((a) => unlockedIds.push(a.id));
+    });
+
+    assert.equal(recordExamScore(6), 6);
+    assert.equal(getProgressStats().examBestScore, 6);
+    assert.equal(getProgress().achievements.includes('atlas_fellow'), false);
+
+    assert.equal(recordExamScore(9), 9);
+    assert.equal(getProgressStats().examBestScore, 9);
+    assert.ok(getProgress().achievements.includes('atlas_fellow'));
+    assert.ok(unlockedIds.includes('atlas_fellow'));
+
+    // Lower subsequent score does not overwrite personal best
+    assert.equal(recordExamScore(4), 9);
+    assert.equal(getProgressStats().examBestScore, 9);
+
+    unsub();
   });
 });

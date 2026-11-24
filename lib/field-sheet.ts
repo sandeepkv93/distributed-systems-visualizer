@@ -1,4 +1,6 @@
 import { CONCEPTS_CATALOG, CONCEPT_DOMAINS, TOTAL_CONCEPTS, TOTAL_SCENARIOS } from './catalog';
+import { EXAM_PASS_THRESHOLD, TOTAL_EXAM_QUESTIONS } from './exam';
+import { TOTAL_INCIDENTS } from './incidents';
 
 export interface FieldSheetOptions {
   completedConceptIds: readonly string[];
@@ -8,6 +10,10 @@ export interface FieldSheetOptions {
   achievementsUnlocked: number;
   totalAchievements: number;
   totalTimeSpentMs: number;
+  incidentsSolved?: number;
+  totalIncidents?: number;
+  examBestScore?: number;
+  examTotalQuestions?: number;
   generatedDate?: string;
 }
 
@@ -210,6 +216,51 @@ export function generateFieldSheetSvg(options: FieldSheetOptions): string {
     cursorY += rows * (rowH + 10) + 18;
   }
 
+  // Applied Labs & Mastery Assessment Verification Band
+  const incidentsSolved = options.incidentsSolved ?? 0;
+  const totalIncidents = options.totalIncidents ?? TOTAL_INCIDENTS;
+  const examBestScore = options.examBestScore ?? 0;
+  const examTotalQuestions = options.examTotalQuestions ?? TOTAL_EXAM_QUESTIONS;
+  const isFellow = examBestScore >= EXAM_PASS_THRESHOLD;
+
+  const verifyY = height - 294;
+  const verifyH = 68;
+  const verifyCols = [
+    {
+      label: 'OUTAGE POSTMORTEMS',
+      value: `${incidentsSolved}/${totalIncidents} RESOLVED`,
+      accent: incidentsSolved >= 3 ? '#0F6B50' : '#161614',
+    },
+    {
+      label: 'SYSTEMS MASTERY EXAM',
+      value: `${examBestScore}/${examTotalQuestions} BEST SCORE`,
+      accent: isFellow ? '#0F6B50' : '#1D4B8F',
+    },
+    {
+      label: 'ATLAS FELLOW SEAL',
+      value: isFellow ? 'VERIFIED FELLOW' : `PENDING (NEED ${EXAM_PASS_THRESHOLD}/${examTotalQuestions})`,
+      accent: isFellow ? '#0F6B50' : '#6E6B62',
+    },
+  ];
+  lines.push(
+    `  <rect x="${padX}" y="${verifyY}" width="${innerW}" height="${verifyH}" fill="${isFellow ? '#F0F7F4' : '#F4F0E8'}" stroke="${isFellow ? '#0F6B50' : '#161614'}" stroke-width="1.25" />`
+  );
+  const vCellW = innerW / verifyCols.length;
+  verifyCols.forEach((cell, idx) => {
+    const vx = padX + idx * vCellW;
+    if (idx > 0) {
+      lines.push(
+        `  <line x1="${vx}" y1="${verifyY}" x2="${vx}" y2="${verifyY + verifyH}" stroke="#161614" stroke-opacity="0.18" stroke-width="1" />`
+      );
+    }
+    lines.push(
+      `  <text x="${vx + 16}" y="${verifyY + 23}" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9.5" letter-spacing="1.2" fill="#6E6B62">${escapeXml(cell.label)}</text>`
+    );
+    lines.push(
+      `  <text x="${vx + 16}" y="${verifyY + 51}" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" font-weight="700" fill="${cell.accent}">${escapeXml(cell.value)}</text>`
+    );
+  });
+
   // Canonical Invariants Quick-Reference Footer Box
   const footerY = height - 208;
   lines.push(
@@ -237,7 +288,7 @@ export function generateFieldSheetSvg(options: FieldSheetOptions): string {
     `  <text x="${padX}" y="${height - 52}" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" letter-spacing="1.2" fill="#6E6B62">DISTRIBUTED SYSTEMS ATLAS · INTERACTIVE MONOGRAPH · VOLUME I</text>`
   );
   lines.push(
-    `  <text x="${width - padX}" y="${height - 52}" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" letter-spacing="1.2" fill="#6E6B62">22 PLATES · 79 SCENARIOS · 06 PROTOCOL DUELS · QUORUM BENCH</text>`
+    `  <text x="${width - padX}" y="${height - 52}" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" letter-spacing="1.2" fill="#6E6B62">22 PLATES · 79 SCENARIOS · 06 DUELS · 06 OUTAGES · MASTERY EXAM</text>`
   );
 
   lines.push(`</svg>`);

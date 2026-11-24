@@ -79,6 +79,15 @@ const CORE_LABS: readonly AtlasSearchItem[] = [
     href: '/systems',
     keywords: 'systems blueprints production cockroachdb etcd dynamo cassandra kafka spanner tendermint architecture',
   },
+  {
+    id: 'lab:exam',
+    kind: 'lab',
+    badge: 'EXAM',
+    title: 'Systems Mastery Assessment',
+    subtitle: '10 cross-domain problems across all 5 domains — score 8/10 to earn the Atlas Fellow seal',
+    href: '/exam',
+    keywords: 'exam test quiz assessment certification atlas fellow mastery score evaluation',
+  },
 ];
 
 export function buildAtlasSearchIndex(): AtlasSearchItem[] {

@@ -78,6 +78,10 @@ export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
       achievementsUnlocked: stats.achievementsUnlocked,
       totalAchievements: stats.totalAchievements,
       totalTimeSpentMs: stats.totalTimeSpent,
+      incidentsSolved: stats.incidentsSolved,
+      totalIncidents: stats.totalIncidents,
+      examBestScore: stats.examBestScore,
+      examTotalQuestions: stats.examTotalQuestions,
     });
     const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -167,44 +171,53 @@ export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
 
         <div className="p-6 space-y-8">
           {/* Summary Spec Row */}
-          <div className="grid grid-cols-2 md:grid-cols-5 border border-[var(--ink)] divide-y md:divide-y-0 md:divide-x divide-[var(--rule)] bg-[var(--paper)]">
-            <div className="p-4">
-              <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">
+          <div className="grid grid-cols-2 md:grid-cols-6 border border-[var(--ink)] divide-y md:divide-y-0 md:divide-x divide-[var(--rule)] bg-[var(--paper)]">
+            <div className="p-3.5">
+              <div className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">
                 Completion
               </div>
               <div className="font-editorial text-3xl text-[var(--signal)] mt-1 tabular-nums">
                 {completionPercentage}%
               </div>
             </div>
-            <div className="p-4">
-              <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">
-                Plates Mastered
+            <div className="p-3.5">
+              <div className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">
+                Plates
               </div>
               <div className="font-editorial text-3xl text-[var(--ink)] mt-1 tabular-nums">
                 {stats.completedConcepts}
                 <span className="text-lg text-[var(--ink-muted)]">/{stats.totalConcepts}</span>
               </div>
             </div>
-            <div className="p-4">
-              <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">
-                Scenarios Run
+            <div className="p-3.5">
+              <div className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">
+                Scenarios
               </div>
               <div className="font-editorial text-3xl text-[var(--ink)] mt-1 tabular-nums">
                 {stats.completedScenarios}
                 <span className="text-lg text-[var(--ink-muted)]">/{stats.totalScenarios}</span>
               </div>
             </div>
-            <div className="p-4">
-              <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">
-                Intuition Checks
+            <div className="p-3.5">
+              <div className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">
+                Outages
               </div>
               <div className="font-editorial text-3xl text-[var(--emerald)] mt-1 tabular-nums">
-                {stats.checkpointsSolved}
-                <span className="text-lg text-[var(--ink-muted)]">/{stats.totalCheckpoints}</span>
+                {stats.incidentsSolved}
+                <span className="text-lg text-[var(--ink-muted)]">/{stats.totalIncidents}</span>
               </div>
             </div>
-            <div className="p-4 col-span-2 md:col-span-1">
-              <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">
+            <div className="p-3.5">
+              <div className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">
+                Exam Best
+              </div>
+              <div className="font-editorial text-3xl text-[var(--cobalt)] mt-1 tabular-nums">
+                {stats.examBestScore}
+                <span className="text-lg text-[var(--ink-muted)]">/{stats.examTotalQuestions}</span>
+              </div>
+            </div>
+            <div className="p-3.5">
+              <div className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--ink-muted)]">
                 Bench Time
               </div>
               <div className="font-editorial text-3xl text-[var(--ink)] mt-1 tabular-nums">

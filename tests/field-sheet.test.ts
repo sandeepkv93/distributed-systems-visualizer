@@ -53,5 +53,24 @@ describe('Archival Field Study Sheet SVG generator', () => {
     // Completed plates should carry green checkmark paths
     const checkCount = (svg.match(/stroke="#FAF7F1" stroke-width="2"/g) || []).length;
     assert.equal(checkCount, 3);
+
+    // Optional outage & exam verification metrics render cleanly
+    const fellowSvg = generateFieldSheetSvg({
+      completedConceptIds: ['raft'],
+      completedScenarioKeys: ['raft:normal-election'],
+      checkpointsSolved: 3,
+      totalCheckpoints: 25,
+      achievementsUnlocked: 5,
+      totalAchievements: 10,
+      totalTimeSpentMs: 600_000,
+      incidentsSolved: 4,
+      totalIncidents: 6,
+      examBestScore: 9,
+      examTotalQuestions: 10,
+      generatedDate: '2026-11-24',
+    });
+    assert.ok(fellowSvg.includes('4/6 RESOLVED'));
+    assert.ok(fellowSvg.includes('9/10 BEST SCORE'));
+    assert.ok(fellowSvg.includes('VERIFIED FELLOW'));
   });
 });
