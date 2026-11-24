@@ -61,6 +61,15 @@ const CORE_LABS: readonly AtlasSearchItem[] = [
     href: '/bibliography',
     keywords: 'bibliography papers literature citations reading list syllabus lamport gray dynamo raft paxos',
   },
+  {
+    id: 'lab:advisor',
+    kind: 'lab',
+    badge: 'LAB',
+    title: 'Architecture Decision Matrix & Protocol Selector',
+    subtitle: 'Rank Raft, Paxos, PBFT, Quorums, CRDTs, 2PC, Sagas & Sharding against system constraints',
+    href: '/advisor',
+    keywords: 'advisor selector choose protocol decision matrix architecture cap linearizable byzantine latency',
+  },
 ];
 
 export function buildAtlasSearchIndex(): AtlasSearchItem[] {

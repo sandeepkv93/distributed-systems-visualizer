@@ -180,6 +180,15 @@ export default function Navigation() {
                   Foundational Papers (1978–2014)
                 </span>
               </div>
+            ) : normalizedPath === '/advisor' ? (
+              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
+                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--cobalt)] text-[#FAF7F1] flex-shrink-0">
+                  ADVISOR
+                </span>
+                <span className="font-editorial text-base text-[var(--ink)] truncate">
+                  Architecture Decision Matrix
+                </span>
+              </div>
             ) : null}
           </div>
 
@@ -269,13 +278,20 @@ export default function Navigation() {
                       <span className="font-mono text-[10px] tracking-[0.12em] uppercase text-[var(--ink-secondary)]">
                         Complete Protocol Index · 22 Plates
                       </span>
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <Link
+                          href="/advisor"
+                          onClick={() => setShowIndexMenu(false)}
+                          className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--emerald)] hover:underline"
+                        >
+                          Protocol Advisor →
+                        </Link>
                         <Link
                           href="/bibliography"
                           onClick={() => setShowIndexMenu(false)}
                           className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--cobalt)] hover:underline"
                         >
-                          Bibliography (1978–2014) →
+                          Bibliography →
                         </Link>
                         <Link
                           href="/"
