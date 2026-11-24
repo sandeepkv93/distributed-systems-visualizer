@@ -5,6 +5,11 @@ import type {
   TwoPhaseCommitNode,
   QuorumNode,
   VectorClockProcess,
+  CRDTReplica,
+  SnapshotNode,
+  LogPartition,
+  LockNode,
+  GossipNode,
 } from './types';
 
 export type InvariantStatus = 'holding' | 'degraded' | 'violated';
@@ -349,3 +354,184 @@ export function evaluateVectorClockInvariants(
     },
   ];
 }
+
+export function evaluateCRDTInvariants(
+  replicas: readonly CRDTReplica[],
+  stats: { divergentGCounter: number; divergentORSet: number; divergentRGA: number }
+): InvariantCheck[] {
+  const totalDivergent = stats.divergentGCounter + stats.divergentORSet + stats.divergentRGA;
+  return [
+    {
+      id: 'crdt-sec-convergence',
+      name: 'Strong Eventual Convergence',
+      formula: 'a ⊔ b = b ⊔ a (semilattice)',
+      status: totalDivergent === 0 ? 'holding' : 'degraded',
+      detail:
+        totalDivergent === 0
+          ? `All ${replicas.length} replicas bit-for-bit converged across G-Counter, OR-Set, RGA`
+          : `Unsynced local mutations active (${totalDivergent} divergent view(s) awaiting Sync)`,
+    },
+    {
+      id: 'crdt-0rtt-avail',
+      name: 'Coordination-Free Writes',
+      formula: 'RTT(write) == 0',
+      status: 'holding',
+      detail: `All ${replicas.length} replicas accept local mutations without consensus`,
+    },
+  ];
+}
+
+export function evaluateChandyLamportInvariants(nodes: readonly SnapshotNode[]): InvariantCheck[] {
+  const recording = nodes.filter((n) => n.snapshot && !n.snapshot.complete);
+  const completed = nodes.filter((n) => n.snapshot?.complete);
+  const started = recording.length + completed.length;
+
+  return [
+    {
+      id: 'cl-global-cut',
+      name: 'Consistent Global Cut',
+      formula: 'e2 in cut && e1 -> e2 => e1 in cut',
+      status: recording.length > 0 ? 'degraded' : 'holding',
+      detail:
+        started === 0
+          ? 'No active snapshot yet — ready for marker broadcast'
+          : recording.length > 0
+          ? `Snapshot in progress: ${completed.length}/${nodes.length} finalized, ${recording.length} recording channels`
+          : `Global snapshot complete across ${completed.length}/${nodes.length} processes`,
+    },
+    {
+      id: 'cl-nonblocking',
+      name: 'Non-Blocking Channel Recording',
+      formula: 'FIFO marker delimiter',
+      status: 'holding',
+      detail:
+        recording.length > 0
+          ? `Tracking ${recording.reduce((s, n) => s + (n.snapshot?.recordingFrom.length ?? 0), 0)} open incoming channel(s)`
+          : 'All channels quiescent with respect to snapshot markers',
+    },
+  ];
+}
+
+export function evaluateReplicationLogInvariants(partition: LogPartition): InvariantCheck[] {
+  const leader = partition.replicas.find((r) => r.role === 'leader');
+  const isrReplicas = partition.replicas.filter((r) => r.inSync);
+  const minIsrLeo =
+    isrReplicas.length > 0 ? Math.min(...isrReplicas.map((r) => r.log.length)) : 0;
+  const hw = leader?.highWatermark ?? 0;
+  const hwSafe = hw <= minIsrLeo;
+
+  return [
+    {
+      id: 'repl-hw-safety',
+      name: 'High Watermark Safety',
+      formula: `HW(${hw}) <= min(ISR LEO=${minIsrLeo})`,
+      status: hwSafe ? 'holding' : 'violated',
+      detail: hwSafe
+        ? `Committed offset HW=${hw} is durably replicated across all ${isrReplicas.length} ISR replicas`
+        : `Safety breach: HW=${hw} exceeds minimum ISR LEO (${minIsrLeo})`,
+    },
+    {
+      id: 'repl-isr-redundancy',
+      name: 'ISR Redundancy',
+      formula: '|ISR| >= 2',
+      status: isrReplicas.length >= 2 ? 'holding' : 'degraded',
+      detail:
+        isrReplicas.length >= 2
+          ? `${isrReplicas.length}/${partition.replicas.length} replicas in-sync`
+          : `Single-replica ISR (${isrReplicas.length}/${partition.replicas.length}) — leader crash risks unavailability`,
+    },
+  ];
+}
+
+export function evaluateDistributedLockInvariants(nodes: readonly LockNode[]): InvariantCheck[] {
+  const manager = nodes.find((n) => n.role === 'manager');
+  const holders = nodes.filter((n) => n.role === 'client' && n.holdingLock);
+  const managerUp = manager?.status === 'healthy';
+
+  return [
+    {
+      id: 'lock-mutual-exclusion',
+      name: 'Mutual Exclusion',
+      formula: '|leaseHolders| <= 1',
+      status: holders.length > 1 ? 'violated' : 'holding',
+      detail:
+        holders.length > 1
+          ? `Split-lock violation: ${holders.map((h) => h.id).join(', ')} simultaneously hold lease`
+          : holders.length === 1
+          ? `Exclusive lease held by ${holders[0].id}`
+          : 'Lock unowned (0 active holders)',
+    },
+    {
+      id: 'lock-manager-liveness',
+      name: 'Coordinator Liveness',
+      formula: 'status(manager) == healthy',
+      status: managerUp ? 'holding' : 'degraded',
+      detail: managerUp
+        ? 'Lock manager online issuing and renewing bounded leases'
+        : 'Lock manager offline — no new leases or renewals can be granted',
+    },
+  ];
+}
+
+export function evaluateConsistentHashingInvariants(stats: {
+  physicalServers: number;
+  totalNodes: number;
+  totalKeys: number;
+  loadStats: { imbalance: number };
+}): InvariantCheck[] {
+  const hasRing = stats.physicalServers > 0 && stats.totalNodes >= stats.physicalServers;
+  const skewOk = stats.totalKeys === 0 || stats.loadStats.imbalance <= 1.5;
+
+  return [
+    {
+      id: 'ch-ring-coverage',
+      name: 'Hash Ring Coverage',
+      formula: 'servers >= 1 && vnodes >= servers',
+      status: hasRing ? 'holding' : 'violated',
+      detail: hasRing
+        ? `${stats.physicalServers} server(s) mapped across ${stats.totalNodes} virtual ring tokens`
+        : 'Ring empty — no servers available to route keys',
+    },
+    {
+      id: 'ch-skew-bound',
+      name: 'Key Balance Skew',
+      formula: `max/avg (${stats.loadStats.imbalance.toFixed(2)}x) <= 1.50x`,
+      status: skewOk ? 'holding' : 'degraded',
+      detail:
+        stats.totalKeys === 0
+          ? 'No keys placed yet'
+          : skewOk
+          ? `Balanced distribution across ${stats.totalKeys} keys (${stats.loadStats.imbalance.toFixed(2)}x)`
+          : `Hot server skew (${stats.loadStats.imbalance.toFixed(2)}x) — increase virtual nodes to smooth load`,
+    },
+  ];
+}
+
+export function evaluateGossipInvariants(
+  nodes: readonly GossipNode[],
+  stats: { healthyNodes: number; divergentNodes: number }
+): InvariantCheck[] {
+  return [
+    {
+      id: 'gossip-convergence',
+      name: 'Epidemic Convergence',
+      formula: 'divergentNodes == 0',
+      status: stats.divergentNodes === 0 ? 'holding' : 'degraded',
+      detail:
+        stats.divergentNodes === 0
+          ? `All ${stats.healthyNodes} healthy peers hold identical key versions`
+          : `${stats.divergentNodes} peer(s) still lagging behind latest rumor version`,
+    },
+    {
+      id: 'gossip-reachability',
+      name: 'Peer Mesh Reachability',
+      formula: `healthy >= 2/${nodes.length}`,
+      status: stats.healthyNodes >= 2 ? 'holding' : 'degraded',
+      detail:
+        stats.healthyNodes >= 2
+          ? `${stats.healthyNodes}/${nodes.length} peers available for randomized fanout`
+          : `Mesh isolated: only ${stats.healthyNodes}/${nodes.length} healthy peer(s)`,
+    },
+  ];
+}
+

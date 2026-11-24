@@ -13,6 +13,8 @@ import { SnapshotNode, SnapshotMessage } from '@/lib/types';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
+import InvariantMonitor from '@/components/InvariantMonitor';
+import { evaluateChandyLamportInvariants } from '@/lib/invariants';
 
 export default function ChandyLamportPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -167,6 +169,11 @@ export default function ChandyLamportPage() {
         </div>
 
         <div className="flex-1 relative bg-slate-900 overflow-hidden min-h-[420px]">
+          <InvariantMonitor
+            protocolLabel="Chandy-Lamport Properties"
+            checks={evaluateChandyLamportInvariants(nodes)}
+          />
+
           <div className="absolute top-4 right-4 z-20">
             <ExportMenu
               svgRef={svgRef}

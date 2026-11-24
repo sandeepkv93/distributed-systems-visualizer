@@ -7,6 +7,12 @@ import {
   evaluateTwoPhaseCommitInvariants,
   evaluateQuorumInvariants,
   evaluateVectorClockInvariants,
+  evaluateCRDTInvariants,
+  evaluateChandyLamportInvariants,
+  evaluateReplicationLogInvariants,
+  evaluateDistributedLockInvariants,
+  evaluateConsistentHashingInvariants,
+  evaluateGossipInvariants,
   summarizeInvariants,
 } from '../lib/invariants';
 import { RaftAlgorithm } from '../lib/algorithms/raft';
@@ -15,6 +21,12 @@ import { PBFTAlgorithm } from '../lib/algorithms/pbft';
 import { TwoPhaseCommitAlgorithm } from '../lib/algorithms/twoPhaseCommit';
 import { QuorumReplicationAlgorithm } from '../lib/algorithms/quorumReplication';
 import { VectorClocksAlgorithm } from '../lib/algorithms/vectorClocks';
+import { CRDTAlgorithm } from '../lib/algorithms/crdts';
+import { ChandyLamportAlgorithm } from '../lib/algorithms/chandyLamport';
+import { ReplicationLogAlgorithm } from '../lib/algorithms/replicationLog';
+import { DistributedLockAlgorithm } from '../lib/algorithms/distributedLock';
+import { ConsistentHashingAlgorithm } from '../lib/algorithms/consistentHashing';
+import { GossipAntiEntropyAlgorithm } from '../lib/algorithms/gossipAntiEntropy';
 
 describe('Live Formal Invariant Monitor evaluators', () => {
   it('evaluates Raft Election Safety, Quorum Liveness, and detects split-leader violations', () => {
@@ -109,5 +121,52 @@ describe('Live Formal Invariant Monitor evaluators', () => {
     vc.createLocalEvent('P2', 'evt-2');
     const vcChecks = evaluateVectorClockInvariants(vc.getProcesses(), vc.getStats().concurrentPairs);
     assert.equal(summarizeInvariants(vcChecks).overall, 'holding');
+  });
+
+  it('evaluates CRDT convergence, Chandy-Lamport cut, Replication Log HW, Lock mutual exclusion, Hashing skew, and Gossip', () => {
+    const crdt = new CRDTAlgorithm(3);
+    assert.equal(summarizeInvariants(evaluateCRDTInvariants(crdt.getReplicas(), crdt.getStats())).overall, 'holding');
+    crdt.increment('R0');
+    assert.equal(
+      evaluateCRDTInvariants(crdt.getReplicas(), crdt.getStats()).find((c) => c.id === 'crdt-sec-convergence')?.status,
+      'degraded'
+    );
+
+    const cl = new ChandyLamportAlgorithm(4);
+    assert.equal(summarizeInvariants(evaluateChandyLamportInvariants(cl.getNodes())).overall, 'holding');
+    cl.startSnapshot('N0');
+    assert.equal(
+      evaluateChandyLamportInvariants(cl.getNodes()).find((c) => c.id === 'cl-global-cut')?.status,
+      'degraded'
+    );
+
+    const repl = new ReplicationLogAlgorithm(3);
+    assert.equal(summarizeInvariants(evaluateReplicationLogInvariants(repl.getPartition())).overall, 'holding');
+
+    const lock = new DistributedLockAlgorithm(4, 4000);
+    assert.equal(summarizeInvariants(evaluateDistributedLockInvariants(lock.getNodes())).overall, 'holding');
+    const dualHolders = lock.getNodes().map((n) => (n.role === 'client' ? { ...n, holdingLock: true } : n));
+    assert.equal(
+      evaluateDistributedLockInvariants(dualHolders).find((c) => c.id === 'lock-mutual-exclusion')?.status,
+      'violated'
+    );
+
+    const ch = new ConsistentHashingAlgorithm(3, 3);
+    assert.equal(summarizeInvariants(evaluateConsistentHashingInvariants(ch.getStats())).overall, 'holding');
+    const emptyRing = evaluateConsistentHashingInvariants({
+      physicalServers: 0,
+      totalNodes: 0,
+      totalKeys: 0,
+      loadStats: { imbalance: 0 },
+    });
+    assert.equal(emptyRing.find((c) => c.id === 'ch-ring-coverage')?.status, 'violated');
+
+    const gossip = new GossipAntiEntropyAlgorithm(5);
+    assert.equal(summarizeInvariants(evaluateGossipInvariants(gossip.getNodes(), gossip.getStats())).overall, 'holding');
+    gossip.setValue('N0', 'rumor:1', 42);
+    assert.equal(
+      evaluateGossipInvariants(gossip.getNodes(), gossip.getStats()).find((c) => c.id === 'gossip-convergence')?.status,
+      'degraded'
+    );
   });
 });

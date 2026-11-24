@@ -11,6 +11,8 @@ import ExportMenu from '@/components/ExportMenu';
 import { consistentHashingScenarios } from '@/visualizers/consistent-hashing/scenarios';
 import { motion } from 'framer-motion';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
+import InvariantMonitor from '@/components/InvariantMonitor';
+import { evaluateConsistentHashingInvariants } from '@/lib/invariants';
 
 export default function ConsistentHashingPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -234,6 +236,11 @@ export default function ConsistentHashingPage() {
 
         {/* Visualization Canvas */}
         <div className="flex-1 relative bg-slate-900 overflow-hidden min-h-[420px]">
+          <InvariantMonitor
+            protocolLabel="Hash Ring Properties"
+            checks={evaluateConsistentHashingInvariants(stats)}
+          />
+
           <div className="absolute top-4 right-4 z-20">
             <ExportMenu
               svgRef={svgRef}

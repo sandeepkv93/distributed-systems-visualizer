@@ -21,6 +21,8 @@ import {
   applyChaosToMessages,
   computeDeliveryDelay,
 } from '@/lib/chaos';
+import InvariantMonitor from '@/components/InvariantMonitor';
+import { evaluateGossipInvariants } from '@/lib/invariants';
 
 export default function GossipAntiEntropyPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -250,6 +252,11 @@ export default function GossipAntiEntropyPage() {
         </div>
 
         <div className="flex-1 relative bg-slate-900 overflow-hidden min-h-[420px]">
+          <InvariantMonitor
+            protocolLabel="Gossip Anti-Entropy Properties"
+            checks={evaluateGossipInvariants(nodes, stats)}
+          />
+
           <div className="absolute top-4 right-4 z-20">
             <ExportMenu
               svgRef={svgRef}
@@ -261,6 +268,7 @@ export default function GossipAntiEntropyPage() {
           <WireLogDrawer
             protocol="Gossip Anti-Entropy"
             scenario={selectedScenario}
+            invariants={evaluateGossipInvariants(nodes, stats)}
             frames={messages.map((m) => ({
               id: m.id,
               from: m.from,

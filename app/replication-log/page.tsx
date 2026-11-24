@@ -13,6 +13,8 @@ import { LogMessage, LogPartition } from '@/lib/types';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
+import InvariantMonitor from '@/components/InvariantMonitor';
+import { evaluateReplicationLogInvariants } from '@/lib/invariants';
 
 export default function ReplicationLogPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -198,6 +200,11 @@ export default function ReplicationLogPage() {
         </div>
 
         <div className="flex-1 relative bg-slate-900 overflow-hidden min-h-[420px]">
+          <InvariantMonitor
+            protocolLabel="Replication Log Properties"
+            checks={evaluateReplicationLogInvariants(partition)}
+          />
+
           <div className="absolute top-4 right-4 z-20">
             <ExportMenu
               svgRef={svgRef}
