@@ -3,7 +3,16 @@ import ConceptGrid from '@/components/ConceptGrid';
 import HeroSimulation from '@/components/HeroSimulation';
 import LearningTracks from '@/components/LearningTracks';
 import { TOTAL_CONCEPTS, TOTAL_SCENARIOS } from '@/lib/catalog';
-import { ArrowDown, ArrowUpRight, Network, Scale, Sliders, AlertTriangle, Compass } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUpRight,
+  Network,
+  Scale,
+  Sliders,
+  AlertTriangle,
+  Compass,
+  Layers,
+} from 'lucide-react';
 
 export default function Home() {
   return (
@@ -50,6 +59,14 @@ export default function Home() {
               >
                 <Compass className="w-3.5 h-3.5 text-[var(--cobalt)]" />
                 <span>Protocol Advisor</span>
+              </Link>
+
+              <Link
+                href="/systems"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--paper-elevated)] hover:bg-[var(--chassis)] text-[var(--ink)] border border-[var(--ink)] font-mono text-xs uppercase tracking-[0.1em] transition-colors"
+              >
+                <Layers className="w-3.5 h-3.5 text-[var(--signal)]" />
+                <span>Real Systems</span>
               </Link>
 
               <Link
@@ -145,6 +162,14 @@ export default function Home() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3 uppercase tracking-wider">
+            <Link href="/systems" className="text-[var(--signal)] hover:underline">
+              Real Systems
+            </Link>
+            <span>·</span>
+            <Link href="/advisor" className="text-[var(--emerald)] hover:underline">
+              Advisor
+            </Link>
+            <span>·</span>
             <Link href="/bibliography" className="text-[var(--cobalt)] hover:underline">
               Bibliography
             </Link>

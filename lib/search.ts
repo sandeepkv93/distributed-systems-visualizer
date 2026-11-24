@@ -70,6 +70,15 @@ const CORE_LABS: readonly AtlasSearchItem[] = [
     href: '/advisor',
     keywords: 'advisor selector choose protocol decision matrix architecture cap linearizable byzantine latency',
   },
+  {
+    id: 'lab:systems',
+    kind: 'lab',
+    badge: 'LAB',
+    title: 'Real-World Infrastructure Blueprints',
+    subtitle: 'How CockroachDB, etcd, Dynamo, Cassandra, Kafka, Spanner & Tendermint compose protocols',
+    href: '/systems',
+    keywords: 'systems blueprints production cockroachdb etcd dynamo cassandra kafka spanner tendermint architecture',
+  },
 ];
 
 export function buildAtlasSearchIndex(): AtlasSearchItem[] {
