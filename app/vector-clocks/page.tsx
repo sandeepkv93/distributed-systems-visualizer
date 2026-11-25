@@ -9,6 +9,7 @@ import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import InvariantMonitor from '@/components/InvariantMonitor';
+import WireLogDrawer from '@/components/WireLogDrawer';
 import { evaluateVectorClockInvariants } from '@/lib/invariants';
 import { vectorClockScenarios } from '@/visualizers/vector-clocks/scenarios';
 import { VectorClockProcess, VectorClockEvent, VectorClock } from '@/lib/types';
@@ -254,6 +255,30 @@ export default function VectorClocksPage() {
               }}
             />
           </div>
+
+          <WireLogDrawer
+            protocol="Vector Clocks"
+            scenario={selectedScenario}
+            invariants={evaluateVectorClockInvariants(processes, stats.concurrentPairs)}
+            frames={(() => {
+              const allEvents = vc.getAllEvents();
+              const byId = new Map(allEvents.map((e) => [e.id, e]));
+              return allEvents
+                .filter((evt) => evt.type !== 'send')
+                .map((evt) => {
+                  const sender = evt.relatedEvent ? byId.get(evt.relatedEvent) : undefined;
+                  const isRecv = evt.type === 'receive' && Boolean(sender);
+                  return {
+                    id: evt.id,
+                    from: isRecv && sender ? sender.processId : evt.processId,
+                    to: evt.processId,
+                    type: isRecv ? 'MSG' : 'LOCAL',
+                    status: 'success',
+                    detail: formatClock(evt.vectorClock),
+                  };
+                });
+            })()}
+          />
           {scopeMode === 'spacetime' ? (
             <div className="w-full h-full min-h-[420px]">
               <SpaceTimeScope

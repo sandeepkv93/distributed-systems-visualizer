@@ -14,6 +14,7 @@ import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/Scop
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 import InvariantMonitor from '@/components/InvariantMonitor';
+import WireLogDrawer from '@/components/WireLogDrawer';
 import { evaluateLamportClockInvariants } from '@/lib/invariants';
 
 export default function LamportClocksPage() {
@@ -171,6 +172,20 @@ export default function LamportClocksPage() {
               currentState={{ scenario: selectedScenario }}
             />
           </div>
+
+          <WireLogDrawer
+            protocol="Lamport Clocks"
+            scenario={selectedScenario}
+            invariants={evaluateLamportClockInvariants(nodes)}
+            frames={messages.map((m) => ({
+              id: m.id,
+              from: m.from,
+              to: m.to,
+              type: m.type,
+              status: m.status,
+              detail: `L=${m.payload.timestamp}`,
+            }))}
+          />
 
           <ScopeModeToggle
             mode={scopeMode}

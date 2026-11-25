@@ -14,6 +14,7 @@ import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/Scop
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 import InvariantMonitor from '@/components/InvariantMonitor';
+import WireLogDrawer from '@/components/WireLogDrawer';
 import { evaluateMerkleInvariants } from '@/lib/invariants';
 
 export default function MerkleAntiEntropyPage() {
@@ -187,6 +188,19 @@ export default function MerkleAntiEntropyPage() {
               currentState={{ scenario: selectedScenario, mismatchedKeys: stats.mismatchedKeys }}
             />
           </div>
+
+          <WireLogDrawer
+            protocol="Merkle Anti-Entropy"
+            scenario={selectedScenario}
+            invariants={evaluateMerkleInvariants(replicas, stats)}
+            frames={messages.map((m) => ({
+              id: m.id,
+              from: m.from,
+              to: m.to,
+              type: m.type,
+              status: m.status,
+            }))}
+          />
 
           <ScopeModeToggle
             mode={scopeMode}

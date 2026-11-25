@@ -14,7 +14,15 @@ import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/Scop
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 import InvariantMonitor from '@/components/InvariantMonitor';
+import WireLogDrawer from '@/components/WireLogDrawer';
 import { evaluateDistributedLockInvariants } from '@/lib/invariants';
+import ChaosStrip from '@/components/ChaosStrip';
+import {
+  ChaosConfig,
+  DEFAULT_CHAOS_CONFIG,
+  applyChaosToMessages,
+  computeDeliveryDelay,
+} from '@/lib/chaos';
 
 export default function DistributedLockingPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -25,6 +33,14 @@ export default function DistributedLockingPage() {
   const [showArticle, setShowArticle] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
+  const [chaos, setChaos] = useState<ChaosConfig>(DEFAULT_CHAOS_CONFIG);
+  const [droppedCount, setDroppedCount] = useState(0);
+  const chaosRef = useRef<ChaosConfig>(DEFAULT_CHAOS_CONFIG);
+
+  const handleChaosChange = useCallback((next: ChaosConfig) => {
+    chaosRef.current = next;
+    setChaos(next);
+  }, []);
 
   const syncVisualization = useCallback(() => {
     setNodes([...lock.getNodes()]);
@@ -49,10 +65,19 @@ export default function DistributedLockingPage() {
 
     const inFlight = lock.getMessages().filter((m) => m.status === 'in-flight');
     if (inFlight.length > 0) {
+      const delayMs = computeDeliveryDelay(500, chaosRef.current.delayMultiplier);
       simulation.scheduleTimeout(() => {
-        inFlight.forEach((msg) => lock.deliverMessage(msg.id));
+        const { dropRate } = chaosRef.current;
+        const { survivors, dropped } =
+          dropRate > 0
+            ? applyChaosToMessages(inFlight, dropRate)
+            : { survivors: inFlight, dropped: [] };
+        if (dropped.length > 0) {
+          setDroppedCount((c) => c + dropped.length);
+        }
+        survivors.forEach((msg) => lock.deliverMessage(msg.id));
         updateVisualization();
-      }, 500);
+      }, delayMs);
     }
   }, [lock, simulation, syncVisualization]);
 
@@ -261,6 +286,19 @@ export default function DistributedLockingPage() {
               currentState={{ scenario: selectedScenario }}
             />
           </div>
+
+          <WireLogDrawer
+            protocol="Distributed Locking"
+            scenario={selectedScenario}
+            invariants={evaluateDistributedLockInvariants(nodes)}
+            frames={messages.map((m) => ({
+              id: m.id,
+              from: m.from,
+              to: m.to,
+              type: m.type,
+              status: m.status,
+            }))}
+          />
 
           <ScopeModeToggle
             mode={scopeMode}
@@ -524,6 +562,13 @@ export default function DistributedLockingPage() {
               </div>
             </div>
           </div>
+
+          <ChaosStrip
+            config={chaos}
+            onChange={handleChaosChange}
+            droppedCount={droppedCount}
+            onResetDropped={() => setDroppedCount(0)}
+          />
         </div>
       </div>
 

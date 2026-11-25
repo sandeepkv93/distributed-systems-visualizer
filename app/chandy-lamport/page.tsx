@@ -14,6 +14,7 @@ import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/Scop
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 import InvariantMonitor from '@/components/InvariantMonitor';
+import WireLogDrawer from '@/components/WireLogDrawer';
 import { evaluateChandyLamportInvariants } from '@/lib/invariants';
 
 export default function ChandyLamportPage() {
@@ -181,6 +182,23 @@ export default function ChandyLamportPage() {
               currentState={{ scenario: selectedScenario }}
             />
           </div>
+
+          <WireLogDrawer
+            protocol="Chandy-Lamport Snapshot"
+            scenario={selectedScenario}
+            invariants={evaluateChandyLamportInvariants(nodes)}
+            frames={messages.map((m) => ({
+              id: m.id,
+              from: m.from,
+              to: m.to,
+              type: m.type,
+              status: m.status,
+              detail:
+                m.type === 'Marker'
+                  ? m.payload.snapshotId ?? 'marker'
+                  : JSON.stringify(m.payload.value ?? ''),
+            }))}
+          />
 
           <ScopeModeToggle
             mode={scopeMode}

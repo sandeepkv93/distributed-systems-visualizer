@@ -14,7 +14,15 @@ import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/Scop
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 import InvariantMonitor from '@/components/InvariantMonitor';
+import WireLogDrawer from '@/components/WireLogDrawer';
 import { evaluateReplicationLogInvariants } from '@/lib/invariants';
+import ChaosStrip from '@/components/ChaosStrip';
+import {
+  ChaosConfig,
+  DEFAULT_CHAOS_CONFIG,
+  applyChaosToMessages,
+  computeDeliveryDelay,
+} from '@/lib/chaos';
 
 export default function ReplicationLogPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -25,6 +33,14 @@ export default function ReplicationLogPage() {
   const [showArticle, setShowArticle] = useState(false);
   const [selectedReplicaId, setSelectedReplicaId] = useState<string | null>(null);
   const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
+  const [chaos, setChaos] = useState<ChaosConfig>(DEFAULT_CHAOS_CONFIG);
+  const [droppedCount, setDroppedCount] = useState(0);
+  const chaosRef = useRef<ChaosConfig>(DEFAULT_CHAOS_CONFIG);
+
+  const handleChaosChange = useCallback((next: ChaosConfig) => {
+    chaosRef.current = next;
+    setChaos(next);
+  }, []);
 
   const syncVisualization = useCallback(() => {
     setPartition({
@@ -51,10 +67,19 @@ export default function ReplicationLogPage() {
 
     const inFlight = replication.getMessages().filter((m) => m.status === 'in-flight');
     if (inFlight.length > 0) {
+      const delayMs = computeDeliveryDelay(500, chaosRef.current.delayMultiplier);
       simulation.scheduleTimeout(() => {
-        inFlight.forEach((msg) => replication.deliverMessage(msg.id));
+        const { dropRate } = chaosRef.current;
+        const { survivors, dropped } =
+          dropRate > 0
+            ? applyChaosToMessages(inFlight, dropRate)
+            : { survivors: inFlight, dropped: [] };
+        if (dropped.length > 0) {
+          setDroppedCount((c) => c + dropped.length);
+        }
+        survivors.forEach((msg) => replication.deliverMessage(msg.id));
         updateVisualization();
-      }, 500);
+      }, delayMs);
     }
   }, [replication, simulation, syncVisualization]);
 
@@ -212,6 +237,20 @@ export default function ReplicationLogPage() {
               currentState={{ scenario: selectedScenario }}
             />
           </div>
+
+          <WireLogDrawer
+            protocol="Replication Log"
+            scenario={selectedScenario}
+            invariants={evaluateReplicationLogInvariants(partition)}
+            frames={messages.map((m) => ({
+              id: m.id,
+              from: m.from,
+              to: m.to,
+              type: m.type,
+              status: m.status,
+              detail: m.payload.offset !== undefined ? `offset=${m.payload.offset}` : undefined,
+            }))}
+          />
 
           <ScopeModeToggle
             mode={scopeMode}
@@ -412,7 +451,7 @@ export default function ReplicationLogPage() {
             </button>
           </div>
 
-          <div className="absolute top-16 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-sm max-h-80 overflow-y-auto">
+          <div className="absolute bottom-4 right-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-xs max-h-56 overflow-y-auto">
             <h3 className="text-sm font-semibold text-white mb-2">Replica Logs</h3>
             <div className="space-y-2">
               {partition.replicas.map((replica) => (
@@ -432,6 +471,13 @@ export default function ReplicationLogPage() {
               ))}
             </div>
           </div>
+
+          <ChaosStrip
+            config={chaos}
+            onChange={handleChaosChange}
+            droppedCount={droppedCount}
+            onResetDropped={() => setDroppedCount(0)}
+          />
         </div>
       </div>
 
