@@ -9,6 +9,8 @@ import {
   markScenarioCompleted,
   markConceptCompleted,
   recordExamScore,
+  markDrillMastered,
+  unmarkDrillMastered,
   startSession,
   endSession,
   importProgress,
@@ -192,5 +194,20 @@ describe('Progress & Achievements system', () => {
     assert.equal(getProgressStats().examBestScore, 9);
 
     unsub();
+  });
+
+  it('tracks mastered flashcards and unlocks flashcard_scholar at 10 cards', () => {
+    for (let i = 0; i < 9; i++) {
+      markDrillMastered(`drill-${i}`);
+    }
+    assert.equal(getProgressStats().drillsMastered, 9);
+    assert.equal(getProgress().achievements.includes('flashcard_scholar'), false);
+
+    markDrillMastered('drill-9');
+    assert.equal(getProgressStats().drillsMastered, 10);
+    assert.ok(getProgress().achievements.includes('flashcard_scholar'));
+
+    unmarkDrillMastered('drill-0');
+    assert.equal(getProgressStats().drillsMastered, 9);
   });
 });

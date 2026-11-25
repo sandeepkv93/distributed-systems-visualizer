@@ -106,6 +106,15 @@ const CORE_LABS: readonly AtlasSearchItem[] = [
     href: '/consistency',
     keywords: 'consistency linearizability sequential causal read your writes monotonic reads eventual stale read jepsen anomaly',
   },
+  {
+    id: 'lab:drills',
+    kind: 'lab',
+    badge: 'DRILL',
+    title: 'Active-Recall Protocol Flashcards',
+    subtitle: '22 keyboard-driven study cards covering invariants, complexity bounds, and failure modes across all plates',
+    href: '/drills',
+    keywords: 'drills flashcards spaced repetition interview prep recall study cards scholar deck',
+  },
 ];
 
 export function buildAtlasSearchIndex(): AtlasSearchItem[] {

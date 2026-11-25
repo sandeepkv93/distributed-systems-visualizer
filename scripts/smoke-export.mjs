@@ -15,6 +15,7 @@ const EXPECTED_ROUTES = [
   '/exam',
   '/latency',
   '/consistency',
+  '/drills',
   '/cap-theorem',
   '/chandy-lamport',
   '/consensus-variants',

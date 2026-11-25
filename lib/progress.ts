@@ -9,6 +9,7 @@ import {
 import { TOTAL_CHECKPOINTS } from './checkpoints';
 import { TOTAL_INCIDENTS } from './incidents';
 import { EXAM_PASS_THRESHOLD, TOTAL_EXAM_QUESTIONS } from './exam';
+import { DRILL_MASTER_SEAL_THRESHOLD, TOTAL_DRILLS } from './drills';
 
 const PROGRESS_KEY = 'distributed_systems_progress';
 const SESSION_START_KEY = 'session_start_time';
@@ -47,6 +48,8 @@ export interface ProgressStats {
   totalIncidents: number;
   examBestScore: number;
   examTotalQuestions: number;
+  drillsMastered: number;
+  totalDrills: number;
 }
 
 export interface ProgressStoreSnapshot {
@@ -71,6 +74,7 @@ export function createDefaultProgress(): UserProgress {
     checkpointsSolved: [],
     incidentsSolved: [],
     examBestScore: 0,
+    drillsMastered: [],
   };
 }
 
@@ -100,6 +104,7 @@ export function validateProgressData(input: unknown): UserProgress | null {
     checkpointsSolved,
     incidentsSolved,
     examBestScore,
+    drillsMastered,
   } = input;
 
   if (!isStringArray(conceptsCompleted)) {
@@ -118,6 +123,9 @@ export function validateProgressData(input: unknown): UserProgress | null {
     return null;
   }
   if (incidentsSolved !== undefined && !isStringArray(incidentsSolved)) {
+    return null;
+  }
+  if (drillsMastered !== undefined && !isStringArray(drillsMastered)) {
     return null;
   }
   if (
@@ -147,6 +155,7 @@ export function validateProgressData(input: unknown): UserProgress | null {
     checkpointsSolved: checkpointsSolved ? dedupe(checkpointsSolved) : [],
     incidentsSolved: incidentsSolved ? dedupe(incidentsSolved) : [],
     examBestScore: examBestScore ?? 0,
+    drillsMastered: drillsMastered ? dedupe(drillsMastered) : [],
   };
 }
 
@@ -193,6 +202,12 @@ const ACHIEVEMENTS: AchievementDefinition[] = [
     name: 'Incident Commander',
     description: 'Diagnose and resolve 3 production outage postmortems',
     condition: (progress: UserProgress) => (progress.incidentsSolved?.length ?? 0) >= 3,
+  },
+  {
+    id: 'flashcard_scholar',
+    name: 'Flashcard Scholar',
+    description: `Master ${DRILL_MASTER_SEAL_THRESHOLD} active-recall protocol flashcards`,
+    condition: (progress: UserProgress) => (progress.drillsMastered?.length ?? 0) >= DRILL_MASTER_SEAL_THRESHOLD,
   },
   {
     id: 'atlas_fellow',
@@ -246,6 +261,8 @@ function computeStats(progress: UserProgress): ProgressStats {
     totalIncidents: TOTAL_INCIDENTS,
     examBestScore: progress.examBestScore ?? 0,
     examTotalQuestions: TOTAL_EXAM_QUESTIONS,
+    drillsMastered: progress.drillsMastered?.length ?? 0,
+    totalDrills: TOTAL_DRILLS,
   };
 }
 
@@ -364,6 +381,7 @@ export function saveProgress(progress: UserProgress): void {
       checkpointsSolved: dedupe(progress.checkpointsSolved ?? []),
       incidentsSolved: dedupe(progress.incidentsSolved ?? []),
       examBestScore: safeExamScore,
+      drillsMastered: dedupe(progress.drillsMastered ?? []),
     };
     localStorage.setItem(PROGRESS_KEY, JSON.stringify(normalized));
     notifyProgressListeners();
@@ -397,6 +415,33 @@ export function markIncidentSolved(incidentId: string): void {
     progress.incidentsSolved = [...solved, trimmed];
     saveProgress(progress);
     checkAchievements(progress);
+  }
+}
+
+// Mark an active-recall flashcard as mastered
+export function markDrillMastered(drillId: string): void {
+  const trimmed = drillId.trim();
+  if (!trimmed) return;
+
+  const progress = getProgress();
+  const mastered = progress.drillsMastered ?? [];
+  if (!mastered.includes(trimmed)) {
+    progress.drillsMastered = [...mastered, trimmed];
+    saveProgress(progress);
+    checkAchievements(progress);
+  }
+}
+
+// Remove an active-recall flashcard from mastered set (when rated "Review Again")
+export function unmarkDrillMastered(drillId: string): void {
+  const trimmed = drillId.trim();
+  if (!trimmed) return;
+
+  const progress = getProgress();
+  const mastered = progress.drillsMastered ?? [];
+  if (mastered.includes(trimmed)) {
+    progress.drillsMastered = mastered.filter((id) => id !== trimmed);
+    saveProgress(progress);
   }
 }
 

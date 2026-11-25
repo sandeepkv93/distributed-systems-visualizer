@@ -602,4 +602,5 @@ export interface UserProgress {
   checkpointsSolved?: string[];
   incidentsSolved?: string[];
   examBestScore?: number;
+  drillsMastered?: string[];
 }

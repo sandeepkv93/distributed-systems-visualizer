@@ -225,6 +225,15 @@ export default function Navigation() {
                   Consistency Models &amp; Anomalies Lab
                 </span>
               </div>
+            ) : normalizedPath === '/drills' ? (
+              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
+                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--emerald)] text-[#FAF7F1] flex-shrink-0">
+                  FLASHCARDS
+                </span>
+                <span className="font-editorial text-base text-[var(--ink)] truncate">
+                  Active-Recall Study Deck (22 Plates)
+                </span>
+              </div>
             ) : null}
           </div>
 
@@ -315,6 +324,13 @@ export default function Navigation() {
                         Complete Protocol Index · 22 Plates
                       </span>
                       <div className="flex flex-wrap items-center gap-3">
+                        <Link
+                          href="/drills"
+                          onClick={() => setShowIndexMenu(false)}
+                          className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--emerald)] font-semibold hover:underline"
+                        >
+                          Flashcards →
+                        </Link>
                         <Link
                           href="/consistency"
                           onClick={() => setShowIndexMenu(false)}
