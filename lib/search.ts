@@ -115,6 +115,15 @@ const CORE_LABS: readonly AtlasSearchItem[] = [
     href: '/drills',
     keywords: 'drills flashcards spaced repetition interview prep recall study cards scholar deck',
   },
+  {
+    id: 'lab:clocks',
+    kind: 'lab',
+    badge: 'LAB',
+    title: 'Hybrid Logical Clocks (HLC) & TrueTime Lab',
+    subtitle: 'Inject NTP clock skew to compare Wall-Clock LWW data loss vs HLC (l,c) vs Spanner TrueTime 2ε Commit-Wait',
+    href: '/clocks',
+    keywords: 'clocks hlc hybrid logical clock truetime spanner ntp skew drift lww commit wait external consistency',
+  },
 ];
 
 export function buildAtlasSearchIndex(): AtlasSearchItem[] {

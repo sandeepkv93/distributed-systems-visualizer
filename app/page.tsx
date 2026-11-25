@@ -171,6 +171,10 @@ export default function Home() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3 uppercase tracking-wider">
+            <Link href="/clocks" className="text-[var(--cobalt)] hover:underline">
+              HLC Clocks
+            </Link>
+            <span>·</span>
             <Link href="/drills" className="text-[var(--emerald)] font-semibold hover:underline">
               Flashcards
             </Link>

@@ -234,6 +234,15 @@ export default function Navigation() {
                   Active-Recall Study Deck (22 Plates)
                 </span>
               </div>
+            ) : normalizedPath === '/clocks' ? (
+              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
+                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--cobalt)] text-[#FAF7F1] flex-shrink-0">
+                  CLOCKS LAB
+                </span>
+                <span className="font-editorial text-base text-[var(--ink)] truncate">
+                  HLC &amp; TrueTime Uncertainty
+                </span>
+              </div>
             ) : null}
           </div>
 
@@ -324,6 +333,13 @@ export default function Navigation() {
                         Complete Protocol Index · 22 Plates
                       </span>
                       <div className="flex flex-wrap items-center gap-3">
+                        <Link
+                          href="/clocks"
+                          onClick={() => setShowIndexMenu(false)}
+                          className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--cobalt)] hover:underline"
+                        >
+                          HLC Clocks →
+                        </Link>
                         <Link
                           href="/drills"
                           onClick={() => setShowIndexMenu(false)}
