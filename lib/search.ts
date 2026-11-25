@@ -133,6 +133,15 @@ const CORE_LABS: readonly AtlasSearchItem[] = [
     href: '/studio',
     keywords: 'studio composer system design stack adr markdown architecture decision record builder anti-pattern',
   },
+  {
+    id: 'lab:runbooks',
+    kind: 'lab',
+    badge: 'SRE',
+    title: 'Production Failure Modes & SRE Runbook Matrix',
+    subtitle: '8 SEV-1/SEV-2 failure playbooks with telemetry signals, breached invariants, mitigations & live scenario links',
+    href: '/runbooks',
+    keywords: 'runbooks playbook sre outage mitigation split brain election storm isr shrink fencing 2pc freeze hot shard',
+  },
 ];
 
 export function buildAtlasSearchIndex(): AtlasSearchItem[] {

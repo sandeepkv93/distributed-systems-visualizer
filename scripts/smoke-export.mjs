@@ -18,6 +18,7 @@ const EXPECTED_ROUTES = [
   '/drills',
   '/clocks',
   '/studio',
+  '/runbooks',
   '/cap-theorem',
   '/chandy-lamport',
   '/consensus-variants',

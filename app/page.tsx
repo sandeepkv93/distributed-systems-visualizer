@@ -171,6 +171,10 @@ export default function Home() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3 uppercase tracking-wider">
+            <Link href="/runbooks" className="text-[var(--signal)] hover:underline">
+              Runbooks
+            </Link>
+            <span>·</span>
             <Link href="/studio" className="text-[var(--signal)] font-semibold hover:underline">
               Stack Studio
             </Link>
