@@ -97,6 +97,15 @@ const CORE_LABS: readonly AtlasSearchItem[] = [
     href: '/latency',
     keywords: 'latency rtt p50 p99 tail straggler wan lan message complexity o(n2) pbft raft 2pc throughput',
   },
+  {
+    id: 'lab:consistency',
+    kind: 'lab',
+    badge: 'LAB',
+    title: 'Consistency Models & Execution Anomalies Lab',
+    subtitle: 'Linearizability, Sequential, Causal, Read-Your-Writes, Monotonic Reads & Eventual Consistency traces',
+    href: '/consistency',
+    keywords: 'consistency linearizability sequential causal read your writes monotonic reads eventual stale read jepsen anomaly',
+  },
 ];
 
 export function buildAtlasSearchIndex(): AtlasSearchItem[] {

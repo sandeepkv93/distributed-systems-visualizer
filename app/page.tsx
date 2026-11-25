@@ -171,6 +171,10 @@ export default function Home() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3 uppercase tracking-wider">
+            <Link href="/consistency" className="text-[var(--signal)] hover:underline">
+              Consistency
+            </Link>
+            <span>·</span>
             <Link href="/latency" className="text-[var(--cobalt)] hover:underline">
               Latency
             </Link>
