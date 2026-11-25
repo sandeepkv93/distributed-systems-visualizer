@@ -12,6 +12,8 @@ import { eventualConsistencyScenarios } from '@/visualizers/eventual-consistency
 import { EventualConsistencyNode, EventualConsistencyMessage } from '@/lib/types';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
+import InvariantMonitor from '@/components/InvariantMonitor';
+import { evaluateEventualConsistencyInvariants } from '@/lib/invariants';
 
 export default function EventualConsistencyPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -259,6 +261,11 @@ export default function EventualConsistencyPage() {
 
         {/* Visualization Canvas */}
         <div className="flex-1 relative bg-slate-900 overflow-hidden min-h-[420px]">
+          <InvariantMonitor
+            protocolLabel="Eventual Consistency Properties"
+            checks={evaluateEventualConsistencyInvariants(stats)}
+          />
+
           <div className="absolute top-4 right-4 z-20">
             <ExportMenu
               svgRef={svgRef}

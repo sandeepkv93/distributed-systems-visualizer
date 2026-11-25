@@ -13,6 +13,16 @@ import {
   evaluateDistributedLockInvariants,
   evaluateConsistentHashingInvariants,
   evaluateGossipInvariants,
+  evaluateLamportClockInvariants,
+  evaluateCAPInvariants,
+  evaluateConsensusVariantInvariants,
+  evaluateEventualConsistencyInvariants,
+  evaluateMerkleInvariants,
+  evaluateNetworkPartitionInvariants,
+  evaluateFailureDetectorInvariants,
+  evaluateShardingInvariants,
+  evaluateLoadBalancingInvariants,
+  evaluateDistributedTransactionsInvariants,
   summarizeInvariants,
 } from '../lib/invariants';
 import { RaftAlgorithm } from '../lib/algorithms/raft';
@@ -27,6 +37,15 @@ import { ReplicationLogAlgorithm } from '../lib/algorithms/replicationLog';
 import { DistributedLockAlgorithm } from '../lib/algorithms/distributedLock';
 import { ConsistentHashingAlgorithm } from '../lib/algorithms/consistentHashing';
 import { GossipAntiEntropyAlgorithm } from '../lib/algorithms/gossipAntiEntropy';
+import { LamportClocksAlgorithm } from '../lib/algorithms/lamportClocks';
+import { ConsensusVariantsAlgorithm } from '../lib/algorithms/consensusVariants';
+import { EventualConsistencyAlgorithm } from '../lib/algorithms/eventualConsistency';
+import { MerkleAntiEntropyAlgorithm } from '../lib/algorithms/merkleAntiEntropy';
+import { NetworkPartitionsAlgorithm } from '../lib/algorithms/networkPartitions';
+import { FailureDetectorsAlgorithm } from '../lib/algorithms/failureDetectors';
+import { ShardingRebalancingAlgorithm } from '../lib/algorithms/shardingRebalancing';
+import { LoadBalancingAlgorithm } from '../lib/algorithms/loadBalancing';
+import { DistributedTransactionsAlgorithm } from '../lib/algorithms/distributedTransactions';
 
 describe('Live Formal Invariant Monitor evaluators', () => {
   it('evaluates Raft Election Safety, Quorum Liveness, and detects split-leader violations', () => {
@@ -167,6 +186,95 @@ describe('Live Formal Invariant Monitor evaluators', () => {
     assert.equal(
       evaluateGossipInvariants(gossip.getNodes(), gossip.getStats()).find((c) => c.id === 'gossip-convergence')?.status,
       'degraded'
+    );
+  });
+
+  it('evaluates remaining 10 plates to achieve 22/22 formal invariant coverage', () => {
+    const lamport = new LamportClocksAlgorithm(3);
+    assert.equal(summarizeInvariants(evaluateLamportClockInvariants(lamport.getNodes())).overall, 'holding');
+
+    assert.equal(summarizeInvariants(evaluateCAPInvariants('CP')).overall, 'holding');
+    assert.equal(
+      evaluateCAPInvariants('CA').find((c) => c.id === 'cap-partition-resilience')?.status,
+      'degraded'
+    );
+
+    const cvar = new ConsensusVariantsAlgorithm(5);
+    assert.equal(
+      summarizeInvariants(evaluateConsensusVariantInvariants(cvar.getNodes('epaxos'), 'epaxos')).overall,
+      'holding'
+    );
+
+    const ec = new EventualConsistencyAlgorithm(5, 3);
+    assert.equal(summarizeInvariants(evaluateEventualConsistencyInvariants(ec.getStats())).overall, 'holding');
+    assert.equal(
+      evaluateEventualConsistencyInvariants({ totalNodes: 5, healthyNodes: 0, inconsistentKeys: 0 }).find(
+        (c) => c.id === 'ec-availability'
+      )?.status,
+      'violated'
+    );
+
+    const merkle = new MerkleAntiEntropyAlgorithm(2);
+    assert.equal(
+      evaluateMerkleInvariants(merkle.getReplicas(), merkle.getStats()).length,
+      2
+    );
+
+    const np = new NetworkPartitionsAlgorithm(5);
+    assert.equal(summarizeInvariants(evaluateNetworkPartitionInvariants(np.getNodes(), np.getStats())).overall, 'holding');
+    assert.equal(
+      evaluateNetworkPartitionInvariants(np.getNodes(), { leaders: 2, partitions: 2 }).find(
+        (c) => c.id === 'np-split-brain'
+      )?.status,
+      'violated'
+    );
+
+    const fd = new FailureDetectorsAlgorithm(5);
+    assert.equal(summarizeInvariants(evaluateFailureDetectorInvariants(fd.getStats())).overall, 'holding');
+    assert.equal(
+      evaluateFailureDetectorInvariants({ alive: 2, suspect: 1, failed: 2 }).find(
+        (c) => c.id === 'fd-quorum-alive'
+      )?.status,
+      'degraded'
+    );
+
+    const shardRange = new ShardingRebalancingAlgorithm(3, 'range');
+    assert.equal(
+      evaluateShardingInvariants(shardRange.getNodes(), shardRange.getStats()).find(
+        (c) => c.id === 'shard-balance'
+      )?.status,
+      'degraded'
+    );
+    const shardHash = new ShardingRebalancingAlgorithm(3, 'hash');
+    assert.equal(
+      summarizeInvariants(evaluateShardingInvariants(shardHash.getNodes(), shardHash.getStats())).overall,
+      'holding'
+    );
+
+    const lb = new LoadBalancingAlgorithm(4);
+    assert.equal(summarizeInvariants(evaluateLoadBalancingInvariants(lb.getWorkers(), lb.getStats())).overall, 'holding');
+    assert.equal(
+      evaluateLoadBalancingInvariants(
+        lb.getWorkers().map((w) => ({ ...w, loadStatus: 'failed' })),
+        lb.getStats()
+      ).find((c) => c.id === 'lb-worker-pool')?.status,
+      'violated'
+    );
+
+    const dtx = new DistributedTransactionsAlgorithm(3);
+    assert.equal(
+      summarizeInvariants(evaluateDistributedTransactionsInvariants(dtx.getParticipants(), dtx.getSagaSteps())).overall,
+      'holding'
+    );
+    const splitParticipants = dtx.getParticipants().map((p, i) => ({
+      ...p,
+      phase: i === 0 ? ('commit' as const) : ('abort' as const),
+    }));
+    assert.equal(
+      evaluateDistributedTransactionsInvariants(splitParticipants, dtx.getSagaSteps()).find(
+        (c) => c.id === 'dtx-3pc-atomicity'
+      )?.status,
+      'violated'
     );
   });
 });

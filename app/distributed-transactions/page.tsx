@@ -12,6 +12,8 @@ import { distributedTransactionsScenarios } from '@/visualizers/distributed-tran
 import { TransactionMessage, TransactionParticipant, SagaStep } from '@/lib/types';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
+import InvariantMonitor from '@/components/InvariantMonitor';
+import { evaluateDistributedTransactionsInvariants } from '@/lib/invariants';
 
 export default function DistributedTransactionsPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -251,6 +253,11 @@ export default function DistributedTransactionsPage() {
         </div>
 
         <div className="flex-1 relative bg-slate-900 overflow-hidden min-h-[420px]">
+          <InvariantMonitor
+            protocolLabel="3PC & Saga Properties"
+            checks={evaluateDistributedTransactionsInvariants(participants, sagaSteps)}
+          />
+
           <div className="absolute top-4 right-4 z-20">
             <ExportMenu
               svgRef={svgRef}

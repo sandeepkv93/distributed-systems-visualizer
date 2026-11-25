@@ -8,6 +8,8 @@ import PredictionCheckpoint from '@/components/PredictionCheckpoint';
 import { getCheckpointForConcept } from '@/lib/checkpoints';
 import { useProgress } from '@/hooks/useProgress';
 import { motion } from 'framer-motion';
+import InvariantMonitor from '@/components/InvariantMonitor';
+import { evaluateCAPInvariants } from '@/lib/invariants';
 
 type CAPProperty = 'C' | 'A' | 'P';
 type CAPCombination = 'CA' | 'CP' | 'AP' | null;
@@ -287,6 +289,11 @@ export default function CAPTheoremPage() {
 
         {/* Canvas */}
         <div className="flex-1 relative bg-slate-900 flex items-center justify-center min-h-[420px]">
+          <InvariantMonitor
+            protocolLabel="CAP Theorem Properties"
+            checks={evaluateCAPInvariants(selectedCombination)}
+          />
+
           <svg ref={svgRef} viewBox="0 0 800 660" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
             {/* Subtle geometric altitude construction lines */}
             <g stroke="rgba(244,240,232,0.08)" strokeWidth="1" strokeDasharray="3 5">

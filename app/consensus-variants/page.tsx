@@ -12,6 +12,8 @@ import { consensusVariantsScenarios } from '@/visualizers/consensus-variants/sce
 import { ConsensusMessage, ConsensusNode, ConsensusVariant } from '@/lib/types';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
+import InvariantMonitor from '@/components/InvariantMonitor';
+import { evaluateConsensusVariantInvariants } from '@/lib/invariants';
 
 const variantLabels: Record<ConsensusVariant, string> = {
   'raft-joint': 'Raft Joint Consensus',
@@ -220,6 +222,11 @@ export default function ConsensusVariantsPage() {
         </div>
 
         <div className="flex-1 relative bg-slate-900 overflow-hidden min-h-[420px]">
+          <InvariantMonitor
+            protocolLabel="Consensus Variant Properties"
+            checks={evaluateConsensusVariantInvariants(nodes, variant)}
+          />
+
           <div className="absolute top-4 right-4 z-20">
             <ExportMenu
               svgRef={svgRef}

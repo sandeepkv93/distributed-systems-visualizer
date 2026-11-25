@@ -12,6 +12,8 @@ import { loadBalancingScenarios } from '@/visualizers/load-balancing/scenarios';
 import { LoadMessage, LoadRequest, LoadWorker } from '@/lib/types';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
+import InvariantMonitor from '@/components/InvariantMonitor';
+import { evaluateLoadBalancingInvariants } from '@/lib/invariants';
 
 export default function LoadBalancingPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -189,6 +191,11 @@ export default function LoadBalancingPage() {
         </div>
 
         <div className="flex-1 relative bg-slate-900 overflow-hidden min-h-[420px]">
+          <InvariantMonitor
+            protocolLabel="Load Balancing Properties"
+            checks={evaluateLoadBalancingInvariants(workers, stats)}
+          />
+
           <div className="absolute top-4 right-4 z-20">
             <ExportMenu
               svgRef={svgRef}

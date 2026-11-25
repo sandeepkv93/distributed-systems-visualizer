@@ -12,6 +12,8 @@ import { shardingRebalancingScenarios } from '@/visualizers/sharding-rebalancing
 import { ShardMessage, ShardNode, ShardingStrategy } from '@/lib/types';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
+import InvariantMonitor from '@/components/InvariantMonitor';
+import { evaluateShardingInvariants } from '@/lib/invariants';
 
 export default function ShardingRebalancingPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -189,6 +191,11 @@ export default function ShardingRebalancingPage() {
         </div>
 
         <div className="flex-1 relative bg-slate-900 overflow-hidden min-h-[420px]">
+          <InvariantMonitor
+            protocolLabel="Sharding & Rebalancing Properties"
+            checks={evaluateShardingInvariants(nodes, stats)}
+          />
+
           <div className="absolute top-4 right-4 z-20">
             <ExportMenu
               svgRef={svgRef}

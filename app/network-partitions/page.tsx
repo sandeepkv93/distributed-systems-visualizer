@@ -12,6 +12,8 @@ import { networkPartitionsScenarios } from '@/visualizers/network-partitions/sce
 import { PartitionLink, PartitionNode } from '@/lib/types';
 import { ScopeDefs, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
+import InvariantMonitor from '@/components/InvariantMonitor';
+import { evaluateNetworkPartitionInvariants } from '@/lib/invariants';
 
 export default function NetworkPartitionsPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -166,6 +168,11 @@ export default function NetworkPartitionsPage() {
         </div>
 
         <div className="flex-1 relative bg-slate-900 overflow-hidden min-h-[420px]">
+          <InvariantMonitor
+            protocolLabel="Network Partition Properties"
+            checks={evaluateNetworkPartitionInvariants(nodes, stats)}
+          />
+
           <div className="absolute top-4 right-4 z-20">
             <ExportMenu
               svgRef={svgRef}

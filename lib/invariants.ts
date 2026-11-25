@@ -10,6 +10,15 @@ import type {
   LogPartition,
   LockNode,
   GossipNode,
+  LamportNode,
+  ConsensusNode,
+  ConsensusVariant,
+  MerkleReplica,
+  PartitionNode,
+  ShardNode,
+  LoadWorker,
+  TransactionParticipant,
+  SagaStep,
 } from './types';
 
 export type InvariantStatus = 'holding' | 'degraded' | 'violated';
@@ -531,6 +540,319 @@ export function evaluateGossipInvariants(
         stats.healthyNodes >= 2
           ? `${stats.healthyNodes}/${nodes.length} peers available for randomized fanout`
           : `Mesh isolated: only ${stats.healthyNodes}/${nodes.length} healthy peer(s)`,
+    },
+  ];
+}
+
+export function evaluateLamportClockInvariants(nodes: readonly LamportNode[]): InvariantCheck[] {
+  const clocksValid = nodes.every((n) => Number.isInteger(n.clock) && n.clock >= 0);
+  const pendingHoldback = nodes.reduce((sum, n) => sum + n.holdback.length, 0);
+
+  return [
+    {
+      id: 'lamport-monotonicity',
+      name: 'Scalar Clock Condition',
+      formula: 'a -> b => L(a) < L(b)',
+      status: clocksValid ? 'holding' : 'violated',
+      detail: clocksValid
+        ? `All ${nodes.length} logical clocks strictly monotonic (max L=${Math.max(0, ...nodes.map((n) => n.clock))})`
+        : 'Invalid negative or non-integer logical clock detected',
+    },
+    {
+      id: 'lamport-total-order',
+      name: 'Total-Order Holdback',
+      formula: 'deliver(m) iff all peers ACK',
+      status: pendingHoldback === 0 ? 'holding' : 'degraded',
+      detail:
+        pendingHoldback === 0
+          ? 'Holdback queues drained — total-order broadcasts settled'
+          : `${pendingHoldback} queued broadcast(s) awaiting peer acknowledgements`,
+    },
+  ];
+}
+
+export function evaluateCAPInvariants(
+  selectedCombination: 'CA' | 'CP' | 'AP' | null
+): InvariantCheck[] {
+  return [
+    {
+      id: 'cap-bound',
+      name: 'CAP Trade-Off Bound',
+      formula: 'under P: Linearizability XOR Availability',
+      status: 'holding',
+      detail:
+        selectedCombination === 'CP'
+          ? 'CP selected: preserves linearizable safety by halting minority partition'
+          : selectedCombination === 'AP'
+          ? 'AP selected: preserves 100% uptime; reconciles divergence after heal'
+          : selectedCombination === 'CA'
+          ? 'CA selected: valid only while network remains partition-free'
+          : 'Inspect CA, CP, or AP edge to evaluate partition behavior',
+    },
+    {
+      id: 'cap-partition-resilience',
+      name: 'Network Partition Tolerance',
+      formula: 'P required on asynchronous WANs',
+      status: selectedCombination === 'CA' ? 'degraded' : 'holding',
+      detail:
+        selectedCombination === 'CA'
+          ? 'CA systems degrade to CP or AP if an asynchronous network split occurs'
+          : 'Partition-tolerant operating regime active',
+    },
+  ];
+}
+
+export function evaluateConsensusVariantInvariants(
+  nodes: readonly ConsensusNode[],
+  variant: ConsensusVariant
+): InvariantCheck[] {
+  const leaders = nodes.filter((n) => n.role === 'leader');
+  const inJoint = nodes.some((n) => n.configPhase === 'joint');
+
+  return [
+    {
+      id: 'cvar-role-safety',
+      name: variant === 'epaxos' ? 'Leaderless Fast-Path Quorum' : 'Single-Leader Authority',
+      formula: variant === 'epaxos' ? 'fastQuorum = F + floor((F+1)/2)' : '|leaders| <= 1',
+      status:
+        variant === 'epaxos'
+          ? nodes.length >= 3
+            ? 'holding'
+            : 'degraded'
+          : leaders.length > 1
+          ? 'violated'
+          : leaders.length === 1
+          ? 'holding'
+          : 'degraded',
+      detail:
+        variant === 'epaxos'
+          ? `${nodes.length} egalitarian replicas ready for 1-RTT non-conflicting commits`
+          : leaders.length > 1
+          ? `Multiple leaders active: ${leaders.map((l) => l.id).join(', ')}`
+          : leaders.length === 1
+          ? `Single coordinator ${leaders[0].id} driving ${variant}`
+          : 'No leader elected yet — awaiting election round',
+    },
+    {
+      id: 'cvar-config-phase',
+      name: 'Configuration Membership Safety',
+      formula: inJoint ? 'C_old,new dual-quorum active' : 'stable cluster membership',
+      status: inJoint ? 'degraded' : 'holding',
+      detail: inJoint
+        ? 'Joint consensus transition active: commits require majorities in BOTH C_old and C_new'
+        : `All ${nodes.length} nodes operating under unified configuration`,
+    },
+  ];
+}
+
+export function evaluateEventualConsistencyInvariants(stats: {
+  totalNodes: number;
+  healthyNodes: number;
+  inconsistentKeys: number;
+}): InvariantCheck[] {
+  return [
+    {
+      id: 'ec-convergence',
+      name: 'Replica Convergence',
+      formula: 'inconsistentKeys == 0',
+      status: stats.inconsistentKeys === 0 ? 'holding' : 'degraded',
+      detail:
+        stats.inconsistentKeys === 0
+          ? 'All healthy replicas converged on identical key values'
+          : `${stats.inconsistentKeys} key(s) currently diverged — run anti-entropy to converge`,
+    },
+    {
+      id: 'ec-availability',
+      name: 'Write Availability (AP)',
+      formula: `healthy (${stats.healthyNodes}/${stats.totalNodes}) >= 1`,
+      status: stats.healthyNodes >= 1 ? 'holding' : 'violated',
+      detail:
+        stats.healthyNodes >= 1
+          ? `${stats.healthyNodes}/${stats.totalNodes} replicas available to serve local requests`
+          : 'All replicas offline — cluster unavailable',
+    },
+  ];
+}
+
+export function evaluateMerkleInvariants(
+  replicas: readonly MerkleReplica[],
+  stats: { mismatchedKeys: number }
+): InvariantCheck[] {
+  const rootsMatch =
+    replicas.length >= 2 && replicas[0].root?.hash === replicas[1].root?.hash;
+  return [
+    {
+      id: 'merkle-root-agreement',
+      name: 'Merkle Root Agreement',
+      formula: 'hash(root_R0) == hash(root_R1)',
+      status: rootsMatch && stats.mismatchedKeys === 0 ? 'holding' : 'degraded',
+      detail:
+        rootsMatch && stats.mismatchedKeys === 0
+          ? 'Root hashes match — zero leaf divergence across replicas'
+          : `Root mismatch detected (${stats.mismatchedKeys} divergent leaf key(s) awaiting sync)`,
+    },
+    {
+      id: 'merkle-diff-complexity',
+      name: 'Logarithmic Subtree Diff',
+      formula: 'O(1) equal · O(k log M) repair',
+      status: 'holding',
+      detail: `Tracking ${replicas[0]?.data.size ?? 0} keys per replica via hierarchical hash tree`,
+    },
+  ];
+}
+
+export function evaluateNetworkPartitionInvariants(
+  nodes: readonly PartitionNode[],
+  stats: { leaders: number; partitions: number }
+): InvariantCheck[] {
+  return [
+    {
+      id: 'np-split-brain',
+      name: 'Single-Leader Election Safety',
+      formula: '|leaders| <= 1',
+      status: stats.leaders > 1 ? 'violated' : 'holding',
+      detail:
+        stats.leaders > 1
+          ? `SPLIT-BRAIN VIOLATION: ${stats.leaders} leaders active simultaneously across partitions`
+          : stats.leaders === 1
+          ? 'Single leader active across cluster'
+          : `0 leaders active (${nodes.length} nodes ready for election)`,
+    },
+    {
+      id: 'np-connectivity',
+      name: 'Full Mesh Connectivity',
+      formula: 'partitions == 1',
+      status: stats.partitions <= 1 ? 'holding' : 'degraded',
+      detail:
+        stats.partitions <= 1
+          ? `All ${nodes.length} nodes connected in a single partition`
+          : `Network bisected into ${stats.partitions} isolated partitions`,
+    },
+  ];
+}
+
+export function evaluateFailureDetectorInvariants(stats: {
+  alive: number;
+  suspect: number;
+  failed: number;
+}): InvariantCheck[] {
+  const total = stats.alive + stats.suspect + stats.failed;
+  const majority = Math.floor(total / 2) + 1;
+
+  return [
+    {
+      id: 'fd-quorum-alive',
+      name: 'Healthy Cluster Majority',
+      formula: `alive (${stats.alive}) >= ${majority}/${total}`,
+      status: stats.alive >= majority ? 'holding' : 'degraded',
+      detail:
+        stats.alive >= majority
+          ? `${stats.alive}/${total} nodes confirmed alive`
+          : `Quorum at risk: only ${stats.alive}/${total} alive (${stats.failed} failed)`,
+    },
+    {
+      id: 'fd-suspicion-state',
+      name: 'Membership Stability',
+      formula: 'suspect == 0',
+      status: stats.suspect === 0 ? 'holding' : 'degraded',
+      detail:
+        stats.suspect === 0
+          ? 'No active phi-accrual / SWIM suspicions pending'
+          : `${stats.suspect} node(s) currently under indirect-probe suspicion`,
+    },
+  ];
+}
+
+export function evaluateShardingInvariants(
+  nodes: readonly ShardNode[],
+  stats: { totalNodes: number; avgLoad: number }
+): InvariantCheck[] {
+  const maxLoad = nodes.reduce((m, n) => Math.max(m, n.load), 0);
+  const hotspotThreshold = Math.max(25, stats.avgLoad * 1.5);
+  const hasHotspot = stats.totalNodes > 0 && maxLoad > hotspotThreshold;
+
+  return [
+    {
+      id: 'shard-cluster-coverage',
+      name: 'Shard Hosting Coverage',
+      formula: 'nodes >= 1',
+      status: stats.totalNodes >= 1 ? 'holding' : 'violated',
+      detail:
+        stats.totalNodes >= 1
+          ? `${stats.totalNodes} shard node(s) hosting keyspace`
+          : 'Zero shard nodes available',
+    },
+    {
+      id: 'shard-balance',
+      name: 'Hot-Shard Load Bound',
+      formula: `maxLoad (${maxLoad}) <= ${Math.round(hotspotThreshold)}`,
+      status: hasHotspot ? 'degraded' : 'holding',
+      detail: hasHotspot
+        ? `Hot shard detected (max load ${maxLoad} vs avg ${stats.avgLoad.toFixed(1)}) — trigger rebalance`
+        : `Shard load balanced (max ${maxLoad}, avg ${stats.avgLoad.toFixed(1)})`,
+    },
+  ];
+}
+
+export function evaluateLoadBalancingInvariants(
+  workers: readonly LoadWorker[],
+  stats: { dropped: number; inFlight: number }
+): InvariantCheck[] {
+  const healthyWorkers = workers.filter((w) => w.loadStatus !== 'failed').length;
+  const overloadedWorkers = workers.filter((w) => w.loadStatus === 'overloaded').length;
+
+  return [
+    {
+      id: 'lb-worker-pool',
+      name: 'Available Worker Capacity',
+      formula: `activeWorkers (${healthyWorkers}/${workers.length}) >= 1`,
+      status: healthyWorkers >= 1 ? 'holding' : 'violated',
+      detail:
+        healthyWorkers >= 1
+          ? `${healthyWorkers}/${workers.length} workers online (${stats.inFlight} req in flight)`
+          : 'All backend workers failed — zero routing capacity',
+    },
+    {
+      id: 'lb-backpressure',
+      name: 'Queue Saturation & Shedding',
+      formula: 'overloaded == 0 && dropped == 0',
+      status: overloadedWorkers > 0 || stats.dropped > 0 ? 'degraded' : 'holding',
+      detail:
+        overloadedWorkers > 0 || stats.dropped > 0
+          ? `Backpressure active: ${overloadedWorkers} overloaded worker(s), ${stats.dropped} request(s) shed`
+          : 'All worker queues within safe latency bounds',
+    },
+  ];
+}
+
+export function evaluateDistributedTransactionsInvariants(
+  participants: readonly TransactionParticipant[],
+  sagaSteps: readonly SagaStep[]
+): InvariantCheck[] {
+  const committed = participants.filter((p) => p.phase === 'commit' || p.phase === 'done');
+  const aborted = participants.filter((p) => p.phase === 'abort');
+  const split3PC = committed.length > 0 && aborted.length > 0;
+  const compensated = sagaSteps.filter((s) => s.status === 'compensated');
+
+  return [
+    {
+      id: 'dtx-3pc-atomicity',
+      name: '3PC Atomic Decision Safety',
+      formula: '!(COMMIT && ABORT)',
+      status: split3PC ? 'violated' : 'holding',
+      detail: split3PC
+        ? `Atomicity violation: ${committed.length} committed while ${aborted.length} aborted`
+        : 'All 3PC participants remain consistent across voting/pre-commit/commit phases',
+    },
+    {
+      id: 'dtx-saga-recovery',
+      name: 'Saga Compensation Integrity',
+      formula: 'failed step => reverse Ci rollback',
+      status: compensated.length > 0 ? 'degraded' : 'holding',
+      detail:
+        compensated.length > 0
+          ? `${compensated.length}/${sagaSteps.length} saga step(s) rolled back via compensating transactions`
+          : `${sagaSteps.filter((s) => s.status === 'completed').length}/${sagaSteps.length} saga step(s) forward-committed`,
     },
   ];
 }
