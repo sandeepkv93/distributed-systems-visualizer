@@ -124,6 +124,15 @@ const CORE_LABS: readonly AtlasSearchItem[] = [
     href: '/clocks',
     keywords: 'clocks hlc hybrid logical clock truetime spanner ntp skew drift lww commit wait external consistency',
   },
+  {
+    id: 'lab:studio',
+    kind: 'lab',
+    badge: 'STUDIO',
+    title: 'System Design Stack Composer & ADR Exporter',
+    subtitle: 'Assemble partitioning, consensus, transaction & clock layers with live conflict auditing and Markdown ADR export',
+    href: '/studio',
+    keywords: 'studio composer system design stack adr markdown architecture decision record builder anti-pattern',
+  },
 ];
 
 export function buildAtlasSearchIndex(): AtlasSearchItem[] {

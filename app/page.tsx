@@ -171,6 +171,10 @@ export default function Home() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3 uppercase tracking-wider">
+            <Link href="/studio" className="text-[var(--signal)] font-semibold hover:underline">
+              Stack Studio
+            </Link>
+            <span>·</span>
             <Link href="/clocks" className="text-[var(--cobalt)] hover:underline">
               HLC Clocks
             </Link>
