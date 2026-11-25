@@ -142,6 +142,15 @@ const CORE_LABS: readonly AtlasSearchItem[] = [
     href: '/runbooks',
     keywords: 'runbooks playbook sre outage mitigation split brain election storm isr shrink fencing 2pc freeze hot shard',
   },
+  {
+    id: 'lab:glossary',
+    kind: 'lab',
+    badge: 'LEXICON',
+    title: 'Canonical Distributed Systems Glossary & Notation',
+    subtitle: '37 foundational terms and formal symbols (FLP, PACELC, HW/LEO, Fencing, Vnodes, HLC) linked to live plates',
+    href: '/glossary',
+    keywords: 'glossary dictionary lexicon notation symbols definitions flp pacelc linearizability quorum fencing vnodes',
+  },
 ];
 
 export function buildAtlasSearchIndex(): AtlasSearchItem[] {
