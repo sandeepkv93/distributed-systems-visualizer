@@ -88,6 +88,15 @@ const CORE_LABS: readonly AtlasSearchItem[] = [
     href: '/exam',
     keywords: 'exam test quiz assessment certification atlas fellow mastery score evaluation',
   },
+  {
+    id: 'lab:latency',
+    kind: 'lab',
+    badge: 'LAB',
+    title: 'Latency & Message Complexity Estimator',
+    subtitle: 'Compare p50/p99 commit RTTs and O(1) vs O(N) vs O(N²) message scaling across WAN/LAN topologies',
+    href: '/latency',
+    keywords: 'latency rtt p50 p99 tail straggler wan lan message complexity o(n2) pbft raft 2pc throughput',
+  },
 ];
 
 export function buildAtlasSearchIndex(): AtlasSearchItem[] {
