@@ -13,6 +13,8 @@ import { ShardMessage, ShardNode, ShardingStrategy } from '@/lib/types';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 import InvariantMonitor from '@/components/InvariantMonitor';
+import WireLogDrawer from '@/components/WireLogDrawer';
+import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 import { evaluateShardingInvariants } from '@/lib/invariants';
 
 export default function ShardingRebalancingPage() {
@@ -24,6 +26,7 @@ export default function ShardingRebalancingPage() {
   const [showArticle, setShowArticle] = useState(false);
   const [strategy, setStrategy] = useState<ShardingStrategy>('range');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
 
   const syncVisualization = useCallback(() => {
     setNodes([...sharding.getNodes()]);
@@ -204,6 +207,26 @@ export default function ShardingRebalancingPage() {
             />
           </div>
 
+          <WireLogDrawer
+            protocol="Sharding & Rebalancing"
+            scenario={selectedScenario}
+            invariants={evaluateShardingInvariants(nodes, stats)}
+            frames={messages.map((m) => ({
+              id: m.id,
+              from: m.from,
+              to: m.to,
+              type: m.type,
+              status: m.status,
+            }))}
+          />
+
+          <ScopeModeToggle
+            mode={scopeMode}
+            onChange={setScopeMode}
+            frameCount={messages.length}
+          />
+
+          {scopeMode === 'topology' ? (
           <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
             <ScopeDefs idPrefix="shard" />
 
@@ -267,6 +290,30 @@ export default function ShardingRebalancingPage() {
               />
             ))}
           </svg>
+          ) : (
+            <SpaceTimeScope
+              svgRef={svgRef}
+              title={`SHARDING · ${strategy.toUpperCase()} MIGRATION TRACE`}
+              idPrefix="shard-st"
+              actors={nodes.map((node) => ({
+                id: node.id,
+                label: node.id,
+                sublabel: `LOAD ${node.load}`,
+                color: getNodeColor(node),
+              }))}
+              frames={messages.map((msg) => {
+                const style = getMessageStyle(msg);
+                return {
+                  id: msg.id,
+                  from: msg.from,
+                  to: msg.to,
+                  label: style.label,
+                  color: style.color,
+                  status: msg.status,
+                };
+              })}
+            />
+          )}
 
           {!inspectedNode && <WireTapHint text="Click any shard node to inspect key ranges & load" />}
 

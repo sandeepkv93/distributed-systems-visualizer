@@ -13,6 +13,8 @@ import { TransactionMessage, TransactionParticipant, SagaStep } from '@/lib/type
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 import InvariantMonitor from '@/components/InvariantMonitor';
+import WireLogDrawer from '@/components/WireLogDrawer';
+import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 import { evaluateDistributedTransactionsInvariants } from '@/lib/invariants';
 
 export default function DistributedTransactionsPage() {
@@ -28,6 +30,7 @@ export default function DistributedTransactionsPage() {
   const [selectedEntity, setSelectedEntity] = useState<
     { kind: 'participant'; id: string } | { kind: 'saga'; id: string } | null
   >(null);
+  const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
 
   const syncVisualization = useCallback(() => {
     setParticipants([...transactions.getParticipants()]);
@@ -271,6 +274,27 @@ export default function DistributedTransactionsPage() {
             />
           </div>
 
+          <WireLogDrawer
+            protocol="3PC & Saga Transactions"
+            scenario={selectedScenario}
+            invariants={evaluateDistributedTransactionsInvariants(participants, sagaSteps)}
+            frames={messages.map((m) => ({
+              id: m.id,
+              from: m.from,
+              to: m.to,
+              type: m.type,
+              detail: m.payload?.vote ? `vote=${m.payload.vote}` : undefined,
+              status: m.status,
+            }))}
+          />
+
+          <ScopeModeToggle
+            mode={scopeMode}
+            onChange={setScopeMode}
+            frameCount={messages.length}
+          />
+
+          {scopeMode === 'topology' ? (
           <svg ref={svgRef} viewBox="0 0 920 560" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
             <ScopeDefs idPrefix="dtx" />
 
@@ -446,6 +470,47 @@ export default function DistributedTransactionsPage() {
               );
             })}
           </svg>
+          ) : (
+            <SpaceTimeScope
+              svgRef={svgRef}
+              title="3PC & SAGA · TRANSACTION WIRE TRACE"
+              idPrefix="dtx-st"
+              actors={[
+                { id: 'coordinator', label: 'COORD', sublabel: '3PC', color: SCOPE_COLORS.cobalt },
+                { id: 'saga', label: 'SAGA', sublabel: 'ORCH', color: SCOPE_COLORS.signal },
+                ...participants.map((p) => ({
+                  id: p.id,
+                  label: p.id,
+                  sublabel: p.phase.toUpperCase(),
+                  color: getParticipantColor(p),
+                  failed: p.phase === 'abort',
+                })),
+                ...sagaSteps.map((s) => ({
+                  id: s.id,
+                  label: s.id,
+                  sublabel: s.status.toUpperCase(),
+                  color: getSagaColor(s),
+                  failed: s.status === 'compensated',
+                })),
+              ]}
+              frames={messages.map((msg) => ({
+                id: msg.id,
+                from: msg.from,
+                to: msg.to,
+                label: msg.payload?.vote ? `${msg.type}(${msg.payload.vote})` : msg.type,
+                color:
+                  msg.type === 'Abort' || msg.type === 'Compensate'
+                    ? SCOPE_COLORS.danger
+                    : msg.type === 'Commit'
+                    ? SCOPE_COLORS.emerald
+                    : msg.type === 'PreCommit'
+                    ? SCOPE_COLORS.signal
+                    : SCOPE_COLORS.cobalt,
+                status: msg.status,
+                dashed: msg.type === 'Abort' || msg.type === 'Compensate',
+              }))}
+            />
+          )}
 
           {!inspectedParticipant && !inspectedSaga && (
             <WireTapHint text="Click any 3PC participant or Saga step to inspect & act" />

@@ -57,10 +57,23 @@ const ibmPlexMono = localFont({
   display: 'swap',
 });
 
+const BASE_PATH =
+  process.env.NODE_ENV === 'production' ? '/distributed-systems-visualizer' : '';
+
 export const metadata: Metadata = {
   title: 'Distributed Systems Atlas — Interactive Protocol Monograph',
   description:
-    'An interactive field manual and live telemetry bench for exploring 22 foundational distributed systems protocols step by step.',
+    'An interactive field manual and live telemetry bench for exploring 22 foundational distributed systems protocols, formal invariants, and real-world architectures step by step.',
+  manifest: `${BASE_PATH}/manifest.webmanifest`,
+  icons: {
+    icon: `${BASE_PATH}/atlas-icon.svg`,
+  },
+  openGraph: {
+    title: 'Distributed Systems Atlas — Interactive Protocol Monograph',
+    description:
+      'Explore 22 interactive protocol plates, live Space-Time wire traces, formal invariant monitors, outage drills, and system design workbenches.',
+    type: 'website',
+  },
 };
 
 export default function RootLayout({

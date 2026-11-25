@@ -13,6 +13,8 @@ import { ConsensusMessage, ConsensusNode, ConsensusVariant } from '@/lib/types';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 import InvariantMonitor from '@/components/InvariantMonitor';
+import WireLogDrawer from '@/components/WireLogDrawer';
+import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 import { evaluateConsensusVariantInvariants } from '@/lib/invariants';
 
 const variantLabels: Record<ConsensusVariant, string> = {
@@ -30,6 +32,7 @@ export default function ConsensusVariantsPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
 
   const syncVisualization = useCallback(() => {
     setNodes([...variants.getNodes(variant)]);
@@ -235,6 +238,26 @@ export default function ConsensusVariantsPage() {
             />
           </div>
 
+          <WireLogDrawer
+            protocol={`Consensus Variants (${variant})`}
+            scenario={selectedScenario}
+            invariants={evaluateConsensusVariantInvariants(nodes, variant)}
+            frames={messages.map((m) => ({
+              id: m.id,
+              from: m.from,
+              to: m.to,
+              type: m.type,
+              status: m.status,
+            }))}
+          />
+
+          <ScopeModeToggle
+            mode={scopeMode}
+            onChange={setScopeMode}
+            frameCount={messages.length}
+          />
+
+          {scopeMode === 'topology' ? (
           <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
             <ScopeDefs idPrefix="cvar" />
 
@@ -304,6 +327,27 @@ export default function ConsensusVariantsPage() {
               />
             ))}
           </svg>
+          ) : (
+            <SpaceTimeScope
+              svgRef={svgRef}
+              title={`CONSENSUS VARIANTS · ${variantLabels[variant].toUpperCase()} TRACE`}
+              idPrefix="cvar-st"
+              actors={nodes.map((node) => ({
+                id: node.id,
+                label: node.id,
+                sublabel: node.role.toUpperCase(),
+                color: getNodeColor(node),
+              }))}
+              frames={messages.map((msg) => ({
+                id: msg.id,
+                from: msg.from,
+                to: msg.to,
+                label: msg.type,
+                color: SCOPE_COLORS.cobalt,
+                status: msg.status,
+              }))}
+            />
+          )}
 
           {!inspectedNode && <WireTapHint text="Click any replica to inspect consensus variant role & commits" />}
 

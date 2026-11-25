@@ -13,6 +13,8 @@ import { LoadMessage, LoadRequest, LoadWorker } from '@/lib/types';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 import InvariantMonitor from '@/components/InvariantMonitor';
+import WireLogDrawer from '@/components/WireLogDrawer';
+import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 import { evaluateLoadBalancingInvariants } from '@/lib/invariants';
 
 export default function LoadBalancingPage() {
@@ -24,6 +26,7 @@ export default function LoadBalancingPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
   const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
+  const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
 
   const syncVisualization = useCallback(() => {
     setWorkers([...lb.getWorkers()]);
@@ -204,6 +207,26 @@ export default function LoadBalancingPage() {
             />
           </div>
 
+          <WireLogDrawer
+            protocol="Load Balancing"
+            scenario={selectedScenario}
+            invariants={evaluateLoadBalancingInvariants(workers, stats)}
+            frames={messages.map((m) => ({
+              id: m.id,
+              from: m.from,
+              to: m.to,
+              type: m.type,
+              status: m.status,
+            }))}
+          />
+
+          <ScopeModeToggle
+            mode={scopeMode}
+            onChange={setScopeMode}
+            frameCount={messages.length}
+          />
+
+          {scopeMode === 'topology' ? (
           <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
             <ScopeDefs idPrefix="lb" />
 
@@ -282,6 +305,32 @@ export default function LoadBalancingPage() {
               />
             ))}
           </svg>
+          ) : (
+            <SpaceTimeScope
+              svgRef={svgRef}
+              title="LOAD BALANCING · DISPATCH & BACKPRESSURE TRACE"
+              idPrefix="lb-st"
+              actors={[
+                { id: 'balancer', label: 'LB', sublabel: 'ROUTER', color: SCOPE_COLORS.cobalt },
+                ...workers.map((worker) => ({
+                  id: worker.id,
+                  label: worker.id,
+                  sublabel: worker.loadStatus.toUpperCase(),
+                  color: getWorkerColor(worker),
+                  failed: worker.loadStatus === 'failed',
+                })),
+              ]}
+              frames={messages.map((msg) => ({
+                id: msg.id,
+                from: msg.from,
+                to: msg.to,
+                label: msg.type,
+                color: msg.type === 'Drop' ? SCOPE_COLORS.danger : SCOPE_COLORS.cobalt,
+                status: msg.status,
+                dashed: msg.type === 'Drop',
+              }))}
+            />
+          )}
 
           {!inspectedWorker && <WireTapHint text="Click any worker to inspect queue depth & inject faults" />}
 

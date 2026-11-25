@@ -13,6 +13,8 @@ import { EventualConsistencyNode, EventualConsistencyMessage } from '@/lib/types
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 import InvariantMonitor from '@/components/InvariantMonitor';
+import WireLogDrawer from '@/components/WireLogDrawer';
+import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 import { evaluateEventualConsistencyInvariants } from '@/lib/invariants';
 
 export default function EventualConsistencyPage() {
@@ -23,6 +25,7 @@ export default function EventualConsistencyPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
 
   const syncVisualization = useCallback(() => {
     setNodes([...ec.getNodes()]);
@@ -273,6 +276,27 @@ export default function EventualConsistencyPage() {
               currentState={{ scenario: selectedScenario }}
             />
           </div>
+
+          <WireLogDrawer
+            protocol="Eventual Consistency"
+            scenario={selectedScenario}
+            invariants={evaluateEventualConsistencyInvariants(stats)}
+            frames={messages.map((m) => ({
+              id: m.id,
+              from: m.from,
+              to: m.to,
+              type: m.type,
+              status: m.status,
+            }))}
+          />
+
+          <ScopeModeToggle
+            mode={scopeMode}
+            onChange={setScopeMode}
+            frameCount={messages.length}
+          />
+
+          {scopeMode === 'topology' ? (
           <svg ref={svgRef} viewBox="0 0 840 700" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
             <ScopeDefs idPrefix="ec" />
 
@@ -339,6 +363,29 @@ export default function EventualConsistencyPage() {
               />
             ))}
           </svg>
+          ) : (
+            <SpaceTimeScope
+              svgRef={svgRef}
+              title="EVENTUAL CONSISTENCY · ASYNC REPLICATION TRACE"
+              idPrefix="ec-st"
+              actors={nodes.map((node) => ({
+                id: node.id,
+                label: node.id,
+                sublabel: node.status === 'failed' ? 'OFFLINE' : `${node.data.size} KEYS`,
+                color: getNodeColor(node),
+                failed: node.status === 'failed',
+              }))}
+              frames={messages.map((msg) => ({
+                id: msg.id,
+                from: msg.from,
+                to: msg.to,
+                label: msg.type === 'AntiEntropy' ? 'SYNC' : 'REPL',
+                color: getMessageColor(msg),
+                status: msg.status,
+                dashed: msg.type === 'AntiEntropy',
+              }))}
+            />
+          )}
 
           {!inspectedNode && <WireTapHint text="Click any replica to inspect versions & inject faults" />}
 

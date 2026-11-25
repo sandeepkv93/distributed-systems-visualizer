@@ -13,6 +13,8 @@ import { FailureDetectorMessage, FailureDetectorNode } from '@/lib/types';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 import InvariantMonitor from '@/components/InvariantMonitor';
+import WireLogDrawer from '@/components/WireLogDrawer';
+import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 import { evaluateFailureDetectorInvariants } from '@/lib/invariants';
 
 export default function FailureDetectorsPage() {
@@ -23,6 +25,7 @@ export default function FailureDetectorsPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
 
   const syncVisualization = useCallback(() => {
     setNodes([...fd.getNodes()]);
@@ -250,6 +253,26 @@ export default function FailureDetectorsPage() {
             />
           </div>
 
+          <WireLogDrawer
+            protocol="Failure Detectors"
+            scenario={selectedScenario}
+            invariants={evaluateFailureDetectorInvariants(stats)}
+            frames={messages.map((m) => ({
+              id: m.id,
+              from: m.from,
+              to: m.to,
+              type: m.type,
+              status: m.status,
+            }))}
+          />
+
+          <ScopeModeToggle
+            mode={scopeMode}
+            onChange={setScopeMode}
+            frameCount={messages.length}
+          />
+
+          {scopeMode === 'topology' ? (
           <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
             <ScopeDefs idPrefix="fd" />
 
@@ -318,6 +341,35 @@ export default function FailureDetectorsPage() {
               />
             ))}
           </svg>
+          ) : (
+            <SpaceTimeScope
+              svgRef={svgRef}
+              title="FAILURE DETECTORS · HEARTBEAT & PROBE TRACE"
+              idPrefix="fd-st"
+              actors={[
+                { id: 'system', label: 'SYS', sublabel: 'MONITOR', color: SCOPE_COLORS.inkMuted },
+                ...nodes.map((node) => ({
+                  id: node.id,
+                  label: node.id,
+                  sublabel: node.fdStatus.toUpperCase(),
+                  color: getNodeColor(node),
+                  failed: node.fdStatus === 'failed',
+                })),
+              ]}
+              frames={messages.map((msg) => {
+                const style = getMessageStyle(msg);
+                return {
+                  id: msg.id,
+                  from: msg.from,
+                  to: msg.to,
+                  label: style.label,
+                  color: style.color,
+                  status: msg.status,
+                  dashed: msg.type === 'Probe' || msg.type === 'Suspect',
+                };
+              })}
+            />
+          )}
 
           {!inspectedNode && <WireTapHint text="Click any member to inspect φ-accrual & inject probes" />}
 
