@@ -160,6 +160,15 @@ const CORE_LABS: readonly AtlasSearchItem[] = [
     href: '/theorems',
     keywords: 'theorems impossibility flp pacelc cap calm monotonicity bft 3f+1 2f+1 lower bound proof counterexample',
   },
+  {
+    id: 'lab:queueing',
+    kind: 'lab',
+    badge: 'MATH',
+    title: 'Queueing Theory, Little’s Law & Tail Amplification Lab',
+    subtitle: 'M/M/c Erlang-C utilization cliffs, Little’s Law L=λW, fan-out tail hedging & metastable retry storms',
+    href: '/queueing',
+    keywords: 'queueing mm1 mmc erlang littles law tail latency amplification fanout hedged requests retry storm metastable jitter',
+  },
 ];
 
 export function buildAtlasSearchIndex(): AtlasSearchItem[] {

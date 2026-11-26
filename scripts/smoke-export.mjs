@@ -21,6 +21,7 @@ const EXPECTED_ROUTES = [
   '/runbooks',
   '/glossary',
   '/theorems',
+  '/queueing',
   '/cap-theorem',
   '/chandy-lamport',
   '/consensus-variants',
