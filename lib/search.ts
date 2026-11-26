@@ -227,6 +227,15 @@ const CORE_LABS: readonly AtlasSearchItem[] = [
     href: '/streaming',
     keywords: 'streaming flink dataflow millwheel watermark event time processing time tumbling sliding session window barrier checkpoint exactly once',
   },
+  {
+    id: 'lab:resilience',
+    kind: 'lab',
+    badge: 'MESH',
+    title: 'Service Mesh Resilience: Circuit Breakers, Bulkheads & AIMD Lab',
+    subtitle: 'Stop cascading failures with 3-state circuit breakers, bulkhead pools, AIMD adaptive concurrency & deadline propagation',
+    href: '/resilience',
+    keywords: 'resilience circuit breaker bulkhead adaptive concurrency aimd vegas hystrix envoy deadline propagation zombie cascade blast radius',
+  },
 ];
 
 export function buildAtlasSearchIndex(): AtlasSearchItem[] {
