@@ -14,6 +14,8 @@ import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/Scop
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 import InvariantMonitor from '@/components/InvariantMonitor';
 import { evaluateCRDTInvariants } from '@/lib/invariants';
+import WireLogDrawer from '@/components/WireLogDrawer';
+import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 
 export default function CRDTsPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -23,6 +25,7 @@ export default function CRDTsPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
   const [selectedReplicaId, setSelectedReplicaId] = useState<string | null>(null);
+  const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
 
   const syncVisualization = useCallback(() => {
     setReplicas([...crdt.getReplicas()]);
@@ -238,6 +241,26 @@ export default function CRDTsPage() {
             />
           </div>
 
+          <WireLogDrawer
+            protocol="CRDTs (G-Counter / OR-Set / RGA)"
+            scenario={selectedScenario}
+            invariants={evaluateCRDTInvariants(replicas, stats)}
+            frames={messages.map((m) => ({
+              id: m.id,
+              from: m.from,
+              to: m.to,
+              type: m.type,
+              status: m.status,
+            }))}
+          />
+
+          <ScopeModeToggle
+            mode={scopeMode}
+            onChange={setScopeMode}
+            frameCount={messages.length}
+          />
+
+          {scopeMode === 'topology' ? (
           <svg ref={svgRef} viewBox="0 0 880 340" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
             <ScopeDefs idPrefix="crdt" />
 
@@ -303,6 +326,27 @@ export default function CRDTsPage() {
               );
             })}
           </svg>
+          ) : (
+            <SpaceTimeScope
+              svgRef={svgRef}
+              title="CRDT · SEMILATTICE MERGE & ANTI-ENTROPY TRACE"
+              idPrefix="crdt-st"
+              actors={replicas.map((r) => ({
+                id: r.id,
+                label: r.id,
+                sublabel: `G=${crdt.getGCounterTotal(r)}`,
+                color: hasDivergence ? SCOPE_COLORS.amber : SCOPE_COLORS.emerald,
+              }))}
+              frames={messages.map((msg) => ({
+                id: msg.id,
+                from: msg.from,
+                to: msg.to,
+                label: msg.type,
+                color: SCOPE_COLORS.emerald,
+                status: msg.status,
+              }))}
+            />
+          )}
 
           {!inspectedReplica && <WireTapHint text="Click any replica to inspect lattice state & mutate locally" />}
 

@@ -628,7 +628,7 @@ export default function Navigation() {
                   setSelectedIdx(0);
                 }}
                 onKeyDown={handlePaletteKeyDown}
-                placeholder='Search plates, 79 scenarios, duels, outages (e.g. "split brain", "3f+1", "Lamport")...'
+                placeholder='Search plates, scenarios, 37 glossary terms, 18 papers, runbooks, theorems, interviews...'
                 className="w-full bg-transparent text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus:outline-none"
               />
               <button
@@ -648,9 +648,12 @@ export default function Navigation() {
                   { id: 'all', label: 'All' },
                   { id: 'plate', label: 'Plates (22)' },
                   { id: 'scenario', label: 'Scenarios (79)' },
+                  { id: 'lab', label: 'Labs & Cases' },
+                  { id: 'glossary', label: 'Glossary (37)' },
+                  { id: 'paper', label: 'Papers (18)' },
+                  { id: 'runbook', label: 'Runbooks (8)' },
                   { id: 'duel', label: 'Duels (6)' },
                   { id: 'incident', label: 'Outages (6)' },
-                  { id: 'lab', label: 'Labs' },
                 ] as const
               ).map((tab) => {
                 const active = searchFilter === tab.id;
@@ -684,11 +687,11 @@ export default function Navigation() {
                   const isSelected = idx === selectedIdx;
                   const conceptId = item.kind === 'plate' ? item.id.replace('plate:', '') : null;
                   const badgeTone =
-                    item.kind === 'incident'
+                    item.kind === 'incident' || item.kind === 'runbook'
                       ? isSelected
                         ? 'bg-[#D9441E] text-[#FAF7F1]'
                         : 'bg-[var(--signal)]/12 text-[var(--signal)]'
-                      : item.kind === 'duel'
+                      : item.kind === 'duel' || item.kind === 'paper'
                       ? isSelected
                         ? 'bg-[#A8640B] text-[#FAF7F1]'
                         : 'bg-[var(--ochre)]/12 text-[var(--ochre)]'
@@ -696,7 +699,7 @@ export default function Navigation() {
                       ? isSelected
                         ? 'bg-[#0F6B50] text-[#FAF7F1]'
                         : 'bg-[var(--emerald)]/12 text-[var(--emerald)]'
-                      : item.kind === 'scenario'
+                      : item.kind === 'scenario' || item.kind === 'glossary'
                       ? isSelected
                         ? 'bg-[#1D4B8F] text-[#FAF7F1]'
                         : 'bg-[var(--cobalt)]/12 text-[var(--cobalt)]'

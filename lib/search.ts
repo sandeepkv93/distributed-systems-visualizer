@@ -1,8 +1,21 @@
 import { CONCEPTS_CATALOG } from './catalog';
 import { DUELS } from './duels';
 import { INCIDENTS } from './incidents';
+import { GLOSSARY_ENTRIES } from './glossary';
+import { BIBLIOGRAPHY } from './bibliography';
+import { FAILURE_RUNBOOKS } from './runbooks';
+import { THEOREMS } from './theorems';
+import { INTERVIEW_PROMPTS } from './interviews';
 
-export type SearchItemKind = 'plate' | 'scenario' | 'duel' | 'incident' | 'lab';
+export type SearchItemKind =
+  | 'plate'
+  | 'scenario'
+  | 'duel'
+  | 'incident'
+  | 'lab'
+  | 'glossary'
+  | 'paper'
+  | 'runbook';
 export type SearchKindFilter = 'all' | SearchItemKind;
 
 export interface AtlasSearchItem {
@@ -240,6 +253,66 @@ export function buildAtlasSearchIndex(): AtlasSearchItem[] {
     });
   }
 
+  for (const entry of GLOSSARY_ENTRIES) {
+    items.push({
+      id: `glossary:${entry.id}`,
+      kind: 'glossary',
+      badge: 'TERM',
+      title: entry.symbol ? `${entry.term} (${entry.symbol})` : entry.term,
+      subtitle: entry.definition,
+      href: '/glossary',
+      keywords: `${entry.id} ${entry.term} ${entry.symbol ?? ''} ${entry.domainId} ${entry.citation ?? ''} ${entry.conceptIds.join(' ')}`,
+    });
+  }
+
+  for (const paper of BIBLIOGRAPHY) {
+    items.push({
+      id: `paper:${paper.id}`,
+      kind: 'paper',
+      badge: String(paper.year),
+      title: paper.title,
+      subtitle: `${paper.authors} · ${paper.venue}`,
+      href: '/bibliography',
+      keywords: `${paper.id} ${paper.year} ${paper.authors} ${paper.venue} ${paper.coreTheorem} ${paper.conceptIds.join(' ')}`,
+    });
+  }
+
+  for (const rb of FAILURE_RUNBOOKS) {
+    items.push({
+      id: `runbook:${rb.id}`,
+      kind: 'runbook',
+      badge: rb.code,
+      title: rb.title,
+      subtitle: `${rb.severity} · ${rb.breachedInvariant}`,
+      href: '/runbooks',
+      keywords: `${rb.id} ${rb.code} ${rb.severity} ${rb.domainId} ${rb.conceptId} ${rb.rootCause} ${rb.telemetrySignals.join(' ')}`,
+    });
+  }
+
+  for (const thm of THEOREMS) {
+    items.push({
+      id: `theorem:${thm.id}`,
+      kind: 'lab',
+      badge: thm.code,
+      title: `${thm.name} (${thm.year})`,
+      subtitle: `${thm.authors} — ${thm.formalStatement}`,
+      href: '/theorems',
+      keywords: `${thm.id} ${thm.code} ${thm.authors} ${thm.year} ${thm.plainEnglish} ${thm.conceptIds.join(' ')}`,
+    });
+  }
+
+  for (const prompt of INTERVIEW_PROMPTS) {
+    items.push({
+      id: `interview:${prompt.id}`,
+      kind: 'lab',
+      badge: prompt.code,
+      title: `Interview: ${prompt.title}`,
+      subtitle: `${prompt.level} · ${prompt.scale}`,
+      href: '/interviews',
+      keywords: `${prompt.id} ${prompt.code} ${prompt.level} ${prompt.scale} ${prompt.brief}`,
+    });
+  }
+
   return items;
 }
 
@@ -265,12 +338,15 @@ function scoreItem(item: AtlasSearchItem, tokens: string[]): number {
     score += tokenScore;
   }
 
-  // Slight tie-breaker priority: labs & plates before deep scenarios
+  // Slight tie-breaker priority: labs & plates before deep scenarios and reference entries
   const kindBonus: Record<SearchItemKind, number> = {
     lab: 8,
     plate: 6,
     duel: 5,
     incident: 4,
+    runbook: 4,
+    paper: 3,
+    glossary: 3,
     scenario: 2,
   };
   return score + kindBonus[item.kind];

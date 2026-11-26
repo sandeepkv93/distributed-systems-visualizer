@@ -10,6 +10,9 @@ import { useProgress } from '@/hooks/useProgress';
 import { motion } from 'framer-motion';
 import InvariantMonitor from '@/components/InvariantMonitor';
 import { evaluateCAPInvariants } from '@/lib/invariants';
+import WireLogDrawer from '@/components/WireLogDrawer';
+import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
+import { SCOPE_COLORS } from '@/components/ScopeSvgKit';
 
 type CAPProperty = 'C' | 'A' | 'P';
 type CAPCombination = 'CA' | 'CP' | 'AP' | null;
@@ -109,8 +112,31 @@ export default function CAPTheoremPage() {
     () => new Set()
   );
   const [showArticle, setShowArticle] = useState(false);
+  const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
   const { completeConcept } = useProgress('cap-theorem');
   const capCheckpoint = getCheckpointForConcept('cap-theorem');
+
+  const capTraceFrames =
+    selectedCombination === 'CA'
+      ? [
+          { id: 'cap-1', from: 'client', to: 'N1', type: 'Write(x=1)', status: 'delivered' as const },
+          { id: 'cap-2', from: 'N1', to: 'N2', type: 'SyncRep(x=1)', status: 'delivered' as const },
+          { id: 'cap-3', from: 'client', to: 'N2', type: 'Read(x)', status: 'delivered' as const },
+          { id: 'cap-4', from: 'N2', to: 'client', type: '200 OK (x=1)', status: 'delivered' as const },
+        ]
+      : selectedCombination === 'AP'
+      ? [
+          { id: 'cap-1', from: 'client', to: 'N1', type: 'Write(x=1)', status: 'delivered' as const },
+          { id: 'cap-2', from: 'N1', to: 'N2', type: 'Rep(x=1) [PARTITION]', status: 'dropped' as const },
+          { id: 'cap-3', from: 'client', to: 'N2', type: 'Read(x)', status: 'delivered' as const },
+          { id: 'cap-4', from: 'N2', to: 'client', type: '200 OK (STALE x=0)', status: 'delivered' as const },
+        ]
+      : [
+          { id: 'cap-1', from: 'client', to: 'N1', type: 'Write(x=1)', status: 'delivered' as const },
+          { id: 'cap-2', from: 'N1', to: 'N2', type: 'Rep(x=1) [PARTITION]', status: 'dropped' as const },
+          { id: 'cap-3', from: 'client', to: 'N2', type: 'Read(x)', status: 'delivered' as const },
+          { id: 'cap-4', from: 'N2', to: 'client', type: '503 Refuse (CP Safe)', status: 'dropped' as const },
+        ];
 
   // Triangle vertices
   const triangleVertices = {
@@ -294,6 +320,20 @@ export default function CAPTheoremPage() {
             checks={evaluateCAPInvariants(selectedCombination)}
           />
 
+          <WireLogDrawer
+            protocol={`CAP Theorem (${selectedCombination ?? 'CP'} Partition Proof)`}
+            scenario={selectedCombination ?? 'CP'}
+            invariants={evaluateCAPInvariants(selectedCombination)}
+            frames={capTraceFrames}
+          />
+
+          <ScopeModeToggle
+            mode={scopeMode}
+            onChange={setScopeMode}
+            frameCount={capTraceFrames.length}
+          />
+
+          {scopeMode === 'topology' ? (
           <svg ref={svgRef} viewBox="0 0 800 660" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
             {/* Subtle geometric altitude construction lines */}
             <g stroke="rgba(244,240,232,0.08)" strokeWidth="1" strokeDasharray="3 5">
@@ -548,6 +588,37 @@ export default function CAPTheoremPage() {
               </g>
             </g>
           </svg>
+          ) : (
+            <SpaceTimeScope
+              svgRef={svgRef}
+              title={`CAP THEOREM · ${selectedCombination ?? 'CP'} PARTITION EXECUTION TRACE`}
+              idPrefix="cap-st"
+              actors={[
+                { id: 'client', label: 'CLIENT', sublabel: 'CALLER', color: SCOPE_COLORS.cobalt },
+                { id: 'N1', label: 'N1', sublabel: 'PART A', color: SCOPE_COLORS.emerald },
+                {
+                  id: 'N2',
+                  label: 'N2',
+                  sublabel: selectedCombination === 'CA' ? 'SYNCED' : 'PART B',
+                  color: selectedCombination === 'CA' ? SCOPE_COLORS.cobalt : SCOPE_COLORS.signal,
+                },
+              ]}
+              frames={capTraceFrames.map((f) => ({
+                id: f.id,
+                from: f.from,
+                to: f.to,
+                label: f.type,
+                color:
+                  f.status === 'dropped'
+                    ? SCOPE_COLORS.danger
+                    : f.type.includes('STALE')
+                    ? SCOPE_COLORS.amber
+                    : SCOPE_COLORS.emerald,
+                status: f.status,
+                dashed: f.status === 'dropped',
+              }))}
+            />
+          )}
 
           {/* Info box */}
           <div className="absolute bottom-4 left-4 bg-slate-800 rounded-lg p-4 border border-slate-700 max-w-md">

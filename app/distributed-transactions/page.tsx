@@ -16,6 +16,13 @@ import InvariantMonitor from '@/components/InvariantMonitor';
 import WireLogDrawer from '@/components/WireLogDrawer';
 import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 import { evaluateDistributedTransactionsInvariants } from '@/lib/invariants';
+import ChaosStrip from '@/components/ChaosStrip';
+import {
+  ChaosConfig,
+  DEFAULT_CHAOS_CONFIG,
+  applyChaosToMessages,
+  computeDeliveryDelay,
+} from '@/lib/chaos';
 
 export default function DistributedTransactionsPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -31,6 +38,14 @@ export default function DistributedTransactionsPage() {
     { kind: 'participant'; id: string } | { kind: 'saga'; id: string } | null
   >(null);
   const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
+  const [chaos, setChaos] = useState<ChaosConfig>(DEFAULT_CHAOS_CONFIG);
+  const [droppedCount, setDroppedCount] = useState(0);
+  const chaosRef = useRef<ChaosConfig>(DEFAULT_CHAOS_CONFIG);
+
+  const handleChaosChange = useCallback((next: ChaosConfig) => {
+    chaosRef.current = next;
+    setChaos(next);
+  }, []);
 
   const syncVisualization = useCallback(() => {
     setParticipants([...transactions.getParticipants()]);
@@ -55,10 +70,19 @@ export default function DistributedTransactionsPage() {
 
     const inFlight = transactions.getMessages().filter((m) => m.status === 'in-flight');
     if (inFlight.length > 0) {
+      const delayMs = computeDeliveryDelay(500, chaosRef.current.delayMultiplier);
       simulation.scheduleTimeout(() => {
-        inFlight.forEach((msg) => transactions.deliverMessage(msg.id));
+        const { dropRate } = chaosRef.current;
+        const { survivors, dropped } =
+          dropRate > 0
+            ? applyChaosToMessages(inFlight, dropRate)
+            : { survivors: inFlight, dropped: [] };
+        if (dropped.length > 0) {
+          setDroppedCount((c) => c + dropped.length);
+        }
+        survivors.forEach((msg) => transactions.deliverMessage(msg.id));
         updateVisualization();
-      }, 500);
+      }, delayMs);
     }
   }, [transactions, simulation, syncVisualization]);
 
@@ -664,6 +688,13 @@ export default function DistributedTransactionsPage() {
               </div>
             ))}
           </div>
+
+          <ChaosStrip
+            config={chaos}
+            onChange={handleChaosChange}
+            droppedCount={droppedCount}
+            onResetDropped={() => setDroppedCount(0)}
+          />
         </div>
       </div>
 

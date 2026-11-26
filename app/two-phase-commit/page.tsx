@@ -16,6 +16,12 @@ import { TwoPhaseCommitNode, TwoPhaseCommitMessage } from '@/lib/types';
 import { ScopeDefs, ScopeEdge, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
+import ChaosStrip from '@/components/ChaosStrip';
+import {
+  ChaosConfig,
+  DEFAULT_CHAOS_CONFIG,
+  applyChaosToMessages,
+} from '@/lib/chaos';
 
 export default function TwoPhaseCommitPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -27,9 +33,27 @@ export default function TwoPhaseCommitPage() {
   const [showArticle, setShowArticle] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
+  const [chaos, setChaos] = useState<ChaosConfig>(DEFAULT_CHAOS_CONFIG);
+  const [droppedCount, setDroppedCount] = useState(0);
+  const chaosRef = useRef<ChaosConfig>(DEFAULT_CHAOS_CONFIG);
+
+  const handleChaosChange = useCallback((next: ChaosConfig) => {
+    chaosRef.current = next;
+    setChaos(next);
+  }, []);
 
   // Update visualization
   const updateVisualization = useCallback(() => {
+    const { dropRate } = chaosRef.current;
+    if (dropRate > 0) {
+      const inFlight = tpc.getMessages().filter((m) => m.status === 'in-flight');
+      if (inFlight.length > 0) {
+        const { dropped } = applyChaosToMessages(inFlight, dropRate);
+        if (dropped.length > 0) {
+          setDroppedCount((c) => c + dropped.length);
+        }
+      }
+    }
     setCoordinator({ ...tpc.getCoordinator() });
     setParticipants([...tpc.getParticipants()]);
     setMessages([...tpc.getMessages()]);
@@ -620,6 +644,13 @@ export default function TwoPhaseCommitPage() {
               </div>
             </div>
           </div>
+
+          <ChaosStrip
+            config={chaos}
+            onChange={handleChaosChange}
+            droppedCount={droppedCount}
+            onResetDropped={() => setDroppedCount(0)}
+          />
         </div>
       </div>
 

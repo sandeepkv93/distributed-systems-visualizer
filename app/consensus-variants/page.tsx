@@ -16,6 +16,13 @@ import InvariantMonitor from '@/components/InvariantMonitor';
 import WireLogDrawer from '@/components/WireLogDrawer';
 import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 import { evaluateConsensusVariantInvariants } from '@/lib/invariants';
+import ChaosStrip from '@/components/ChaosStrip';
+import {
+  ChaosConfig,
+  DEFAULT_CHAOS_CONFIG,
+  applyChaosToMessages,
+  computeDeliveryDelay,
+} from '@/lib/chaos';
 
 const variantLabels: Record<ConsensusVariant, string> = {
   'raft-joint': 'Raft Joint Consensus',
@@ -33,6 +40,14 @@ export default function ConsensusVariantsPage() {
   const [showArticle, setShowArticle] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
+  const [chaos, setChaos] = useState<ChaosConfig>(DEFAULT_CHAOS_CONFIG);
+  const [droppedCount, setDroppedCount] = useState(0);
+  const chaosRef = useRef<ChaosConfig>(DEFAULT_CHAOS_CONFIG);
+
+  const handleChaosChange = useCallback((next: ChaosConfig) => {
+    chaosRef.current = next;
+    setChaos(next);
+  }, []);
 
   const syncVisualization = useCallback(() => {
     setNodes([...variants.getNodes(variant)]);
@@ -56,10 +71,19 @@ export default function ConsensusVariantsPage() {
 
     const inFlight = variants.getMessages().filter((m) => m.status === 'in-flight');
     if (inFlight.length > 0) {
+      const delayMs = computeDeliveryDelay(500, chaosRef.current.delayMultiplier);
       simulation.scheduleTimeout(() => {
-        inFlight.forEach((msg) => variants.deliverMessage(msg.id));
+        const { dropRate } = chaosRef.current;
+        const { survivors, dropped } =
+          dropRate > 0
+            ? applyChaosToMessages(inFlight, dropRate)
+            : { survivors: inFlight, dropped: [] };
+        if (dropped.length > 0) {
+          setDroppedCount((c) => c + dropped.length);
+        }
+        survivors.forEach((msg) => variants.deliverMessage(msg.id));
         updateVisualization();
-      }, 500);
+      }, delayMs);
     }
   }, [variants, simulation, syncVisualization]);
 
@@ -436,6 +460,13 @@ export default function ConsensusVariantsPage() {
               </>
             )}
           </div>
+
+          <ChaosStrip
+            config={chaos}
+            onChange={handleChaosChange}
+            droppedCount={droppedCount}
+            onResetDropped={() => setDroppedCount(0)}
+          />
         </div>
       </div>
 

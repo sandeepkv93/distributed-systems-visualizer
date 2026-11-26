@@ -16,6 +16,13 @@ import InvariantMonitor from '@/components/InvariantMonitor';
 import WireLogDrawer from '@/components/WireLogDrawer';
 import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 import { evaluateEventualConsistencyInvariants } from '@/lib/invariants';
+import ChaosStrip from '@/components/ChaosStrip';
+import {
+  ChaosConfig,
+  DEFAULT_CHAOS_CONFIG,
+  applyChaosToMessages,
+  computeDeliveryDelay,
+} from '@/lib/chaos';
 
 export default function EventualConsistencyPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -26,6 +33,14 @@ export default function EventualConsistencyPage() {
   const [showArticle, setShowArticle] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
+  const [chaos, setChaos] = useState<ChaosConfig>(DEFAULT_CHAOS_CONFIG);
+  const [droppedCount, setDroppedCount] = useState(0);
+  const chaosRef = useRef<ChaosConfig>(DEFAULT_CHAOS_CONFIG);
+
+  const handleChaosChange = useCallback((next: ChaosConfig) => {
+    chaosRef.current = next;
+    setChaos(next);
+  }, []);
 
   const syncVisualization = useCallback(() => {
     setNodes([...ec.getNodes()]);
@@ -51,12 +66,21 @@ export default function EventualConsistencyPage() {
     // Process in-flight messages
     const inFlightMessages = ec.getMessages().filter((m) => m.status === 'in-flight');
     if (inFlightMessages.length > 0) {
+      const delayMs = computeDeliveryDelay(500, chaosRef.current.delayMultiplier);
       simulation.scheduleTimeout(() => {
-        inFlightMessages.forEach((msg) => {
+        const { dropRate } = chaosRef.current;
+        const { survivors, dropped } =
+          dropRate > 0
+            ? applyChaosToMessages(inFlightMessages, dropRate)
+            : { survivors: inFlightMessages, dropped: [] };
+        if (dropped.length > 0) {
+          setDroppedCount((c) => c + dropped.length);
+        }
+        survivors.forEach((msg) => {
           ec.receiveReplicate(msg.id);
         });
         updateVisualization();
-      }, 500);
+      }, delayMs);
     }
   }, [ec, simulation, syncVisualization]);
 
@@ -546,6 +570,13 @@ export default function EventualConsistencyPage() {
               </div>
             </div>
           </div>
+
+          <ChaosStrip
+            config={chaos}
+            onChange={handleChaosChange}
+            droppedCount={droppedCount}
+            onResetDropped={() => setDroppedCount(0)}
+          />
         </div>
       </div>
 

@@ -13,6 +13,9 @@ import { motion } from 'framer-motion';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 import InvariantMonitor from '@/components/InvariantMonitor';
 import { evaluateConsistentHashingInvariants } from '@/lib/invariants';
+import WireLogDrawer from '@/components/WireLogDrawer';
+import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
+import { SCOPE_COLORS } from '@/components/ScopeSvgKit';
 
 export default function ConsistentHashingPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -24,6 +27,7 @@ export default function ConsistentHashingPage() {
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
   const [selectedVNodeId, setSelectedVNodeId] = useState<string | null>(null);
+  const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
 
   // Update visualization
   const updateVisualization = useCallback(() => {
@@ -249,6 +253,27 @@ export default function ConsistentHashingPage() {
             />
           </div>
 
+          <WireLogDrawer
+            protocol="Consistent Hashing Ring"
+            scenario={selectedScenario}
+            invariants={evaluateConsistentHashingInvariants(stats)}
+            frames={ring.keys.slice(-24).map((k, idx) => ({
+              id: `route-${idx}-${k.key}`,
+              from: 'client',
+              to: k.nodeId.split('#')[0],
+              type: 'RouteKey',
+              detail: `${k.key} -> ${k.nodeId}`,
+              status: 'delivered',
+            }))}
+          />
+
+          <ScopeModeToggle
+            mode={scopeMode}
+            onChange={setScopeMode}
+            frameCount={ring.keys.length}
+          />
+
+          {scopeMode === 'topology' ? (
           <svg ref={svgRef} viewBox="0 0 820 700" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
             {/* Outer calibrated compass ticks (24 divisions around 2^32 space) */}
             {Array.from({ length: 24 }, (_, idx) => {
@@ -455,6 +480,30 @@ export default function ConsistentHashingPage() {
               {stats.loadStats.imbalance.toFixed(2)}× IMBAL
             </text>
           </svg>
+          ) : (
+            <SpaceTimeScope
+              svgRef={svgRef}
+              title="CONSISTENT HASHING · KEY ROUTING WIRE TRACE"
+              idPrefix="ch-st"
+              actors={[
+                { id: 'client', label: 'CLIENT', sublabel: 'ROUTER', color: SCOPE_COLORS.cobalt },
+                ...servers.map((serverId) => ({
+                  id: serverId,
+                  label: serverId.replace('server-', 'S'),
+                  sublabel: `${stats.loadDistribution.get(serverId) || 0} KEYS`,
+                  color: getServerColor(serverId),
+                })),
+              ]}
+              frames={ring.keys.slice(-18).map((k, idx) => ({
+                id: `ch-frame-${idx}-${k.key}`,
+                from: 'client',
+                to: k.nodeId.split('#')[0],
+                label: k.key,
+                color: getServerColor(k.nodeId.split('#')[0]),
+                status: 'delivered',
+              }))}
+            />
+          )}
 
           {!selectedVNodeId && <WireTapHint text="Click any ring pin to inspect vnode & keys" />}
 

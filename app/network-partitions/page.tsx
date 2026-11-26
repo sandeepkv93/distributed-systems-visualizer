@@ -9,24 +9,29 @@ import TopicArticleDrawer from '@/components/TopicArticleDrawer';
 import { topicArticles } from '@/data/topic-articles';
 import ExportMenu from '@/components/ExportMenu';
 import { networkPartitionsScenarios } from '@/visualizers/network-partitions/scenarios';
-import { PartitionLink, PartitionNode } from '@/lib/types';
+import { PartitionLink, PartitionMessage, PartitionNode } from '@/lib/types';
 import { ScopeDefs, ScopeNode, SCOPE_COLORS } from '@/components/ScopeSvgKit';
 import WireTapInspector, { WireTapHint } from '@/components/WireTapInspector';
 import InvariantMonitor from '@/components/InvariantMonitor';
 import { evaluateNetworkPartitionInvariants } from '@/lib/invariants';
+import WireLogDrawer from '@/components/WireLogDrawer';
+import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 
 export default function NetworkPartitionsPage() {
   const svgRef = useRef<SVGSVGElement>(null);
   const [np] = useState(() => new NetworkPartitionsAlgorithm(5));
   const [nodes, setNodes] = useState<PartitionNode[]>(np.getNodes());
   const [links, setLinks] = useState<PartitionLink[]>(np.getLinks());
+  const [messages, setMessages] = useState<PartitionMessage[]>(np.getMessages());
   const [selectedScenario, setSelectedScenario] = useState<string>('');
   const [showArticle, setShowArticle] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
 
   const syncVisualization = useCallback(() => {
     setNodes([...np.getNodes()]);
     setLinks([...np.getLinks()]);
+    setMessages([...np.getMessages()]);
   }, [np]);
 
   const simulation = useSimulation([], {
@@ -181,6 +186,27 @@ export default function NetworkPartitionsPage() {
             />
           </div>
 
+          <WireLogDrawer
+            protocol="Network Partitions + Split-Brain"
+            scenario={selectedScenario}
+            invariants={evaluateNetworkPartitionInvariants(nodes, stats)}
+            frames={messages.map((m) => ({
+              id: m.id,
+              from: m.from,
+              to: m.to,
+              type: m.type,
+              detail: m.payload?.term !== undefined ? `T${m.payload.term}` : undefined,
+              status: m.status,
+            }))}
+          />
+
+          <ScopeModeToggle
+            mode={scopeMode}
+            onChange={setScopeMode}
+            frameCount={messages.length}
+          />
+
+          {scopeMode === 'topology' ? (
           <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
             <ScopeDefs idPrefix="netpart" />
 
@@ -234,6 +260,35 @@ export default function NetworkPartitionsPage() {
               );
             })}
           </svg>
+          ) : (
+            <SpaceTimeScope
+              svgRef={svgRef}
+              title="NETWORK PARTITIONS · SPLIT-BRAIN ELECTION WIRE TRACE"
+              idPrefix="netpart-st"
+              actors={nodes.map((node) => ({
+                id: node.id,
+                label: node.id,
+                sublabel: `${node.role.toUpperCase()} · P${node.partitionId}`,
+                color: getNodeColor(node),
+              }))}
+              frames={messages.map((msg) => ({
+                id: msg.id,
+                from: msg.from,
+                to: msg.to,
+                label: msg.payload?.term !== undefined ? `${msg.type} T${msg.payload.term}` : msg.type,
+                color:
+                  msg.type === 'Vote'
+                    ? SCOPE_COLORS.emerald
+                    : msg.type === 'Reject'
+                    ? SCOPE_COLORS.danger
+                    : msg.type === 'Heartbeat'
+                    ? SCOPE_COLORS.cobalt
+                    : SCOPE_COLORS.signal,
+                status: msg.status,
+                dashed: msg.type === 'Reject',
+              }))}
+            />
+          )}
 
           {!inspectedNode && <WireTapHint text="Click any node to inspect partition membership & links" />}
 
