@@ -151,6 +151,15 @@ const CORE_LABS: readonly AtlasSearchItem[] = [
     href: '/glossary',
     keywords: 'glossary dictionary lexicon notation symbols definitions flp pacelc linearizability quorum fencing vnodes',
   },
+  {
+    id: 'lab:theorems',
+    kind: 'lab',
+    badge: 'THEORY',
+    title: 'Impossibility Theorems & PACELC Bounds Lab',
+    subtitle: 'Interactive FLP, CAP/PACELC, 2f+1, 3f+1, CALM monotonicity, and clock-sync assumption evaluator',
+    href: '/theorems',
+    keywords: 'theorems impossibility flp pacelc cap calm monotonicity bft 3f+1 2f+1 lower bound proof counterexample',
+  },
 ];
 
 export function buildAtlasSearchIndex(): AtlasSearchItem[] {
