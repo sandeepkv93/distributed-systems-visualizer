@@ -218,6 +218,15 @@ const CORE_LABS: readonly AtlasSearchItem[] = [
     href: '/caching',
     keywords: 'caching redis memcache lease stampede thundering herd singleflight xfetch cache-aside write-through write-behind lru lfu tinylfu',
   },
+  {
+    id: 'lab:streaming',
+    kind: 'lab',
+    badge: 'STREAM',
+    title: 'Stream Processing: Watermarks, Windows & Checkpoint Barriers Lab',
+    subtitle: 'Event-time vs processing-time watermarks, late data drops, tumbling/sliding/session windows & Flink ABS barriers',
+    href: '/streaming',
+    keywords: 'streaming flink dataflow millwheel watermark event time processing time tumbling sliding session window barrier checkpoint exactly once',
+  },
 ];
 
 export function buildAtlasSearchIndex(): AtlasSearchItem[] {
