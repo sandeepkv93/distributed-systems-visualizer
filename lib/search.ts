@@ -200,6 +200,15 @@ const CORE_LABS: readonly AtlasSearchItem[] = [
     href: '/interviews',
     keywords: 'interviews staff principal system design simulator critique payment ledger rate limiter chat log pipeline kv editor',
   },
+  {
+    id: 'lab:isolation',
+    kind: 'lab',
+    badge: 'MVCC',
+    title: 'Transaction Isolation Levels, MVCC & Write-Skew Lab',
+    subtitle: 'Step through Dirty Read, Lost Update, Phantom & On-Call Write Skew across Read Committed, Snapshot Isolation & SSI',
+    href: '/isolation',
+    keywords: 'isolation mvcc write skew ssi serializable snapshot read committed repeatable phantom dirty read adya cycle',
+  },
 ];
 
 export function buildAtlasSearchIndex(): AtlasSearchItem[] {
