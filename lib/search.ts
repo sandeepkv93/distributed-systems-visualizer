@@ -296,7 +296,7 @@ export function buildAtlasSearchIndex(): AtlasSearchItem[] {
       badge: 'TERM',
       title: entry.symbol ? `${entry.term} (${entry.symbol})` : entry.term,
       subtitle: entry.definition,
-      href: '/glossary',
+      href: `/glossary?term=${encodeURIComponent(entry.id)}`,
       keywords: `${entry.id} ${entry.term} ${entry.symbol ?? ''} ${entry.domainId} ${entry.citation ?? ''} ${entry.conceptIds.join(' ')}`,
     });
   }
@@ -308,7 +308,7 @@ export function buildAtlasSearchIndex(): AtlasSearchItem[] {
       badge: String(paper.year),
       title: paper.title,
       subtitle: `${paper.authors} · ${paper.venue}`,
-      href: '/bibliography',
+      href: `/bibliography?paper=${encodeURIComponent(paper.id)}`,
       keywords: `${paper.id} ${paper.year} ${paper.authors} ${paper.venue} ${paper.coreTheorem} ${paper.conceptIds.join(' ')}`,
     });
   }
@@ -320,7 +320,7 @@ export function buildAtlasSearchIndex(): AtlasSearchItem[] {
       badge: rb.code,
       title: rb.title,
       subtitle: `${rb.severity} · ${rb.breachedInvariant}`,
-      href: '/runbooks',
+      href: `/runbooks?runbook=${encodeURIComponent(rb.id)}`,
       keywords: `${rb.id} ${rb.code} ${rb.severity} ${rb.domainId} ${rb.conceptId} ${rb.rootCause} ${rb.telemetrySignals.join(' ')}`,
     });
   }
@@ -332,7 +332,7 @@ export function buildAtlasSearchIndex(): AtlasSearchItem[] {
       badge: thm.code,
       title: `${thm.name} (${thm.year})`,
       subtitle: `${thm.authors} — ${thm.formalStatement}`,
-      href: '/theorems',
+      href: `/theorems?theorem=${encodeURIComponent(thm.id)}`,
       keywords: `${thm.id} ${thm.code} ${thm.authors} ${thm.year} ${thm.plainEnglish} ${thm.conceptIds.join(' ')}`,
     });
   }
@@ -344,7 +344,7 @@ export function buildAtlasSearchIndex(): AtlasSearchItem[] {
       badge: prompt.code,
       title: `Interview: ${prompt.title}`,
       subtitle: `${prompt.level} · ${prompt.scale}`,
-      href: '/interviews',
+      href: `/interviews?case=${encodeURIComponent(prompt.id)}`,
       keywords: `${prompt.id} ${prompt.code} ${prompt.level} ${prompt.scale} ${prompt.brief}`,
     });
   }

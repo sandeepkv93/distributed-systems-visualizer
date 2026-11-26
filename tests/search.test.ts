@@ -52,21 +52,21 @@ describe('Unified Atlas Command Palette search index', () => {
 
     const fencingGlossary = searchAtlas('fencing', 'glossary');
     assert.ok(fencingGlossary.length > 0);
-    assert.ok(fencingGlossary.every((r) => r.kind === 'glossary' && r.href === '/glossary'));
+    assert.ok(fencingGlossary.every((r) => r.kind === 'glossary' && r.href.startsWith('/glossary?term=')));
 
     const raftPapers = searchAtlas('ongaro', 'paper');
     assert.ok(raftPapers.length > 0);
-    assert.ok(raftPapers.every((r) => r.kind === 'paper' && r.href === '/bibliography'));
+    assert.ok(raftPapers.every((r) => r.kind === 'paper' && r.href.startsWith('/bibliography?paper=')));
 
     const flpTheorem = searchAtlas('fischer');
-    assert.ok(flpTheorem.some((r) => r.href === '/theorems'));
+    assert.ok(flpTheorem.some((r) => r.href === '/theorems?theorem=flp'));
 
     const runbookHits = searchAtlas('isr', 'runbook');
     assert.ok(runbookHits.length > 0);
-    assert.ok(runbookHits.every((r) => r.kind === 'runbook' && r.href === '/runbooks'));
+    assert.ok(runbookHits.every((r) => r.kind === 'runbook' && r.href.startsWith('/runbooks?runbook=')));
 
     const interviewHits = searchAtlas('payment ledger');
-    assert.ok(interviewHits.some((r) => r.href === '/interviews'));
+    assert.ok(interviewHits.some((r) => r.href === '/interviews?case=payment-ledger'));
   });
 
   it('returns curated labs and plates on empty query and respects kind filters', () => {

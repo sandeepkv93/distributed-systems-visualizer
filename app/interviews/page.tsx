@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useSyncExternalStore } from 'react';
+import { useState, useMemo, useEffect, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import {
   AlertTriangle,
@@ -27,6 +27,15 @@ export default function InterviewsStudioPage() {
   const [selectedPromptId, setSelectedPromptId] = useState<InterviewPromptId>('payment-ledger');
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const caseParam = new URLSearchParams(window.location.search).get('case');
+    if (caseParam && INTERVIEW_PROMPTS.some((p) => p.id === caseParam)) {
+      const timer = setTimeout(() => setSelectedPromptId(caseParam as InterviewPromptId), 0);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const bestScores = useSyncExternalStore(
     subscribeInterviewScores,
@@ -61,6 +70,11 @@ export default function InterviewsStudioPage() {
     setSelectedPromptId(id);
     setSelections({});
     setSubmitted(false);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('case', id);
+      window.history.replaceState({}, '', url.toString());
+    }
   };
 
   const handleSubmit = () => {

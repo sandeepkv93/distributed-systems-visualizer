@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { BookOpen, ArrowUpRight, Search, Scale, Printer } from 'lucide-react';
 import {
@@ -16,6 +16,17 @@ export default function BibliographyPage() {
   const [selectedDecade, setSelectedDecade] = useState<PaperDecade | 'all'>('all');
   const [selectedDomain, setSelectedDomain] = useState<ConceptDomainId | 'all'>('all');
   const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const paperParam = new URLSearchParams(window.location.search).get('paper');
+    if (!paperParam) return;
+    const match = BIBLIOGRAPHY.find((p) => p.id === paperParam);
+    if (match) {
+      const timer = setTimeout(() => setQuery(match.title), 0);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const filteredPapers = useMemo(
     () =>

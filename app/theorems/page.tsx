@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import {
   AlertTriangle,
@@ -27,6 +27,15 @@ export default function TheoremsLabPage() {
   const [assumptions, setAssumptions] = useState<SystemAssumptions>(DEFAULT_ASSUMPTIONS);
   const [selectedTheoremId, setSelectedTheoremId] = useState<TheoremId>('flp');
   const [pacelcFilter, setPacelcFilter] = useState<PacelcClass | 'ALL'>('ALL');
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const thmParam = new URLSearchParams(window.location.search).get('theorem');
+    if (thmParam && THEOREMS.some((t) => t.id === thmParam)) {
+      const timer = setTimeout(() => setSelectedTheoremId(thmParam as TheoremId), 0);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const summary = useMemo(() => evaluateSystemAssumptions(assumptions), [assumptions]);
   const activeTheorem = useMemo(

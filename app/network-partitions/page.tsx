@@ -16,6 +16,13 @@ import InvariantMonitor from '@/components/InvariantMonitor';
 import { evaluateNetworkPartitionInvariants } from '@/lib/invariants';
 import WireLogDrawer from '@/components/WireLogDrawer';
 import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
+import ChaosStrip from '@/components/ChaosStrip';
+import {
+  ChaosConfig,
+  DEFAULT_CHAOS_CONFIG,
+  applyChaosToMessages,
+  computeDeliveryDelay,
+} from '@/lib/chaos';
 
 export default function NetworkPartitionsPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -27,6 +34,14 @@ export default function NetworkPartitionsPage() {
   const [showArticle, setShowArticle] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
+  const [chaos, setChaos] = useState<ChaosConfig>(DEFAULT_CHAOS_CONFIG);
+  const [droppedCount, setDroppedCount] = useState(0);
+  const chaosRef = useRef<ChaosConfig>(DEFAULT_CHAOS_CONFIG);
+
+  const handleChaosChange = useCallback((next: ChaosConfig) => {
+    chaosRef.current = next;
+    setChaos(next);
+  }, []);
 
   const syncVisualization = useCallback(() => {
     setNodes([...np.getNodes()]);
@@ -51,10 +66,19 @@ export default function NetworkPartitionsPage() {
 
     const inFlight = np.getMessages().filter((m) => m.status === 'in-flight');
     if (inFlight.length > 0) {
+      const delayMs = computeDeliveryDelay(500, chaosRef.current.delayMultiplier);
       simulation.scheduleTimeout(() => {
-        inFlight.forEach((msg) => np.deliverMessage(msg.id));
+        const { dropRate } = chaosRef.current;
+        const { survivors, dropped } =
+          dropRate > 0
+            ? applyChaosToMessages(inFlight, dropRate)
+            : { survivors: inFlight, dropped: [] };
+        if (dropped.length > 0) {
+          setDroppedCount((c) => c + dropped.length);
+        }
+        survivors.forEach((msg) => np.deliverMessage(msg.id));
         updateVisualization();
-      }, 500);
+      }, delayMs);
     }
   }, [np, simulation, syncVisualization]);
 
@@ -366,6 +390,13 @@ export default function NetworkPartitionsPage() {
               Election Partition B
             </button>
           </div>
+
+          <ChaosStrip
+            config={chaos}
+            onChange={handleChaosChange}
+            droppedCount={droppedCount}
+            onResetDropped={() => setDroppedCount(0)}
+          />
         </div>
       </div>
 

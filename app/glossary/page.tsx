@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowUpRight, BookMarked, Search } from 'lucide-react';
 import {
@@ -19,6 +19,17 @@ export default function GlossaryPage() {
   const [domainFilter, setDomainFilter] = useState<ConceptDomainId | 'all'>('all');
   const [letterFilter, setLetterFilter] = useState<string | 'all'>('all');
   const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const termParam = new URLSearchParams(window.location.search).get('term');
+    if (!termParam) return;
+    const match = GLOSSARY_ENTRIES.find((e) => e.id === termParam);
+    if (match) {
+      const timer = setTimeout(() => setQuery(match.term), 0);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const availableLetters = useMemo(
     () => Array.from(new Set(GLOSSARY_ENTRIES.map((e) => e.term[0].toUpperCase()))).sort(),

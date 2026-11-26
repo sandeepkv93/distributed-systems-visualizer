@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import {
   AlertTriangle,
@@ -21,6 +21,17 @@ export default function RunbooksPage() {
   const [domainFilter, setDomainFilter] = useState<ConceptDomainId | 'all'>('all');
   const [severityFilter, setSeverityFilter] = useState<RunbookSeverity | 'all'>('all');
   const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const rbParam = new URLSearchParams(window.location.search).get('runbook');
+    if (!rbParam) return;
+    const match = FAILURE_RUNBOOKS.find((r) => r.id === rbParam || r.code === rbParam);
+    if (match) {
+      const timer = setTimeout(() => setQuery(match.code), 0);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const visibleRunbooks = useMemo(
     () => filterRunbooks(domainFilter, severityFilter, query),

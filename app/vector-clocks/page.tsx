@@ -16,6 +16,12 @@ import { VectorClockProcess, VectorClockEvent, VectorClock } from '@/lib/types';
 import { motion } from 'framer-motion';
 import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTimeScope';
 import { SCOPE_COLORS } from '@/components/ScopeSvgKit';
+import ChaosStrip from '@/components/ChaosStrip';
+import {
+  ChaosConfig,
+  DEFAULT_CHAOS_CONFIG,
+  shouldDropPacket,
+} from '@/lib/chaos';
 
 export default function VectorClocksPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -25,6 +31,14 @@ export default function VectorClocksPage() {
   const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set());
   const [showArticle, setShowArticle] = useState(false);
   const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
+  const [chaos, setChaos] = useState<ChaosConfig>(DEFAULT_CHAOS_CONFIG);
+  const [droppedCount, setDroppedCount] = useState(0);
+  const chaosRef = useRef<ChaosConfig>(DEFAULT_CHAOS_CONFIG);
+
+  const handleChaosChange = useCallback((next: ChaosConfig) => {
+    chaosRef.current = next;
+    setChaos(next);
+  }, []);
 
   // Update visualization
   const updateVisualization = useCallback(() => {
@@ -57,6 +71,11 @@ export default function VectorClocksPage() {
     });
 
     simulation.onEvent('receive_message', (event) => {
+      if (chaosRef.current.dropRate > 0 && shouldDropPacket(chaosRef.current.dropRate)) {
+        setDroppedCount((c) => c + 1);
+        updateVisualization();
+        return;
+      }
       const currentEvents = vc.getAllEvents();
       let sendEvent: VectorClockEvent | undefined;
       if (event.data.sendEventId) {
@@ -531,6 +550,13 @@ export default function VectorClocksPage() {
               </div>
             </div>
           </div>
+
+          <ChaosStrip
+            config={chaos}
+            onChange={handleChaosChange}
+            droppedCount={droppedCount}
+            onResetDropped={() => setDroppedCount(0)}
+          />
         </div>
       </div>
 

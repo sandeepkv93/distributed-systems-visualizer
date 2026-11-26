@@ -16,6 +16,13 @@ import SpaceTimeScope, { ScopeMode, ScopeModeToggle } from '@/components/SpaceTi
 import InvariantMonitor from '@/components/InvariantMonitor';
 import WireLogDrawer from '@/components/WireLogDrawer';
 import { evaluateLamportClockInvariants } from '@/lib/invariants';
+import ChaosStrip from '@/components/ChaosStrip';
+import {
+  ChaosConfig,
+  DEFAULT_CHAOS_CONFIG,
+  applyChaosToMessages,
+  computeDeliveryDelay,
+} from '@/lib/chaos';
 
 export default function LamportClocksPage() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -26,6 +33,14 @@ export default function LamportClocksPage() {
   const [showArticle, setShowArticle] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [scopeMode, setScopeMode] = useState<ScopeMode>('topology');
+  const [chaos, setChaos] = useState<ChaosConfig>(DEFAULT_CHAOS_CONFIG);
+  const [droppedCount, setDroppedCount] = useState(0);
+  const chaosRef = useRef<ChaosConfig>(DEFAULT_CHAOS_CONFIG);
+
+  const handleChaosChange = useCallback((next: ChaosConfig) => {
+    chaosRef.current = next;
+    setChaos(next);
+  }, []);
 
   const syncVisualization = useCallback(() => {
     setNodes([...lamport.getNodes()]);
@@ -49,10 +64,19 @@ export default function LamportClocksPage() {
 
     const inFlight = lamport.getMessages().filter((m) => m.status === 'in-flight');
     if (inFlight.length > 0) {
+      const delayMs = computeDeliveryDelay(450, chaosRef.current.delayMultiplier);
       simulation.scheduleTimeout(() => {
-        inFlight.forEach((msg) => lamport.deliverMessage(msg.id));
+        const { dropRate } = chaosRef.current;
+        const { survivors, dropped } =
+          dropRate > 0
+            ? applyChaosToMessages(inFlight, dropRate)
+            : { survivors: inFlight, dropped: [] };
+        if (dropped.length > 0) {
+          setDroppedCount((c) => c + dropped.length);
+        }
+        survivors.forEach((msg) => lamport.deliverMessage(msg.id));
         updateVisualization();
-      }, 450);
+      }, delayMs);
     }
   }, [lamport, simulation, syncVisualization]);
 
@@ -403,6 +427,13 @@ export default function LamportClocksPage() {
               </div>
             </div>
           </div>
+
+          <ChaosStrip
+            config={chaos}
+            onChange={handleChaosChange}
+            droppedCount={droppedCount}
+            onResetDropped={() => setDroppedCount(0)}
+          />
         </div>
       </div>
 
