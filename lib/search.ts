@@ -169,6 +169,15 @@ const CORE_LABS: readonly AtlasSearchItem[] = [
     href: '/queueing',
     keywords: 'queueing mm1 mmc erlang littles law tail latency amplification fanout hedged requests retry storm metastable jitter',
   },
+  {
+    id: 'lab:storage',
+    kind: 'lab',
+    badge: 'STORAGE',
+    title: 'Storage Engine Internals: LSM-Tree vs B+Tree & RUM Lab',
+    subtitle: 'Compare RocksDB/SSTable compaction & Bloom filters against B+Tree pages under live Read/Write/Space amplification',
+    href: '/storage',
+    keywords: 'storage lsm tree btree b+tree rocksdb pebble sstable memtable wal bloom filter compaction rum conjecture write amplification',
+  },
 ];
 
 export function buildAtlasSearchIndex(): AtlasSearchItem[] {
