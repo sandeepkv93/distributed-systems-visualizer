@@ -171,6 +171,10 @@ export default function Home() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3 uppercase tracking-wider">
+            <Link href="/caching" className="text-[var(--emerald)] font-semibold hover:underline">
+              Caching
+            </Link>
+            <span>·</span>
             <Link href="/isolation" className="text-[var(--cobalt)] font-semibold hover:underline">
               Isolation
             </Link>

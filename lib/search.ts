@@ -209,6 +209,15 @@ const CORE_LABS: readonly AtlasSearchItem[] = [
     href: '/isolation',
     keywords: 'isolation mvcc write skew ssi serializable snapshot read committed repeatable phantom dirty read adya cycle',
   },
+  {
+    id: 'lab:caching',
+    kind: 'lab',
+    badge: 'CACHE',
+    title: 'Distributed Caching, Thundering Herds & Memcache Leases Lab',
+    subtitle: 'Compare Cache-Aside/Write-Through, Singleflight, XFetch early expiry, Memcache Leases & W-TinyLFU eviction',
+    href: '/caching',
+    keywords: 'caching redis memcache lease stampede thundering herd singleflight xfetch cache-aside write-through write-behind lru lfu tinylfu',
+  },
 ];
 
 export function buildAtlasSearchIndex(): AtlasSearchItem[] {

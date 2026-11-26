@@ -315,6 +315,15 @@ export default function Navigation() {
                   MVCC &amp; Write-Skew Lab
                 </span>
               </div>
+            ) : normalizedPath === '/caching' ? (
+              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
+                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--emerald)] text-[#FAF7F1] flex-shrink-0">
+                  CACHING
+                </span>
+                <span className="font-editorial text-base text-[var(--ink)] truncate">
+                  Stampedes &amp; Memcache Leases Lab
+                </span>
+              </div>
             ) : null}
           </div>
 
@@ -405,6 +414,13 @@ export default function Navigation() {
                         Complete Protocol Index · 22 Plates
                       </span>
                       <div className="flex flex-wrap items-center gap-3">
+                        <Link
+                          href="/caching"
+                          onClick={() => setShowIndexMenu(false)}
+                          className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--emerald)] font-semibold hover:underline"
+                        >
+                          Caching →
+                        </Link>
                         <Link
                           href="/isolation"
                           onClick={() => setShowIndexMenu(false)}
