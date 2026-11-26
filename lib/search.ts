@@ -178,6 +178,15 @@ const CORE_LABS: readonly AtlasSearchItem[] = [
     href: '/storage',
     keywords: 'storage lsm tree btree b+tree rocksdb pebble sstable memtable wal bloom filter compaction rum conjecture write amplification',
   },
+  {
+    id: 'lab:interviews',
+    kind: 'lab',
+    badge: 'INTERVIEW',
+    title: 'System Design Interview Simulator & Critique Studio',
+    subtitle: '6 Staff/Principal design cases (Payment Ledger, Rate Limiter, Chat, Kafka Log, Geo-KV, Collab Editor) with scored critiques',
+    href: '/interviews',
+    keywords: 'interviews staff principal system design simulator critique payment ledger rate limiter chat log pipeline kv editor',
+  },
 ];
 
 export function buildAtlasSearchIndex(): AtlasSearchItem[] {
