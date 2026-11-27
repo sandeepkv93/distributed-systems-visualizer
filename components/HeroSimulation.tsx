@@ -440,8 +440,14 @@ export default function HeroSimulation() {
         </svg>
 
         {/* Live Telemetry Readout Strip */}
-        <div className="px-3.5 py-2 border-t border-[rgba(244,240,232,0.12)] bg-[#0C0E0D] font-mono text-[11px] text-[#D6D2C7] flex items-center justify-between gap-2">
-          <span className="truncate">{lastTrace}</span>
+        <div
+          aria-live="polite"
+          aria-atomic="true"
+          className="px-3.5 py-2 border-t border-[rgba(244,240,232,0.12)] bg-[#0C0E0D] font-mono text-[11px] text-[#D6D2C7] flex items-center justify-between gap-2"
+        >
+          <span className="truncate" title={lastTrace}>
+            {lastTrace}
+          </span>
         </div>
       </div>
 

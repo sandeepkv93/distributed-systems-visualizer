@@ -186,12 +186,6 @@ export default function Navigation() {
     };
   }, [showCommandPalette, showShortcutsModal]);
 
-  useEffect(() => {
-    if (showCommandPalette) {
-      setTimeout(() => inputRef.current?.focus(), 20);
-    }
-  }, [showCommandPalette]);
-
   // Keep keyboard-selected Command Palette result scrolled into view
   useEffect(() => {
     if (!showCommandPalette) return;
@@ -231,12 +225,12 @@ export default function Navigation() {
   return (
     <>
       <header className="sticky top-0 z-30 h-14 bg-[var(--paper)]/95 backdrop-blur-sm border-b border-[var(--rule)]">
-        <div className="max-w-[1440px] mx-auto h-full px-4 sm:px-6 flex items-center justify-between gap-4">
+        <div className="max-w-[1440px] mx-auto h-full px-2.5 sm:px-6 flex items-center justify-between gap-2 sm:gap-4">
           {/* Brand Masthead + Live Active Plate / Workbench Breadcrumb */}
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <Link
               href="/"
-              className="group flex items-center gap-2.5 flex-shrink-0 text-[var(--ink)]"
+              className="group flex items-center gap-2 sm:gap-2.5 flex-shrink-0 text-[var(--ink)]"
             >
               {/* Custom geometric 3-node protocol emblem */}
               <svg
@@ -298,11 +292,11 @@ export default function Navigation() {
           </div>
 
           {/* Right Instrument Controls */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {/* Curated Workbenches & Labs Directory Link */}
             <Link
               href="/labs"
-              className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 font-mono text-xs uppercase tracking-wider border transition-colors ${
+              className={`inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 font-mono text-[11px] sm:text-xs uppercase tracking-wider border transition-colors ${
                 normalizedPath === '/labs'
                   ? 'bg-[var(--ink)] text-[#FAF7F1] border-[var(--ink)]'
                   : 'bg-[var(--paper-elevated)] text-[var(--ink)] border-[var(--rule)] hover:border-[var(--ink)]'
@@ -310,7 +304,7 @@ export default function Navigation() {
               aria-label={`All ${TOTAL_LABS} Interactive Labs`}
             >
               <FlaskConical className="w-3.5 h-3.5 text-[var(--emerald)]" />
-              <span className="hidden md:inline">Labs</span>
+              <span>Labs</span>
               <span className="hidden xl:inline text-[10px] opacity-70 tabular-nums">
                 {TOTAL_LABS}
               </span>
@@ -377,7 +371,7 @@ export default function Navigation() {
               <button
                 type="button"
                 onClick={() => setShowIndexMenu((open) => !open)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 font-mono text-xs uppercase tracking-wider border transition-colors cursor-pointer ${
+                className={`inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 font-mono text-[11px] sm:text-xs uppercase tracking-wider border transition-colors cursor-pointer ${
                   showIndexMenu
                     ? 'bg-[var(--ink)] text-[var(--paper-elevated)] border-[var(--ink)]'
                     : 'bg-[var(--paper-elevated)] text-[var(--ink)] border-[var(--rule)] hover:border-[var(--ink)]'
@@ -502,7 +496,7 @@ export default function Navigation() {
             <button
               type="button"
               onClick={openCommandPalette}
-              className="inline-flex items-center gap-2 px-2.5 sm:px-3 py-1.5 bg-[var(--paper-elevated)] border border-[var(--rule)] hover:border-[var(--ink)] text-[var(--ink-secondary)] hover:text-[var(--ink)] transition-colors cursor-pointer"
+              className="inline-flex items-center gap-2 px-2 sm:px-3 py-1.5 bg-[var(--paper-elevated)] border border-[var(--rule)] hover:border-[var(--ink)] text-[var(--ink-secondary)] hover:text-[var(--ink)] transition-colors cursor-pointer"
               aria-label="Search protocols (Cmd+K)"
             >
               <Search className="w-3.5 h-3.5" />
@@ -516,7 +510,7 @@ export default function Navigation() {
             <button
               type="button"
               onClick={() => setShowProgressDashboard(true)}
-              className="inline-flex items-center gap-2 px-3 py-1.5 bg-[var(--ink)] hover:bg-[var(--signal)] text-[var(--paper-elevated)] font-mono text-xs tracking-wide transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 bg-[var(--ink)] hover:bg-[var(--signal)] text-[var(--paper-elevated)] font-mono text-[11px] sm:text-xs tracking-wide transition-colors cursor-pointer"
             >
               <BookMarked className="w-3.5 h-3.5" />
               <span className="hidden sm:inline uppercase">Ledger</span>
