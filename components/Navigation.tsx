@@ -15,10 +15,34 @@ import {
   Network,
   Sliders,
   AlertTriangle,
+  FlaskConical,
 } from 'lucide-react';
 import { CONCEPTS_CATALOG, CONCEPT_DOMAINS, TOTAL_CONCEPTS } from '@/lib/catalog';
+import { LAB_CATEGORIES, TOTAL_LABS, getLabByPath, type LabTone } from '@/lib/labs-catalog';
 import { searchAtlas, SearchKindFilter } from '@/lib/search';
 import { useProgress } from '@/hooks/useProgress';
+
+function labToneBgClass(tone: LabTone): string {
+  switch (tone) {
+    case 'signal':
+      return 'bg-[var(--signal)]';
+    case 'cobalt':
+      return 'bg-[var(--cobalt)]';
+    case 'emerald':
+      return 'bg-[var(--emerald)]';
+  }
+}
+
+function labToneTextClass(tone: LabTone): string {
+  switch (tone) {
+    case 'signal':
+      return 'text-[var(--signal)]';
+    case 'cobalt':
+      return 'text-[var(--cobalt)]';
+    case 'emerald':
+      return 'text-[var(--emerald)]';
+  }
+}
 
 export default function Navigation() {
   const pathname = usePathname();
@@ -37,6 +61,7 @@ export default function Navigation() {
     () => CONCEPTS_CATALOG.find((c) => c.path === normalizedPath) ?? null,
     [normalizedPath]
   );
+  const activeLab = useMemo(() => getLabByPath(normalizedPath), [normalizedPath]);
 
   const searchResults = useMemo(
     () => searchAtlas(query, searchFilter, 32),
@@ -95,7 +120,7 @@ export default function Navigation() {
     <>
       <header className="sticky top-0 z-30 h-14 bg-[var(--paper)]/95 backdrop-blur-sm border-b border-[var(--rule)]">
         <div className="max-w-[1440px] mx-auto h-full px-4 sm:px-6 flex items-center justify-between gap-4">
-          {/* Brand Masthead + Live Active Plate Breadcrumb */}
+          {/* Brand Masthead + Live Active Plate / Workbench Breadcrumb */}
           <div className="flex items-center gap-3 min-w-0">
             <Link
               href="/"
@@ -135,247 +160,26 @@ export default function Navigation() {
                   · {activeConcept.citation}
                 </span>
               </div>
-            ) : normalizedPath === '/duel' ? (
+            ) : normalizedPath === '/labs' ? (
               <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--signal)] text-[#FAF7F1] flex-shrink-0">
-                  DUEL LAB
+                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--ink)] text-[#FAF7F1] flex-shrink-0">
+                  WORKBENCHES
                 </span>
                 <span className="font-editorial text-base text-[var(--ink)] truncate">
-                  Side-by-Side Protocol Bench
+                  All {TOTAL_LABS} Interactive Labs &amp; Simulators
                 </span>
               </div>
-            ) : normalizedPath === '/map' ? (
+            ) : activeLab ? (
               <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--cobalt)] text-[#FAF7F1] flex-shrink-0">
-                  DEPENDENCY MAP
+                <span
+                  className={`font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 ${labToneBgClass(
+                    activeLab.tone
+                  )} text-[#FAF7F1] flex-shrink-0`}
+                >
+                  {activeLab.badge}
                 </span>
                 <span className="font-editorial text-base text-[var(--ink)] truncate">
-                  22-Protocol Systems Genealogy
-                </span>
-              </div>
-            ) : normalizedPath === '/bench' ? (
-              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--emerald)] text-[#FAF7F1] flex-shrink-0">
-                  QUORUM BENCH
-                </span>
-                <span className="font-editorial text-base text-[var(--ink)] truncate">
-                  Fault-Tolerance &amp; Quorum Calculator
-                </span>
-              </div>
-            ) : normalizedPath === '/incidents' ? (
-              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--signal)] text-[#FAF7F1] flex-shrink-0">
-                  POSTMORTEMS
-                </span>
-                <span className="font-editorial text-base text-[var(--ink)] truncate">
-                  Diagnose the Outage
-                </span>
-              </div>
-            ) : normalizedPath === '/bibliography' ? (
-              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--cobalt)] text-[#FAF7F1] flex-shrink-0">
-                  BIBLIOGRAPHY
-                </span>
-                <span className="font-editorial text-base text-[var(--ink)] truncate">
-                  Foundational Papers (1978–2014)
-                </span>
-              </div>
-            ) : normalizedPath === '/advisor' ? (
-              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--cobalt)] text-[#FAF7F1] flex-shrink-0">
-                  ADVISOR
-                </span>
-                <span className="font-editorial text-base text-[var(--ink)] truncate">
-                  Architecture Decision Matrix
-                </span>
-              </div>
-            ) : normalizedPath === '/systems' ? (
-              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--signal)] text-[#FAF7F1] flex-shrink-0">
-                  BLUEPRINTS
-                </span>
-                <span className="font-editorial text-base text-[var(--ink)] truncate">
-                  Real-World Infrastructure Stacks
-                </span>
-              </div>
-            ) : normalizedPath === '/exam' ? (
-              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--emerald)] text-[#FAF7F1] flex-shrink-0">
-                  MASTERY EXAM
-                </span>
-                <span className="font-editorial text-base text-[var(--ink)] truncate">
-                  Systems Mastery Assessment
-                </span>
-              </div>
-            ) : normalizedPath === '/latency' ? (
-              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--cobalt)] text-[#FAF7F1] flex-shrink-0">
-                  LATENCY LAB
-                </span>
-                <span className="font-editorial text-base text-[var(--ink)] truncate">
-                  Latency &amp; Message Complexity Estimator
-                </span>
-              </div>
-            ) : normalizedPath === '/consistency' ? (
-              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--signal)] text-[#FAF7F1] flex-shrink-0">
-                  CONSISTENCY
-                </span>
-                <span className="font-editorial text-base text-[var(--ink)] truncate">
-                  Consistency Models &amp; Anomalies Lab
-                </span>
-              </div>
-            ) : normalizedPath === '/drills' ? (
-              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--emerald)] text-[#FAF7F1] flex-shrink-0">
-                  FLASHCARDS
-                </span>
-                <span className="font-editorial text-base text-[var(--ink)] truncate">
-                  Active-Recall Study Deck (22 Plates)
-                </span>
-              </div>
-            ) : normalizedPath === '/clocks' ? (
-              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--cobalt)] text-[#FAF7F1] flex-shrink-0">
-                  CLOCKS LAB
-                </span>
-                <span className="font-editorial text-base text-[var(--ink)] truncate">
-                  HLC &amp; TrueTime Uncertainty
-                </span>
-              </div>
-            ) : normalizedPath === '/studio' ? (
-              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--signal)] text-[#FAF7F1] flex-shrink-0">
-                  STACK STUDIO
-                </span>
-                <span className="font-editorial text-base text-[var(--ink)] truncate">
-                  System Design Composer &amp; ADR Exporter
-                </span>
-              </div>
-            ) : normalizedPath === '/runbooks' ? (
-              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--signal)] text-[#FAF7F1] flex-shrink-0">
-                  RUNBOOKS
-                </span>
-                <span className="font-editorial text-base text-[var(--ink)] truncate">
-                  Production Failure Modes &amp; SRE Playbook
-                </span>
-              </div>
-            ) : normalizedPath === '/glossary' ? (
-              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--cobalt)] text-[#FAF7F1] flex-shrink-0">
-                  GLOSSARY
-                </span>
-                <span className="font-editorial text-base text-[var(--ink)] truncate">
-                  Formal Notation &amp; Terms Lexicon
-                </span>
-              </div>
-            ) : normalizedPath === '/theorems' ? (
-              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--signal)] text-[#FAF7F1] flex-shrink-0">
-                  THEOREMS
-                </span>
-                <span className="font-editorial text-base text-[var(--ink)] truncate">
-                  Impossibility Theorems &amp; PACELC Bounds
-                </span>
-              </div>
-            ) : normalizedPath === '/queueing' ? (
-              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--cobalt)] text-[#FAF7F1] flex-shrink-0">
-                  QUEUEING
-                </span>
-                <span className="font-editorial text-base text-[var(--ink)] truncate">
-                  Little&apos;s Law &amp; Tail-Latency Lab
-                </span>
-              </div>
-            ) : normalizedPath === '/storage' ? (
-              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--emerald)] text-[#FAF7F1] flex-shrink-0">
-                  STORAGE
-                </span>
-                <span className="font-editorial text-base text-[var(--ink)] truncate">
-                  LSM-Tree vs. B+Tree &amp; RUM Lab
-                </span>
-              </div>
-            ) : normalizedPath === '/interviews' ? (
-              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--signal)] text-[#FAF7F1] flex-shrink-0">
-                  INTERVIEWS
-                </span>
-                <span className="font-editorial text-base text-[var(--ink)] truncate">
-                  System Design Interview Simulator
-                </span>
-              </div>
-            ) : normalizedPath === '/isolation' ? (
-              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--cobalt)] text-[#FAF7F1] flex-shrink-0">
-                  ISOLATION
-                </span>
-                <span className="font-editorial text-base text-[var(--ink)] truncate">
-                  MVCC &amp; Write-Skew Lab
-                </span>
-              </div>
-            ) : normalizedPath === '/caching' ? (
-              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--emerald)] text-[#FAF7F1] flex-shrink-0">
-                  CACHING
-                </span>
-                <span className="font-editorial text-base text-[var(--ink)] truncate">
-                  Stampedes &amp; Memcache Leases Lab
-                </span>
-              </div>
-            ) : normalizedPath === '/streaming' ? (
-              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--cobalt)] text-[#FAF7F1] flex-shrink-0">
-                  STREAMING
-                </span>
-                <span className="font-editorial text-base text-[var(--ink)] truncate">
-                  Watermarks &amp; Checkpoint Barriers Lab
-                </span>
-              </div>
-            ) : normalizedPath === '/resilience' ? (
-              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--signal)] text-[#FAF7F1] flex-shrink-0">
-                  RESILIENCE
-                </span>
-                <span className="font-editorial text-base text-[var(--ink)] truncate">
-                  Circuit Breakers, Bulkheads &amp; AIMD Lab
-                </span>
-              </div>
-            ) : normalizedPath === '/outbox' ? (
-              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--emerald)] text-[#FAF7F1] flex-shrink-0">
-                  OUTBOX · CDC
-                </span>
-                <span className="font-editorial text-base text-[var(--ink)] truncate">
-                  Transactional Outbox &amp; Idempotent Consumers
-                </span>
-              </div>
-            ) : normalizedPath === '/tracing' ? (
-              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--cobalt)] text-[#FAF7F1] flex-shrink-0">
-                  TRACING
-                </span>
-                <span className="font-editorial text-base text-[var(--ink)] truncate">
-                  OpenTelemetry Span Trees &amp; Tail Sampling
-                </span>
-              </div>
-            ) : normalizedPath === '/sketches' ? (
-              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--emerald)] text-[#FAF7F1] flex-shrink-0">
-                  SKETCHES
-                </span>
-                <span className="font-editorial text-base text-[var(--ink)] truncate">
-                  Bloom, Count-Min &amp; HyperLogLog Lab
-                </span>
-              </div>
-            ) : normalizedPath === '/replication-topologies' ? (
-              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--signal)] text-[#FAF7F1] flex-shrink-0">
-                  GEO-WAN
-                </span>
-                <span className="font-editorial text-base text-[var(--ink)] truncate">
-                  Geo-Distributed Replication Topologies
+                  {activeLab.navTitle}
                 </span>
               </div>
             ) : null}
@@ -383,10 +187,27 @@ export default function Navigation() {
 
           {/* Right Instrument Controls */}
           <div className="flex items-center gap-2">
+            {/* Curated Workbenches & Labs Directory Link */}
+            <Link
+              href="/labs"
+              className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 font-mono text-xs uppercase tracking-wider border transition-colors ${
+                normalizedPath === '/labs'
+                  ? 'bg-[var(--ink)] text-[#FAF7F1] border-[var(--ink)]'
+                  : 'bg-[var(--paper-elevated)] text-[var(--ink)] border-[var(--rule)] hover:border-[var(--ink)]'
+              }`}
+              aria-label={`All ${TOTAL_LABS} Interactive Labs`}
+            >
+              <FlaskConical className="w-3.5 h-3.5 text-[var(--emerald)]" />
+              <span className="hidden md:inline">Labs</span>
+              <span className="hidden xl:inline text-[10px] opacity-70 tabular-nums">
+                {TOTAL_LABS}
+              </span>
+            </Link>
+
             {/* Protocol Dependency Map Link */}
             <Link
               href="/map"
-              className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 font-mono text-xs uppercase tracking-wider border transition-colors ${
+              className={`hidden sm:inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 font-mono text-xs uppercase tracking-wider border transition-colors ${
                 normalizedPath === '/map'
                   ? 'bg-[var(--cobalt)] text-[#FAF7F1] border-[var(--cobalt)]'
                   : 'bg-[var(--paper-elevated)] text-[var(--ink)] border-[var(--rule)] hover:border-[var(--ink)]'
@@ -394,13 +215,13 @@ export default function Navigation() {
               aria-label="Protocol Dependency Map"
             >
               <Network className="w-3.5 h-3.5" />
-              <span className="hidden lg:inline">Map</span>
+              <span className="hidden xl:inline">Map</span>
             </Link>
 
             {/* Quorum & Fault-Tolerance Workbench Link */}
             <Link
               href="/bench"
-              className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 font-mono text-xs uppercase tracking-wider border transition-colors ${
+              className={`hidden sm:inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 font-mono text-xs uppercase tracking-wider border transition-colors ${
                 normalizedPath === '/bench'
                   ? 'bg-[var(--emerald)] text-[#FAF7F1] border-[var(--emerald)]'
                   : 'bg-[var(--paper-elevated)] text-[var(--ink)] border-[var(--rule)] hover:border-[var(--ink)]'
@@ -408,13 +229,13 @@ export default function Navigation() {
               aria-label="Quorum and Fault-Tolerance Workbench"
             >
               <Sliders className="w-3.5 h-3.5" />
-              <span className="hidden lg:inline">Bench</span>
+              <span className="hidden xl:inline">Bench</span>
             </Link>
 
             {/* Protocol Duel Link */}
             <Link
               href="/duel"
-              className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 font-mono text-xs uppercase tracking-wider border transition-colors ${
+              className={`hidden md:inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 font-mono text-xs uppercase tracking-wider border transition-colors ${
                 normalizedPath === '/duel'
                   ? 'bg-[var(--signal)] text-[#FAF7F1] border-[var(--signal)]'
                   : 'bg-[var(--paper-elevated)] text-[var(--ink)] border-[var(--rule)] hover:border-[var(--ink)]'
@@ -422,13 +243,13 @@ export default function Navigation() {
               aria-label="Protocol Duel Lab"
             >
               <Scale className="w-3.5 h-3.5" />
-              <span className="hidden lg:inline">Duel</span>
+              <span className="hidden xl:inline">Duel</span>
             </Link>
 
             {/* Incident Postmortem Lab Link */}
             <Link
               href="/incidents"
-              className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 font-mono text-xs uppercase tracking-wider border transition-colors ${
+              className={`hidden md:inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 font-mono text-xs uppercase tracking-wider border transition-colors ${
                 normalizedPath === '/incidents'
                   ? 'bg-[var(--signal)] text-[#FAF7F1] border-[var(--signal)]'
                   : 'bg-[var(--paper-elevated)] text-[var(--ink)] border-[var(--rule)] hover:border-[var(--ink)]'
@@ -436,8 +257,9 @@ export default function Navigation() {
               aria-label="Incident Postmortem Lab"
             >
               <AlertTriangle className="w-3.5 h-3.5" />
-              <span className="hidden lg:inline">Outages</span>
+              <span className="hidden xl:inline">Outages</span>
             </Link>
+
             {/* Domain-Grouped Protocol Index Popover */}
             <div className="relative">
               <button
@@ -462,152 +284,42 @@ export default function Navigation() {
                     className="fixed inset-0 z-40"
                     onClick={() => setShowIndexMenu(false)}
                   />
-                  <div className="fixed sm:absolute right-4 sm:right-0 left-4 sm:left-auto mt-2 sm:w-[680px] max-w-[calc(100vw-2rem)] bg-[var(--paper-elevated)] border border-[var(--ink)] shadow-[6px_6px_0_0_var(--ink)] z-50 max-h-[75vh] overflow-y-auto">
-                    <div className="px-4 py-2.5 border-b border-[var(--rule)] bg-[var(--chassis)] flex flex-wrap items-center justify-between gap-2">
-                      <span className="font-mono text-[10px] tracking-[0.12em] uppercase text-[var(--ink-secondary)]">
-                        Complete Protocol Index · 22 Plates
-                      </span>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <Link
-                          href="/resilience"
-                          onClick={() => setShowIndexMenu(false)}
-                          className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--signal)] font-semibold hover:underline"
-                        >
-                          Resilience →
-                        </Link>
-                        <Link
-                          href="/streaming"
-                          onClick={() => setShowIndexMenu(false)}
-                          className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--cobalt)] font-semibold hover:underline"
-                        >
-                          Streaming →
-                        </Link>
-                        <Link
-                          href="/caching"
-                          onClick={() => setShowIndexMenu(false)}
-                          className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--emerald)] font-semibold hover:underline"
-                        >
-                          Caching →
-                        </Link>
-                        <Link
-                          href="/isolation"
-                          onClick={() => setShowIndexMenu(false)}
-                          className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--cobalt)] font-semibold hover:underline"
-                        >
-                          Isolation →
-                        </Link>
-                        <Link
-                          href="/interviews"
-                          onClick={() => setShowIndexMenu(false)}
-                          className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--signal)] font-semibold hover:underline"
-                        >
-                          Interviews →
-                        </Link>
-                        <Link
-                          href="/storage"
-                          onClick={() => setShowIndexMenu(false)}
-                          className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--emerald)] font-semibold hover:underline"
-                        >
-                          Storage →
-                        </Link>
-                        <Link
-                          href="/queueing"
-                          onClick={() => setShowIndexMenu(false)}
-                          className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--cobalt)] font-semibold hover:underline"
-                        >
-                          Queueing →
-                        </Link>
-                        <Link
-                          href="/theorems"
-                          onClick={() => setShowIndexMenu(false)}
-                          className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--signal)] font-semibold hover:underline"
-                        >
-                          Theorems →
-                        </Link>
-                        <Link
-                          href="/glossary"
-                          onClick={() => setShowIndexMenu(false)}
-                          className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--cobalt)] hover:underline"
-                        >
-                          Glossary →
-                        </Link>
-                        <Link
-                          href="/runbooks"
-                          onClick={() => setShowIndexMenu(false)}
-                          className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--signal)] hover:underline"
-                        >
-                          Runbooks →
-                        </Link>
-                        <Link
-                          href="/studio"
-                          onClick={() => setShowIndexMenu(false)}
-                          className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--signal)] font-semibold hover:underline"
-                        >
-                          Stack Studio →
-                        </Link>
-                        <Link
-                          href="/clocks"
-                          onClick={() => setShowIndexMenu(false)}
-                          className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--cobalt)] hover:underline"
-                        >
-                          HLC Clocks →
-                        </Link>
-                        <Link
-                          href="/drills"
-                          onClick={() => setShowIndexMenu(false)}
-                          className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--emerald)] font-semibold hover:underline"
-                        >
-                          Flashcards →
-                        </Link>
-                        <Link
-                          href="/consistency"
-                          onClick={() => setShowIndexMenu(false)}
-                          className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--signal)] hover:underline"
-                        >
-                          Consistency →
-                        </Link>
-                        <Link
-                          href="/latency"
-                          onClick={() => setShowIndexMenu(false)}
-                          className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--cobalt)] hover:underline"
-                        >
-                          Latency →
-                        </Link>
-                        <Link
-                          href="/exam"
-                          onClick={() => setShowIndexMenu(false)}
-                          className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--emerald)] font-semibold hover:underline"
-                        >
-                          Mastery Exam →
-                        </Link>
-                        <Link
-                          href="/systems"
-                          onClick={() => setShowIndexMenu(false)}
-                          className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--signal)] hover:underline"
-                        >
-                          Real Systems →
-                        </Link>
-                        <Link
-                          href="/advisor"
-                          onClick={() => setShowIndexMenu(false)}
-                          className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--cobalt)] hover:underline"
-                        >
-                          Advisor →
-                        </Link>
-                        <Link
-                          href="/bibliography"
-                          onClick={() => setShowIndexMenu(false)}
-                          className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--cobalt)] hover:underline"
-                        >
-                          Bibliography →
-                        </Link>
-                        <Link
-                          href="/"
-                          onClick={() => setShowIndexMenu(false)}
-                          className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--ink)] hover:underline"
-                        >
-                          Atlas Home →
-                        </Link>
+                  <div className="fixed sm:absolute right-4 sm:right-0 left-4 sm:left-auto mt-2 sm:w-[700px] max-w-[calc(100vw-2rem)] bg-[var(--paper-elevated)] border border-[var(--ink)] shadow-[6px_6px_0_0_var(--ink)] z-50 max-h-[78vh] overflow-y-auto">
+                    <div className="px-4 py-3 border-b border-[var(--rule)] bg-[var(--chassis)] space-y-2.5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-mono text-[10px] tracking-[0.12em] uppercase text-[var(--ink-secondary)]">
+                          Complete Protocol Index · {TOTAL_CONCEPTS} Plates &amp; {TOTAL_LABS} Labs
+                        </span>
+                        <div className="flex items-center gap-3">
+                          <Link
+                            href="/labs"
+                            onClick={() => setShowIndexMenu(false)}
+                            className="font-mono text-[10px] tracking-[0.08em] uppercase px-2 py-0.5 bg-[var(--ink)] text-[var(--paper-elevated)] hover:bg-[var(--signal)] transition-colors font-semibold"
+                          >
+                            All {TOTAL_LABS} Workbenches →
+                          </Link>
+                          <Link
+                            href="/"
+                            onClick={() => setShowIndexMenu(false)}
+                            className="font-mono text-[10px] tracking-[0.08em] uppercase text-[var(--ink)] hover:underline"
+                          >
+                            Atlas Home →
+                          </Link>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[var(--rule)]">
+                        {LAB_CATEGORIES.map((cat) => (
+                          <Link
+                            key={cat.id}
+                            href={`/labs?category=${encodeURIComponent(cat.id)}`}
+                            onClick={() => setShowIndexMenu(false)}
+                            className={`font-mono text-[10px] tracking-[0.06em] uppercase px-2 py-0.5 bg-[var(--paper-elevated)] border border-[var(--rule)] hover:border-[var(--ink)] transition-colors ${labToneTextClass(
+                              cat.tone
+                            )}`}
+                          >
+                            {cat.index} · {cat.shortLabel}
+                          </Link>
+                        ))}
                       </div>
                     </div>
                     <div className="p-4 grid sm:grid-cols-2 gap-x-6 gap-y-5">

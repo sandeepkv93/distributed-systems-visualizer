@@ -3,6 +3,7 @@ import ConceptGrid from '@/components/ConceptGrid';
 import HeroSimulation from '@/components/HeroSimulation';
 import LearningTracks from '@/components/LearningTracks';
 import { TOTAL_CONCEPTS, TOTAL_SCENARIOS } from '@/lib/catalog';
+import { LAB_CATEGORIES, TOTAL_LABS, getCategoryCounts } from '@/lib/labs-catalog';
 import {
   ArrowDown,
   ArrowUpRight,
@@ -13,9 +14,12 @@ import {
   Compass,
   Layers,
   Award,
+  FlaskConical,
 } from 'lucide-react';
 
 export default function Home() {
+  const labCounts = getCategoryCounts();
+
   return (
     <div className="min-h-screen bg-[var(--paper)] text-[var(--ink)]">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 pt-8 pb-20">
@@ -25,7 +29,9 @@ export default function Home() {
           <div className="flex items-center gap-4 tabular-nums">
             <span>{TOTAL_CONCEPTS} INTERACTIVE PLATES</span>
             <span className="hidden sm:inline">·</span>
-            <span className="hidden sm:inline">{TOTAL_SCENARIOS} STEP-THROUGH SCENARIOS</span>
+            <span className="hidden sm:inline">{TOTAL_LABS} WORKBENCH LABS</span>
+            <span className="hidden md:inline">·</span>
+            <span className="hidden md:inline">{TOTAL_SCENARIOS} STEP-THROUGH SCENARIOS</span>
           </div>
         </div>
 
@@ -52,6 +58,15 @@ export default function Home() {
               >
                 <span>Open Plate 20 · Raft</span>
                 <ArrowUpRight className="w-4 h-4" />
+              </Link>
+
+              <Link
+                href="/labs"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--emerald)] hover:bg-[var(--ink)] text-[#FAF7F1] font-mono text-xs uppercase tracking-[0.1em] transition-colors"
+              >
+                <FlaskConical className="w-3.5 h-3.5" />
+                <span>Explore All {TOTAL_LABS} Labs</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
               </Link>
 
               <Link
@@ -154,6 +169,63 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Curated Interactive Workbenches & Labs Showcase */}
+        <section className="mb-16 bg-[var(--paper-elevated)] border border-[var(--ink)] p-6 shadow-[6px_6px_0_0_var(--ink)]">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4 mb-5 border-b border-[var(--rule)]">
+            <div>
+              <div className="font-mono text-[10px] tracking-[0.14em] uppercase text-[var(--emerald)] font-semibold">
+                SPECIALIZED WORKBENCHES · {TOTAL_LABS} INTERACTIVE LABS
+              </div>
+              <h2 className="font-editorial text-2xl sm:text-3xl text-[var(--ink)] mt-1">
+                Calculators, Failure Simulators &amp; Production Playbooks
+              </h2>
+            </div>
+            <Link
+              href="/labs"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--ink)] hover:bg-[var(--signal)] text-[var(--paper-elevated)] font-mono text-xs uppercase tracking-[0.1em] transition-colors self-start sm:self-auto flex-shrink-0"
+            >
+              <span>Open Full Directory ({TOTAL_LABS})</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            {LAB_CATEGORIES.map((cat) => (
+              <Link
+                key={cat.id}
+                href={`/labs?category=${encodeURIComponent(cat.id)}`}
+                className="group bg-[var(--paper)] border border-[var(--rule)] hover:border-[var(--ink)] p-4 flex flex-col justify-between transition-colors"
+              >
+                <div>
+                  <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-wider mb-1.5">
+                    <span
+                      className={
+                        cat.tone === 'signal'
+                          ? 'text-[var(--signal)] font-semibold'
+                          : cat.tone === 'cobalt'
+                          ? 'text-[var(--cobalt)] font-semibold'
+                          : 'text-[var(--emerald)] font-semibold'
+                      }
+                    >
+                      {cat.index} · {cat.shortLabel}
+                    </span>
+                    <span className="text-[var(--ink-muted)] tabular-nums">
+                      {labCounts[cat.id]}
+                    </span>
+                  </div>
+                  <p className="text-xs leading-relaxed text-[var(--ink-secondary)]">
+                    {cat.summary}
+                  </p>
+                </div>
+                <div className="mt-3 pt-2 border-t border-[var(--rule)] font-mono text-[10px] uppercase tracking-wider text-[var(--ink)] group-hover:text-[var(--signal)] flex items-center justify-between">
+                  <span>Browse section</span>
+                  <ArrowUpRight className="w-3 h-3" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+
         {/* Guided Curriculum Tracks */}
         <LearningTracks />
 
@@ -171,84 +243,32 @@ export default function Home() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3 uppercase tracking-wider">
-            <Link href="/outbox" className="text-[var(--emerald)] font-semibold hover:underline">
-              Outbox &amp; CDC
-            </Link>
-            <span>·</span>
-            <Link href="/resilience" className="text-[var(--signal)] font-semibold hover:underline">
-              Resilience
-            </Link>
-            <span>·</span>
-            <Link href="/streaming" className="text-[var(--cobalt)] font-semibold hover:underline">
-              Streaming
-            </Link>
-            <span>·</span>
-            <Link href="/caching" className="text-[var(--emerald)] font-semibold hover:underline">
-              Caching
-            </Link>
-            <span>·</span>
-            <Link href="/isolation" className="text-[var(--cobalt)] font-semibold hover:underline">
-              Isolation
-            </Link>
-            <span>·</span>
-            <Link href="/interviews" className="text-[var(--signal)] font-semibold hover:underline">
-              Interviews
-            </Link>
-            <span>·</span>
-            <Link href="/storage" className="text-[var(--emerald)] font-semibold hover:underline">
-              Storage
-            </Link>
-            <span>·</span>
-            <Link href="/queueing" className="text-[var(--cobalt)] font-semibold hover:underline">
-              Queueing
-            </Link>
-            <span>·</span>
-            <Link href="/theorems" className="text-[var(--signal)] font-semibold hover:underline">
-              Theorems
-            </Link>
-            <span>·</span>
-            <Link href="/glossary" className="text-[var(--cobalt)] hover:underline">
-              Glossary
-            </Link>
-            <span>·</span>
-            <Link href="/runbooks" className="text-[var(--signal)] hover:underline">
-              Runbooks
+            <Link href="/labs" className="text-[var(--emerald)] font-semibold hover:underline">
+              All {TOTAL_LABS} Labs →
             </Link>
             <span>·</span>
             <Link href="/studio" className="text-[var(--signal)] font-semibold hover:underline">
               Stack Studio
             </Link>
             <span>·</span>
-            <Link href="/clocks" className="text-[var(--cobalt)] hover:underline">
-              HLC Clocks
+            <Link href="/interviews" className="text-[var(--signal)] hover:underline">
+              Interviews
             </Link>
             <span>·</span>
-            <Link href="/drills" className="text-[var(--emerald)] font-semibold hover:underline">
-              Flashcards
+            <Link href="/runbooks" className="text-[var(--signal)] hover:underline">
+              Runbooks
             </Link>
             <span>·</span>
-            <Link href="/consistency" className="text-[var(--signal)] hover:underline">
-              Consistency
-            </Link>
-            <span>·</span>
-            <Link href="/latency" className="text-[var(--cobalt)] hover:underline">
-              Latency
-            </Link>
-            <span>·</span>
-            <Link href="/exam" className="text-[var(--emerald)] font-semibold hover:underline">
-              Mastery Exam
-            </Link>
-            <span>·</span>
-            <Link href="/systems" className="text-[var(--signal)] hover:underline">
-              Real Systems
-            </Link>
-            <span>·</span>
-            <Link href="/advisor" className="text-[var(--cobalt)] hover:underline">
-              Advisor
+            <Link href="/glossary" className="text-[var(--cobalt)] hover:underline">
+              Glossary
             </Link>
             <span>·</span>
             <Link href="/bibliography" className="text-[var(--cobalt)] hover:underline">
               Bibliography
+            </Link>
+            <span>·</span>
+            <Link href="/exam" className="text-[var(--emerald)] hover:underline">
+              Mastery Exam
             </Link>
             <span>·</span>
             <span>⌘K Jump</span>

@@ -5,6 +5,7 @@ const exportDir = resolve(process.argv[2] ?? './out');
 
 const EXPECTED_ROUTES = [
   '/',
+  '/labs',
   '/duel',
   '/map',
   '/bench',
