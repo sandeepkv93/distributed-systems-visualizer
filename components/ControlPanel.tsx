@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Play,
@@ -11,6 +12,10 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Link2,
+  ArrowRight,
 } from 'lucide-react';
 import { Scenario, SimulationEvent } from '@/lib/types';
 import { getCheckpointForScenario } from '@/lib/checkpoints';
@@ -19,6 +24,8 @@ import {
   clampDeepLinkStep,
   parseScenarioDeepLink,
 } from '@/lib/deeplink';
+import { getTrackContextForConcept } from '@/lib/tracks';
+import { showToast } from '@/lib/toast';
 import PredictionCheckpoint from './PredictionCheckpoint';
 
 interface ControlPanelProps {
@@ -60,20 +67,36 @@ export default function ControlPanel({
 }: ControlPanelProps) {
   const pathname = usePathname();
   const [showObjectives, setShowObjectives] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const deepLinkInitializedRef = useRef(false);
   const pendingDeepLinkStepRef = useRef<number | null>(null);
   const pendingDeepLinkScenarioRef = useRef<string | null>(null);
+  const activeStepButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  const conceptId = pathname?.replace(/^\/|\/$/g, '') || '';
 
   const activeScenario = useMemo(
     () => scenarios.find((s) => s.id === selectedScenario) ?? null,
     [scenarios, selectedScenario]
   );
 
+  const nextScenario = useMemo(() => {
+    if (!selectedScenario || scenarios.length < 2) return null;
+    const idx = scenarios.findIndex((s) => s.id === selectedScenario);
+    if (idx === -1 || idx >= scenarios.length - 1) return null;
+    return scenarios[idx + 1];
+  }, [scenarios, selectedScenario]);
+
+  const nextPlate = useMemo(() => {
+    if (!conceptId) return null;
+    return getTrackContextForConcept(conceptId)?.next ?? null;
+  }, [conceptId]);
+
   const activeCheckpoint = useMemo(() => {
-    const conceptId = pathname?.replace(/^\/|\/$/g, '') || '';
     if (!conceptId || !selectedScenario) return null;
     return getCheckpointForScenario(conceptId, selectedScenario);
-  }, [pathname, selectedScenario]);
+  }, [conceptId, selectedScenario]);
 
   const timelineEvents = useMemo(
     () => (events && events.length > 0 ? events : activeScenario?.events ?? []),
@@ -145,6 +168,15 @@ export default function ControlPanel({
     }
   }, [selectedScenario, resolvedIndex]);
 
+  // Keep the active step visible inside the Event Tape scroll container
+  useEffect(() => {
+    if (isCollapsed || totalEvents === 0) return;
+    const el = activeStepButtonRef.current;
+    if (el && typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [resolvedIndex, isCollapsed, totalEvents]);
+
   const canStepBackward = totalEvents > 0 && resolvedIndex > 0;
   const canStepForward = totalEvents > 0 && resolvedIndex < totalEvents;
   const canPlay = totalEvents > 0 && resolvedIndex < totalEvents;
@@ -154,6 +186,23 @@ export default function ControlPanel({
     resolvedIndex > 0 && resolvedIndex <= totalEvents ? timelineEvents[resolvedIndex - 1] : null;
   const nextEvent =
     resolvedIndex >= 0 && resolvedIndex < totalEvents ? timelineEvents[resolvedIndex] : null;
+
+  const handleCopyDeepLink = async () => {
+    if (typeof window === 'undefined') return;
+    const shareUrl = buildScenarioDeepLinkUrl(
+      window.location.href,
+      selectedScenario,
+      resolvedIndex
+    );
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopiedLink(true);
+      showToast('Link to this exact simulation step copied.', 'success');
+      setTimeout(() => setCopiedLink(false), 1800);
+    } catch {
+      showToast('Unable to copy link in this browser context.', 'error');
+    }
+  };
 
   // Keyboard shortcuts: Space (Play/Pause), Left/Right arrows (Step), R (Reset)
   useEffect(() => {
@@ -207,11 +256,82 @@ export default function ControlPanel({
     onReset,
   ]);
 
-  return (
-    <aside className="bg-[var(--chassis)] text-[var(--ink)] border-b md:border-b-0 md:border-r border-[var(--rule)] w-full md:w-[328px] flex-shrink-0 flex flex-col max-h-[48vh] md:max-h-none md:h-full overflow-y-auto">
-      {/* Instrument Deck Header Strip */}
-      <div className="px-4 py-2.5 border-b border-[var(--rule)] bg-[var(--chassis-deep)]/65 flex items-center justify-between font-mono text-[10px] tracking-[0.12em] uppercase text-[var(--ink-secondary)]">
-        <span className="flex items-center gap-2">
+  if (isCollapsed) {
+    return (
+      <aside
+        aria-label="Collapsed Instrument Deck"
+        className="bg-[var(--chassis)] text-[var(--ink)] border-b md:border-b-0 md:border-r border-[var(--rule)] w-full md:w-[54px] flex-shrink-0 flex md:flex-col items-center justify-between gap-2 px-3 py-2 md:py-3 md:px-0"
+      >
+        <div className="flex md:flex-col items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsCollapsed(false)}
+            className="p-2 bg-[var(--paper-elevated)] border border-[var(--rule)] hover:border-[var(--ink)] text-[var(--ink)] transition-colors cursor-pointer"
+            title="Expand Instrument Deck"
+            aria-label="Expand Instrument Deck"
+          >
+            <PanelLeftOpen className="w-4 h-4" />
+          </button>
+
+          <div className="flex md:flex-col items-center gap-1">
+            <button
+              type="button"
+              onClick={onStepBackward}
+              disabled={!canStepBackward}
+              className="p-2 bg-[var(--paper-elevated)] border border-[var(--rule)] hover:border-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+              title="Step Backward (←)"
+              aria-label="Step Backward"
+            >
+              <SkipBack className="w-3.5 h-3.5" />
+            </button>
+
+            {isPlaying ? (
+              <button
+                type="button"
+                onClick={onPause}
+                className="p-2 bg-[var(--ink)] text-[var(--paper-elevated)] cursor-pointer"
+                title="Pause (Space)"
+                aria-label="Pause"
+              >
+                <Pause className="w-3.5 h-3.5" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onPlay}
+                disabled={!canPlay}
+                className="p-2 bg-[var(--signal)] text-[#FAF7F1] disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer"
+                title="Play (Space)"
+                aria-label="Play"
+              >
+                <Play className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={onStepForward}
+              disabled={!canStepForward}
+              className="p-2 bg-[var(--paper-elevated)] border border-[var(--rule)] hover:border-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+              title="Step Forward (→)"
+              aria-label="Step Forward"
+            >
+              <SkipForward className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              type="button"
+              onClick={onReset}
+              className="p-2 bg-[var(--paper-elevated)] border border-[var(--rule)] hover:border-[var(--ink)] cursor-pointer"
+              title="Reset (R)"
+              aria-label="Reset"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex md:flex-col items-center gap-1.5 font-mono text-[10px] tabular-nums text-[var(--ink-secondary)]">
           <span
             className={`w-2 h-2 rounded-full ${
               isPlaying
@@ -221,11 +341,59 @@ export default function ControlPanel({
                 : 'bg-[var(--ink)]/35'
             }`}
           />
-          <span>Instrument Deck</span>
+          {totalEvents > 0 && (
+            <span className="font-semibold text-[var(--ink)]">
+              {String(resolvedIndex).padStart(2, '0')}/{String(totalEvents).padStart(2, '0')}
+            </span>
+          )}
+        </div>
+      </aside>
+    );
+  }
+
+  return (
+    <aside className="bg-[var(--chassis)] text-[var(--ink)] border-b md:border-b-0 md:border-r border-[var(--rule)] w-full md:w-[328px] flex-shrink-0 flex flex-col max-h-[44vh] md:max-h-none md:h-full overflow-y-auto">
+      {/* Instrument Deck Header Strip */}
+      <div className="px-4 py-2 border-b border-[var(--rule)] bg-[var(--chassis-deep)]/65 flex items-center justify-between gap-2 font-mono text-[10px] tracking-[0.12em] uppercase text-[var(--ink-secondary)]">
+        <span className="flex items-center gap-2 min-w-0">
+          <span
+            className={`w-2 h-2 rounded-full flex-shrink-0 ${
+              isPlaying
+                ? 'bg-[var(--signal)]'
+                : isComplete
+                ? 'bg-[var(--emerald)]'
+                : 'bg-[var(--ink)]/35'
+            }`}
+          />
+          <span className="truncate">Instrument Deck</span>
         </span>
-        <span className="tabular-nums text-[var(--ink)] font-semibold">
-          {isPlaying ? 'RUNNING' : isComplete ? 'VERIFIED' : totalEvents > 0 ? 'ARMED' : 'MANUAL'}
-        </span>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="tabular-nums text-[var(--ink)] font-semibold">
+            {isPlaying ? 'RUNNING' : isComplete ? 'VERIFIED' : totalEvents > 0 ? 'ARMED' : 'MANUAL'}
+          </span>
+          <button
+            type="button"
+            onClick={handleCopyDeepLink}
+            className="p-1 text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:bg-[var(--paper-elevated)] border border-transparent hover:border-[var(--rule)] transition-colors cursor-pointer"
+            title="Copy direct link to this scenario step"
+            aria-label="Copy direct link to this scenario step"
+          >
+            {copiedLink ? (
+              <Check className="w-3.5 h-3.5 text-[var(--emerald)]" />
+            ) : (
+              <Link2 className="w-3.5 h-3.5" />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsCollapsed(true)}
+            className="p-1 text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:bg-[var(--paper-elevated)] border border-transparent hover:border-[var(--rule)] transition-colors cursor-pointer"
+            title="Collapse Instrument Deck for wider canvas"
+            aria-label="Collapse Instrument Deck"
+          >
+            <PanelLeftClose className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
 
       <div className="p-4 space-y-5 flex-1 flex flex-col">
@@ -267,6 +435,7 @@ export default function ControlPanel({
                   <div className="pt-1 border-t border-[var(--rule)]">
                     <button
                       type="button"
+                      aria-expanded={showObjectives}
                       onClick={() => setShowObjectives((prev) => !prev)}
                       className="flex items-center justify-between w-full font-mono text-[10px] uppercase tracking-wider font-semibold text-[var(--cobalt)] hover:text-[var(--ink)] transition-colors cursor-pointer"
                     >
@@ -300,7 +469,31 @@ export default function ControlPanel({
                     <span className="font-mono text-[10px] uppercase tracking-wider font-semibold block mb-0.5">
                       {isComplete ? '✓ Outcome Verified' : 'Expected Outcome'}
                     </span>
-                    <span className="leading-snug">{activeScenario.expectedOutcome}</span>
+                    <span className="leading-snug block">{activeScenario.expectedOutcome}</span>
+
+                    {/* Zero Dead-End Next Action on Scenario Completion */}
+                    {isComplete && (nextScenario || nextPlate) && (
+                      <div className="mt-2.5 pt-2 border-t border-[var(--emerald)]/25 flex flex-wrap items-center justify-between gap-2">
+                        {nextScenario && onScenarioChange ? (
+                          <button
+                            type="button"
+                            onClick={() => onScenarioChange(nextScenario.id)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[var(--emerald)] hover:bg-[var(--ink)] text-[#FAF7F1] font-mono text-[10px] uppercase tracking-wider font-semibold transition-colors cursor-pointer"
+                          >
+                            <span>Next Scenario</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </button>
+                        ) : nextPlate ? (
+                          <Link
+                            href={nextPlate.path}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[var(--emerald)] hover:bg-[var(--ink)] text-[#FAF7F1] font-mono text-[10px] uppercase tracking-wider font-semibold transition-colors"
+                          >
+                            <span>Next: PL {nextPlate.plateNumber} · {nextPlate.navName}</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </Link>
+                        ) : null}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -379,6 +572,7 @@ export default function ControlPanel({
                 <button
                   key={speedOption}
                   type="button"
+                  aria-pressed={speed === speedOption}
                   onClick={() => onSpeedChange(speedOption)}
                   className={`py-1.5 font-mono text-[11px] tabular-nums transition-colors cursor-pointer ${
                     speed === speedOption
@@ -403,7 +597,7 @@ export default function ControlPanel({
           </div>
         </div>
 
-        {/* Calibrated Progress Ruler & Live Step Telemetry */}
+        {/* Calibrated Scrubbable Progress Ruler & Live Step Telemetry */}
         <div>
           <div className="flex items-center justify-between font-mono text-[10px] tracking-[0.1em] uppercase text-[var(--ink-secondary)] mb-1.5">
             <span>03 · Progress · {Math.round(progress)}%</span>
@@ -413,17 +607,45 @@ export default function ControlPanel({
               </span>
             )}
           </div>
-          <div className="w-full bg-[var(--paper-elevated)] border border-[var(--rule)] h-2 overflow-hidden">
-            <div
-              className={`h-full transition-all duration-300 ${
-                isComplete ? 'bg-[var(--emerald)]' : 'bg-[var(--signal)]'
-              }`}
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+
+          {totalEvents > 0 && onJumpToStep ? (
+            <div className="relative h-5 flex items-center">
+              <div className="w-full bg-[var(--paper-elevated)] border border-[var(--rule)] h-2 overflow-hidden pointer-events-none">
+                <div
+                  className={`h-full transition-all duration-150 ${
+                    isComplete ? 'bg-[var(--emerald)]' : 'bg-[var(--signal)]'
+                  }`}
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={totalEvents}
+                step={1}
+                value={resolvedIndex}
+                onChange={(e) => onJumpToStep(Number(e.target.value))}
+                aria-label="Scrub simulation timeline"
+                title="Drag or click to scrub directly to any step"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize"
+              />
+            </div>
+          ) : (
+            <div className="w-full bg-[var(--paper-elevated)] border border-[var(--rule)] h-2 overflow-hidden">
+              <div
+                className={`h-full transition-all duration-300 ${
+                  isComplete ? 'bg-[var(--emerald)]' : 'bg-[var(--signal)]'
+                }`}
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          )}
 
           {totalEvents > 0 && (
-            <div className="mt-2.5 bg-[var(--paper-elevated)] border border-[var(--rule)] p-2.5 text-xs">
+            <div
+              className="mt-2 bg-[var(--paper-elevated)] border border-[var(--rule)] p-2.5 text-xs"
+              aria-live="polite"
+            >
               {lastExecutedEvent ? (
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-1 font-mono text-[10px]">
@@ -456,7 +678,7 @@ export default function ControlPanel({
           )}
         </div>
 
-        {/* Interactive Event Tape Sequencer */}
+        {/* Interactive Auto-Scrolling Event Tape Sequencer */}
         {totalEvents > 0 && (
           <div className="flex-1 min-h-0 flex flex-col">
             <div className="font-mono text-[10px] font-semibold tracking-[0.12em] uppercase text-[var(--ink-secondary)] mb-1.5">
@@ -464,6 +686,7 @@ export default function ControlPanel({
             </div>
             <div className="border border-[var(--rule)] bg-[var(--paper-elevated)] divide-y divide-[var(--rule)] max-h-48 md:max-h-56 overflow-y-auto">
               <button
+                ref={resolvedIndex === 0 ? activeStepButtonRef : null}
                 type="button"
                 onClick={() => onJumpToStep?.(0)}
                 disabled={!onJumpToStep}
@@ -491,6 +714,7 @@ export default function ControlPanel({
                 return (
                   <button
                     key={`${event.id}-${idx}`}
+                    ref={isCurrent ? activeStepButtonRef : null}
                     type="button"
                     onClick={() => onJumpToStep?.(stepNumber)}
                     disabled={!onJumpToStep}
