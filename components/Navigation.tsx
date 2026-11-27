@@ -351,6 +351,15 @@ export default function Navigation() {
                   Transactional Outbox &amp; Idempotent Consumers
                 </span>
               </div>
+            ) : normalizedPath === '/tracing' ? (
+              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
+                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--cobalt)] text-[#FAF7F1] flex-shrink-0">
+                  TRACING
+                </span>
+                <span className="font-editorial text-base text-[var(--ink)] truncate">
+                  OpenTelemetry Span Trees &amp; Tail Sampling
+                </span>
+              </div>
             ) : null}
           </div>
 

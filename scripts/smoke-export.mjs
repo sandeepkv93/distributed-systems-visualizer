@@ -29,6 +29,7 @@ const EXPECTED_ROUTES = [
   '/streaming',
   '/resilience',
   '/outbox',
+  '/tracing',
   '/cap-theorem',
   '/chandy-lamport',
   '/consensus-variants',

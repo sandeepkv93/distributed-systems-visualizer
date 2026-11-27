@@ -245,6 +245,15 @@ const CORE_LABS: readonly AtlasSearchItem[] = [
     href: '/outbox',
     keywords: 'outbox cdc debezium dual write kafka postgres wal idempotent consumer inbox effectively once event driven microservices',
   },
+  {
+    id: 'lab:tracing',
+    kind: 'lab',
+    badge: 'OTEL',
+    title: 'Distributed Tracing, Span Trees & Tail Sampling Lab',
+    subtitle: 'W3C traceparent propagation, critical-path waterfalls, NTP clock-skew span inversion & Head vs Tail sampling math',
+    href: '/tracing',
+    keywords: 'tracing opentelemetry otel dapper jaeger span waterfall traceparent critical path tail sampling head sampling clock skew',
+  },
 ];
 
 export function buildAtlasSearchIndex(): AtlasSearchItem[] {
