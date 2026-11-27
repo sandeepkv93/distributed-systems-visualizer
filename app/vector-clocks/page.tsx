@@ -248,7 +248,7 @@ export default function VectorClocksPage() {
         </div>
 
         {/* Visualization Canvas */}
-        <div className="flex-1 relative bg-slate-900 overflow-auto p-6">
+        <div className="flex-1 relative bg-slate-900 overflow-auto p-6 min-h-[420px]">
           <InvariantMonitor
             protocolLabel="Vector Clock Causality"
             checks={evaluateVectorClockInvariants(processes, stats.concurrentPairs)}

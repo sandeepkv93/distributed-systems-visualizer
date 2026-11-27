@@ -351,6 +351,31 @@ main[data-view="visualizer"] div.flex-1.relative.bg-slate-900 > div.absolute.bg-
   max-width: calc(100% - 2rem);
 }
 
+@media (max-width: 767px) {
+  main[data-view="visualizer"] div.flex-1.relative.bg-slate-900 {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto !important;
+    padding-top: 3.25rem;
+    padding-bottom: 3.75rem;
+  }
+
+  main[data-view="visualizer"] div.flex-1.relative.bg-slate-900 > svg {
+    flex: 0 0 auto;
+    min-height: 320px;
+    max-height: 52vh;
+  }
+
+  main[data-view="visualizer"] div.flex-1.relative.bg-slate-900 > div.absolute.bg-slate-800,
+  main[data-view="visualizer"] div.flex-1.relative.bg-slate-900 > div.absolute.bg-slate-800\/95 {
+    position: static !important;
+    inset: auto !important;
+    width: calc(100% - 1.5rem) !important;
+    max-width: calc(100% - 1.5rem) !important;
+    margin: 0.65rem auto 0 !important;
+  }
+}
+
 main[data-view="visualizer"] svg g[role="button"]:focus-visible circle:first-of-type {
   stroke: #f4f0e8;
   stroke-width: 2.5px;
