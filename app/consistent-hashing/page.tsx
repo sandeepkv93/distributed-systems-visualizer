@@ -408,10 +408,20 @@ export default function ConsistentHashingPage() {
               return (
                 <g
                   key={node.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={isSelected}
+                  aria-label={`Inspect virtual node ${node.id.replace('server-', 'S')} (hash ${node.hashValue})`}
                   onClick={() =>
                     setSelectedVNodeId((prev) => (prev === node.id ? null : node.id))
                   }
-                  className="cursor-pointer"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSelectedVNodeId((prev) => (prev === node.id ? null : node.id));
+                    }
+                  }}
+                  className="cursor-pointer focus:outline-none"
                 >
                   <circle
                     cx={pos.x}

@@ -389,9 +389,15 @@ main[data-view="visualizer"] div.flex-1.relative.bg-slate-900 > div.absolute.bg-
   }
 }
 
-main[data-view="visualizer"] svg g[role="button"]:focus-visible circle:first-of-type {
+svg g[role="button"]:focus-visible {
+  outline: none;
+}
+
+svg g[role="button"]:focus-visible circle:first-of-type,
+svg g[role="button"]:focus-visible rect:first-of-type {
   stroke: #f4f0e8;
   stroke-width: 2.5px;
+  opacity: 1;
 }
 
 /* Editorial Monograph Reader typography (overrides legacy dark-mode text classes in all 22 drawers) */
