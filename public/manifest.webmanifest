@@ -1,7 +1,7 @@
 {
   "name": "Distributed Systems Atlas — Interactive Monograph",
   "short_name": "DS Atlas",
-  "description": "Interactive field manual and live telemetry bench for 22 foundational distributed systems protocols.",
+  "description": "Interactive field manual and live telemetry bench featuring 22 protocol plates and 27 specialized distributed systems workbenches.",
   "start_url": "/distributed-systems-visualizer/",
   "scope": "/distributed-systems-visualizer/",
   "display": "standalone",

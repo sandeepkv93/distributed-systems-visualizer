@@ -63,7 +63,7 @@ const BASE_PATH =
 export const metadata: Metadata = {
   title: 'Distributed Systems Atlas — Interactive Protocol Monograph',
   description:
-    'An interactive field manual and live telemetry bench for exploring 22 foundational distributed systems protocols, formal invariants, and real-world architectures step by step.',
+    'An interactive field manual and live telemetry bench for exploring 22 foundational distributed systems protocol plates, 27 specialized workbenches, formal invariants, and real-world architectures step by step.',
   manifest: `${BASE_PATH}/manifest.webmanifest`,
   icons: {
     icon: `${BASE_PATH}/atlas-icon.svg`,
@@ -71,7 +71,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Distributed Systems Atlas — Interactive Protocol Monograph',
     description:
-      'Explore 22 interactive protocol plates, live Space-Time wire traces, formal invariant monitors, outage drills, and system design workbenches.',
+      'Explore 22 interactive protocol plates, 27 specialized engineering workbenches, live Space-Time wire traces, formal invariant monitors, and outage drills.',
     type: 'website',
   },
 };

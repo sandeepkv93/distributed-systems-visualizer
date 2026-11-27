@@ -1,14 +1,46 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { getTrackContextForConcept } from '@/lib/tracks';
 import { CONCEPTS_BY_ID } from '@/lib/catalog';
 import { useProgress } from '@/hooks/useProgress';
 
 export default function PlateNavigator({ conceptId }: { conceptId: string }) {
+  const router = useRouter();
   const ctx = getTrackContextForConcept(conceptId);
   const { progress } = useProgress();
+
+  const prevPath = ctx?.prev?.path ?? null;
+  const nextPath = ctx?.next?.path ?? null;
+
+  useEffect(() => {
+    if (!prevPath && !nextPath) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      if (event.key === '[' && prevPath) {
+        event.preventDefault();
+        router.push(prevPath);
+      } else if (event.key === ']' && nextPath) {
+        event.preventDefault();
+        router.push(nextPath);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [prevPath, nextPath, router]);
 
   if (!ctx) return null;
 
@@ -22,6 +54,7 @@ export default function PlateNavigator({ conceptId }: { conceptId: string }) {
         {ctx.prev ? (
           <Link
             href={ctx.prev.path}
+            title={`Previous plate: ${ctx.prev.name} ([)`}
             className="inline-flex items-center gap-1.5 text-[var(--ink-secondary)] hover:text-[var(--signal)] transition-colors max-w-full"
           >
             <ArrowLeft className="w-3.5 h-3.5 flex-shrink-0" />
@@ -76,6 +109,7 @@ export default function PlateNavigator({ conceptId }: { conceptId: string }) {
         {ctx.next ? (
           <Link
             href={ctx.next.path}
+            title={`Next plate: ${ctx.next.name} (])`}
             className="inline-flex items-center gap-1.5 text-[var(--ink)] hover:text-[var(--signal)] font-medium transition-colors max-w-full"
           >
             <span className="truncate">{ctx.next.navName}</span>

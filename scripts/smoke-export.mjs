@@ -76,7 +76,7 @@ if (!existsSync(exportDir)) {
   process.exit(1);
 }
 
-// 1. Verify all 26 primary application routes
+// 1. Verify all primary application routes
 for (const route of EXPECTED_ROUTES) {
   const htmlPath = resolveRouteHtmlPath(exportDir, route);
   if (!existsSync(htmlPath)) {

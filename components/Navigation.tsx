@@ -21,7 +21,12 @@ import {
 } from 'lucide-react';
 import { CONCEPTS_CATALOG, CONCEPT_DOMAINS, TOTAL_CONCEPTS } from '@/lib/catalog';
 import { LAB_CATEGORIES, TOTAL_LABS, getLabByPath, type LabTone } from '@/lib/labs-catalog';
-import { searchAtlas, SearchKindFilter } from '@/lib/search';
+import {
+  ATLAS_SEARCH_INDEX,
+  searchAtlas,
+  type SearchItemKind,
+  type SearchKindFilter,
+} from '@/lib/search';
 import {
   getClientRecentVisits,
   getServerRecentVisits,
@@ -29,6 +34,23 @@ import {
   subscribeRecentVisits,
 } from '@/lib/recent-visits';
 import { useProgress } from '@/hooks/useProgress';
+
+const SEARCH_KIND_COUNTS: Record<SearchItemKind, number> = ATLAS_SEARCH_INDEX.reduce(
+  (acc, item) => {
+    acc[item.kind] += 1;
+    return acc;
+  },
+  {
+    plate: 0,
+    scenario: 0,
+    lab: 0,
+    glossary: 0,
+    paper: 0,
+    runbook: 0,
+    duel: 0,
+    incident: 0,
+  } as Record<SearchItemKind, number>
+);
 
 function labToneBgClass(tone: LabTone): string {
   switch (tone) {
@@ -56,6 +78,7 @@ const KEYBOARD_SHORTCUTS = [
   { keys: '⌘K / Ctrl+K', action: 'Open instant Atlas search & recent visits' },
   { keys: 'Space', action: 'Play or pause active protocol simulation' },
   { keys: '← / →', action: 'Step backward or forward one event' },
+  { keys: '[ / ]', action: 'Jump to previous or next plate / lab in section' },
   { keys: 'R', action: 'Reset simulation back to initial state' },
   { keys: 'S', action: 'Toggle Topology ↔ Space-Time wire trace' },
   { keys: '?', action: 'Toggle this keyboard shortcuts sheet' },
@@ -524,7 +547,7 @@ export default function Navigation() {
                   setSelectedIdx(0);
                 }}
                 onKeyDown={handlePaletteKeyDown}
-                placeholder='Search plates, scenarios, 37 glossary terms, 18 papers, runbooks, theorems, interviews...'
+                placeholder={`Search ${SEARCH_KIND_COUNTS.plate} plates, ${SEARCH_KIND_COUNTS.scenario} scenarios, ${SEARCH_KIND_COUNTS.glossary} glossary terms, ${SEARCH_KIND_COUNTS.paper} papers, runbooks, labs...`}
                 className="w-full bg-transparent text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus:outline-none"
               />
               <button
@@ -541,15 +564,15 @@ export default function Navigation() {
             <div className="flex flex-wrap items-center gap-1.5 px-4 py-2 border-b border-[var(--rule)] bg-[var(--chassis)]/65 font-mono text-[10px] uppercase tracking-wider">
               {(
                 [
-                  { id: 'all', label: 'All' },
-                  { id: 'plate', label: 'Plates (22)' },
-                  { id: 'scenario', label: 'Scenarios (79)' },
-                  { id: 'lab', label: 'Labs & Cases' },
-                  { id: 'glossary', label: 'Glossary (37)' },
-                  { id: 'paper', label: 'Papers (18)' },
-                  { id: 'runbook', label: 'Runbooks (8)' },
-                  { id: 'duel', label: 'Duels (6)' },
-                  { id: 'incident', label: 'Outages (6)' },
+                  { id: 'all', label: `All (${ATLAS_SEARCH_INDEX.length})` },
+                  { id: 'plate', label: `Plates (${SEARCH_KIND_COUNTS.plate})` },
+                  { id: 'scenario', label: `Scenarios (${SEARCH_KIND_COUNTS.scenario})` },
+                  { id: 'lab', label: `Labs & Cases (${SEARCH_KIND_COUNTS.lab})` },
+                  { id: 'glossary', label: `Glossary (${SEARCH_KIND_COUNTS.glossary})` },
+                  { id: 'paper', label: `Papers (${SEARCH_KIND_COUNTS.paper})` },
+                  { id: 'runbook', label: `Runbooks (${SEARCH_KIND_COUNTS.runbook})` },
+                  { id: 'duel', label: `Duels (${SEARCH_KIND_COUNTS.duel})` },
+                  { id: 'incident', label: `Outages (${SEARCH_KIND_COUNTS.incident})` },
                 ] as const
               ).map((tab) => {
                 const active = searchFilter === tab.id;
