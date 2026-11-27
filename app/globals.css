@@ -586,7 +586,7 @@ main[data-view="visualizer"] div.flex-1.relative.bg-slate-900 :where(a, button, 
 
   header,
   footer,
-  aside,
+  aside:not([role="dialog"]),
   input[type="range"],
   a[href="#main-content"],
   .print-hide,
@@ -618,8 +618,18 @@ main[data-view="visualizer"] div.flex-1.relative.bg-slate-900 :where(a, button, 
     max-height: none !important;
   }
 
+  div:has(> [role="dialog"]) {
+    position: static !important;
+    inset: auto !important;
+    background: transparent !important;
+    padding: 0 !important;
+  }
+
   [role="dialog"] {
     position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
     box-shadow: none !important;
     border-color: #161614 !important;
   }

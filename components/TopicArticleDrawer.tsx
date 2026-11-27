@@ -39,7 +39,7 @@ export default function TopicArticleDrawer({
   return (
     <div className="fixed inset-0 z-50">
       <div
-        className="absolute inset-0 bg-[#161614]/50 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-[#161614]/50 backdrop-blur-[2px] print-hide"
         onClick={onClose}
       />
       <aside
@@ -61,7 +61,7 @@ export default function TopicArticleDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--paper-elevated)] border border-[rgba(22,22,20,0.28)] hover:bg-[var(--ink)] hover:text-[var(--paper-elevated)] font-mono text-[11px] uppercase tracking-wider text-[var(--ink)] transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--paper-elevated)] border border-[rgba(22,22,20,0.28)] hover:bg-[var(--ink)] hover:text-[var(--paper-elevated)] font-mono text-[11px] uppercase tracking-wider text-[var(--ink)] transition-colors cursor-pointer print-hide"
             aria-label="Close theory drawer"
           >
             <span>Close</span>
