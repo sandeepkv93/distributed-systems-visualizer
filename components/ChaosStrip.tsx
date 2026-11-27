@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Flame, RotateCcw, ChevronUp, ChevronDown } from 'lucide-react';
 import {
   ChaosConfig,
@@ -9,6 +9,7 @@ import {
   DELAY_MULTIPLIER_OPTIONS,
   isChaosActive,
 } from '@/lib/chaos';
+import { useDismissibleHudPopover } from '@/hooks/useDismissiblePopover';
 
 interface ChaosStripProps {
   config: ChaosConfig;
@@ -24,6 +25,8 @@ export default function ChaosStrip({
   onResetDropped,
 }: ChaosStripProps) {
   const [expanded, setExpanded] = useState(false);
+  const close = useCallback(() => setExpanded(false), []);
+  const containerRef = useDismissibleHudPopover('chaos', expanded, close);
   const active = isChaosActive(config);
 
   const handleReset = () => {
@@ -32,10 +35,13 @@ export default function ChaosStrip({
   };
 
   return (
-    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center">
+    <div
+      ref={containerRef}
+      className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center max-w-[calc(100%-1.5rem)]"
+    >
       {expanded && (
         <div
-          className="mb-2 w-[310px] sm:w-[340px] bg-[#161918]/96 border border-[#F4F0E8]/25 shadow-[0_12px_32px_rgba(0,0,0,0.55)] p-3.5 text-[#F4F0E8] font-mono"
+          className="mb-2 w-[300px] sm:w-[340px] max-w-[calc(100vw-2rem)] bg-[#161918]/96 border border-[#F4F0E8]/25 shadow-[0_12px_32px_rgba(0,0,0,0.55)] p-3.5 text-[#F4F0E8] font-mono"
           role="region"
           aria-label="Network Chaos Controls"
         >

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Terminal, Copy, Download, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import type { InvariantCheck } from '@/lib/invariants';
 import {
@@ -10,6 +10,7 @@ import {
   formatTraceJson,
 } from '@/lib/trace-export';
 import { showToast } from '@/lib/toast';
+import { useDismissibleHudPopover } from '@/hooks/useDismissiblePopover';
 
 interface WireLogDrawerProps {
   protocol: string;
@@ -28,6 +29,8 @@ export default function WireLogDrawer({
 }: WireLogDrawerProps) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const close = useCallback(() => setExpanded(false), []);
+  const containerRef = useDismissibleHudPopover('wire-log', expanded, close);
   const summary = summarizeWireFrames(frames);
 
   const handleCopyMarkdown = async () => {
@@ -68,16 +71,19 @@ export default function WireLogDrawer({
   const recentFrames = frames.slice(-14).reverse();
 
   return (
-    <div className={`absolute ${className} z-20 flex flex-col items-end`}>
+    <div
+      ref={containerRef}
+      className={`absolute ${className} z-20 flex flex-col items-end max-w-[calc(100%-1.5rem)]`}
+    >
       <button
         type="button"
         onClick={() => setExpanded((open) => !open)}
-        className="inline-flex items-center gap-2 px-2.5 py-1.5 bg-[#141816]/94 border border-[#F4F0E8]/22 hover:border-[#F4F0E8]/45 text-[#F4F0E8] font-mono text-[10px] uppercase tracking-[0.1em] backdrop-blur-sm shadow-md transition-colors cursor-pointer"
+        className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-1.5 bg-[#141816]/94 border border-[#F4F0E8]/22 hover:border-[#F4F0E8]/45 text-[#F4F0E8] font-mono text-[10px] uppercase tracking-[0.08em] sm:tracking-[0.1em] backdrop-blur-sm shadow-md transition-colors cursor-pointer"
         aria-expanded={expanded}
         aria-label="Toggle live wire transcript recorder"
       >
-        <Terminal className="w-3 h-3 text-[#60A5FA]" />
-        <span>Wire Log</span>
+        <Terminal className="w-3 h-3 text-[#60A5FA] flex-shrink-0" />
+        <span className="hidden sm:inline">Wire Log</span>
         <span className="px-1 bg-[#F4F0E8]/12 text-[#F4F0E8] tabular-nums">{summary.total}</span>
         {summary.dropped > 0 && (
           <span className="px-1 bg-[#D9441E] text-[#FAF7F1] tabular-nums">
@@ -85,15 +91,15 @@ export default function WireLogDrawer({
           </span>
         )}
         {expanded ? (
-          <ChevronUp className="w-3 h-3 opacity-75" />
+          <ChevronUp className="w-3 h-3 opacity-75 flex-shrink-0" />
         ) : (
-          <ChevronDown className="w-3 h-3 opacity-75" />
+          <ChevronDown className="w-3 h-3 opacity-75 flex-shrink-0" />
         )}
       </button>
 
       {expanded && (
         <div
-          className="mt-1.5 w-[310px] sm:w-[350px] bg-[#141816]/96 border border-[#F4F0E8]/22 shadow-[0_12px_32px_rgba(0,0,0,0.55)] text-[#F4F0E8] font-mono"
+          className="mt-1.5 w-[290px] sm:w-[350px] max-w-[calc(100vw-2rem)] max-h-[55vh] overflow-y-auto bg-[#141816]/96 border border-[#F4F0E8]/22 shadow-[0_12px_32px_rgba(0,0,0,0.55)] text-[#F4F0E8] font-mono"
           role="region"
           aria-label="Live Wire Transcript"
         >

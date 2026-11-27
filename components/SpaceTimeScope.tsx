@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Activity, GitCommitHorizontal, X } from 'lucide-react';
 import {
   SpaceTimeActor,
@@ -21,35 +21,64 @@ interface ScopeModeToggleProps {
  * Hardware-styled Topology <-> Space-Time wire trace toggle pill.
  */
 export function ScopeModeToggle({ mode, onChange, frameCount }: ScopeModeToggleProps) {
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      if (event.key === 's' || event.key === 'S') {
+        event.preventDefault();
+        onChange(mode === 'topology' ? 'spacetime' : 'topology');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mode, onChange]);
+
   return (
     <div
-      className="absolute top-3.5 left-1/2 -translate-x-1/2 z-20 inline-flex border border-[rgba(244,240,232,0.24)] bg-[#141816]/95 backdrop-blur-sm shadow-md font-mono text-[10px] uppercase tracking-[0.1em]"
+      className="absolute top-3.5 left-1/2 -translate-x-1/2 z-20 inline-flex border border-[rgba(244,240,232,0.24)] bg-[#141816]/95 backdrop-blur-sm shadow-md font-mono text-[10px] uppercase tracking-[0.08em] sm:tracking-[0.1em]"
       role="group"
       aria-label="Oscilloscope view mode"
     >
       <button
         type="button"
+        aria-pressed={mode === 'topology'}
+        title="Topology View (S)"
         onClick={() => onChange('topology')}
-        className={`px-2.5 py-1.5 inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
+        className={`px-2 sm:px-2.5 py-1.5 inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
           mode === 'topology'
             ? 'bg-[#F4F0E8] text-[#161614] font-semibold'
             : 'text-[#9E9B90] hover:text-[#F4F0E8]'
         }`}
       >
-        <GitCommitHorizontal className="w-3 h-3" />
-        <span>Topology</span>
+        <GitCommitHorizontal className="w-3 h-3 flex-shrink-0" />
+        <span className="hidden sm:inline">Topology</span>
       </button>
       <button
         type="button"
+        aria-pressed={mode === 'spacetime'}
+        title="Space-Time Wire Trace (S)"
         onClick={() => onChange('spacetime')}
-        className={`px-2.5 py-1.5 inline-flex items-center gap-1.5 border-l border-[rgba(244,240,232,0.18)] transition-colors cursor-pointer ${
+        className={`px-2 sm:px-2.5 py-1.5 inline-flex items-center gap-1.5 border-l border-[rgba(244,240,232,0.18)] transition-colors cursor-pointer ${
           mode === 'spacetime'
             ? 'bg-[#D9441E] text-[#FAF7F1] font-semibold'
             : 'text-[#9E9B90] hover:text-[#F4F0E8]'
         }`}
       >
-        <Activity className="w-3 h-3" />
-        <span>Space-Time</span>
+        <Activity className="w-3 h-3 flex-shrink-0" />
+        <span>
+          <span className="hidden sm:inline">Space-Time</span>
+          <span className="sm:hidden">Trace</span>
+        </span>
         <span
           className={`px-1 py-0.25 text-[9px] tabular-nums ${
             mode === 'spacetime'

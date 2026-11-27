@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ShieldCheck, ShieldAlert, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { InvariantCheck, summarizeInvariants } from '@/lib/invariants';
+import { useDismissibleHudPopover } from '@/hooks/useDismissiblePopover';
 
 interface InvariantMonitorProps {
   checks: readonly InvariantCheck[];
@@ -14,6 +15,8 @@ export default function InvariantMonitor({
   protocolLabel = 'Formal Properties',
 }: InvariantMonitorProps) {
   const [expanded, setExpanded] = useState(false);
+  const close = useCallback(() => setExpanded(false), []);
+  const containerRef = useDismissibleHudPopover('invariants', expanded, close);
   const summary = summarizeInvariants(checks);
 
   const pillClasses =
@@ -31,34 +34,39 @@ export default function InvariantMonitor({
       : 'HOLDING';
 
   return (
-    <div className="absolute top-3.5 left-4 z-20 flex flex-col items-start">
+    <div
+      ref={containerRef}
+      className="absolute top-3.5 left-3 sm:left-4 z-20 flex flex-col items-start max-w-[calc(100%-1.5rem)]"
+    >
       <button
         type="button"
         onClick={() => setExpanded((open) => !open)}
-        className={`inline-flex items-center gap-2 px-2.5 py-1.5 border font-mono text-[10px] uppercase tracking-[0.1em] backdrop-blur-sm shadow-md transition-colors cursor-pointer ${pillClasses}`}
+        className={`inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-1.5 border font-mono text-[10px] uppercase tracking-[0.08em] sm:tracking-[0.1em] backdrop-blur-sm shadow-md transition-colors cursor-pointer ${pillClasses}`}
         aria-expanded={expanded}
         aria-label="Toggle formal invariant monitor"
       >
         {summary.overall === 'violated' ? (
-          <ShieldAlert className="w-3.5 h-3.5 text-[#F87171]" />
+          <ShieldAlert className="w-3.5 h-3.5 text-[#F87171] flex-shrink-0" />
         ) : summary.overall === 'degraded' ? (
-          <AlertTriangle className="w-3.5 h-3.5 text-[#FBBF24]" />
+          <AlertTriangle className="w-3.5 h-3.5 text-[#FBBF24] flex-shrink-0" />
         ) : (
-          <ShieldCheck className="w-3.5 h-3.5 text-[#34D399]" />
+          <ShieldCheck className="w-3.5 h-3.5 text-[#34D399] flex-shrink-0" />
         )}
-        <span className="font-semibold">
-          Invariants {summary.holdingCount}/{summary.totalCount} · {statusText}
+        <span className="font-semibold tabular-nums">
+          <span className="hidden lg:inline">Invariants </span>
+          {summary.holdingCount}/{summary.totalCount}
+          <span className="hidden sm:inline"> · {statusText}</span>
         </span>
         {expanded ? (
-          <ChevronUp className="w-3 h-3 opacity-75" />
+          <ChevronUp className="w-3 h-3 opacity-75 flex-shrink-0" />
         ) : (
-          <ChevronDown className="w-3 h-3 opacity-75" />
+          <ChevronDown className="w-3 h-3 opacity-75 flex-shrink-0" />
         )}
       </button>
 
       {expanded && (
         <div
-          className="mt-1.5 w-[290px] sm:w-[320px] bg-[#141816]/96 border border-[#F4F0E8]/22 shadow-[0_12px_32px_rgba(0,0,0,0.55)] p-3 text-[#F4F0E8] font-mono"
+          className="mt-1.5 w-[280px] sm:w-[320px] max-w-[calc(100vw-2rem)] max-h-[55vh] overflow-y-auto bg-[#141816]/96 border border-[#F4F0E8]/22 shadow-[0_12px_32px_rgba(0,0,0,0.55)] p-3 text-[#F4F0E8] font-mono"
           role="region"
           aria-label={`${protocolLabel} live invariant checks`}
         >
