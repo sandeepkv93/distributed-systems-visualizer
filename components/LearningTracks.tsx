@@ -71,6 +71,7 @@ export default function LearningTracks() {
                         key={id}
                         href={c.path}
                         title={c.name}
+                        aria-label={`Plate ${c.plateNumber}: ${c.name}${done ? ' (completed)' : ''}`}
                         className={`font-mono text-[10px] px-1.5 py-0.5 border tabular-nums transition-colors ${
                           done
                             ? 'bg-[var(--emerald)] border-[var(--emerald)] text-[#FAF7F1]'

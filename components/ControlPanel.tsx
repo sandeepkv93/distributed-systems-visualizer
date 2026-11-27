@@ -411,19 +411,25 @@ export default function ControlPanel({
                 {scenarios.length} presets
               </span>
             </div>
-            <select
-              id="scenario-select"
-              value={selectedScenario || ''}
-              onChange={(e) => onScenarioChange?.(e.target.value)}
-              className="w-full px-3 py-2 bg-[var(--paper-elevated)] text-[var(--ink)] border border-[rgba(22,22,20,0.3)] focus:border-[var(--ink)] focus:outline-none text-sm font-medium cursor-pointer"
-            >
-              <option value="">Select a scenario...</option>
-              {scenarios.map((scenario, idx) => (
-                <option key={scenario.id} value={scenario.id}>
-                  {String(idx + 1).padStart(2, '0')} — {scenario.name}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                id="scenario-select"
+                value={selectedScenario || ''}
+                onChange={(e) => onScenarioChange?.(e.target.value)}
+                className="w-full appearance-none pl-3 pr-9 py-2 bg-[var(--paper-elevated)] text-[var(--ink)] border border-[rgba(22,22,20,0.3)] hover:border-[var(--ink)] focus:border-[var(--ink)] focus:outline-none text-sm font-medium cursor-pointer transition-colors"
+              >
+                <option value="">Select a scenario...</option>
+                {scenarios.map((scenario, idx) => (
+                  <option key={scenario.id} value={scenario.id}>
+                    {String(idx + 1).padStart(2, '0')} — {scenario.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                className="w-4 h-4 text-[var(--ink-secondary)] pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2"
+                aria-hidden="true"
+              />
+            </div>
 
             {activeScenario && (
               <div className="mt-2.5 bg-[var(--paper-elevated)] border border-[var(--rule)] p-3 space-y-2.5">

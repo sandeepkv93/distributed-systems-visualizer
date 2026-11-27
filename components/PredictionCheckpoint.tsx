@@ -39,6 +39,7 @@ export default function PredictionCheckpoint({ checkpoint }: PredictionCheckpoin
     >
       <button
         type="button"
+        aria-expanded={expanded}
         onClick={() => setExpanded((prev) => !prev)}
         className="w-full px-3 py-2 flex items-center justify-between gap-2 text-left cursor-pointer"
       >
@@ -78,6 +79,7 @@ export default function PredictionCheckpoint({ checkpoint }: PredictionCheckpoin
                 <button
                   key={option}
                   type="button"
+                  aria-pressed={picked}
                   onClick={() => handleSelect(idx)}
                   className={`w-full text-left px-2.5 py-2 border text-[11px] leading-snug flex items-start gap-2 transition-colors cursor-pointer ${
                     showRight
