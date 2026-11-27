@@ -1,9 +1,10 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { CONCEPTS_BY_ID } from '@/lib/catalog';
 import { getLabByPath } from '@/lib/labs-catalog';
+import { getPageTitleForPath } from '@/lib/page-title';
 import PlateNavigator from './PlateNavigator';
 import LabNavigator from './LabNavigator';
 
@@ -13,6 +14,10 @@ export default function VisualizerShell({ children }: { children: ReactNode }) {
   const normalizedPath = pathname?.replace(/\/$/, '') || '/';
   const isConceptPlate = CONCEPTS_BY_ID.has(normalizedSlug);
   const isInteractiveLab = !isConceptPlate && Boolean(getLabByPath(normalizedPath));
+
+  useEffect(() => {
+    document.title = getPageTitleForPath(normalizedPath);
+  }, [normalizedPath]);
 
   return (
     <main
