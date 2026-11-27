@@ -548,6 +548,13 @@ export default function Navigation() {
               <input
                 ref={inputRef}
                 type="text"
+                role="combobox"
+                aria-expanded="true"
+                aria-controls="command-palette-results"
+                aria-autocomplete="list"
+                aria-activedescendant={
+                  searchResults[selectedIdx] ? `cmd-option-${selectedIdx}` : undefined
+                }
                 aria-label="Search the Distributed Systems Atlas"
                 value={query}
                 onChange={(e) => {
@@ -558,10 +565,24 @@ export default function Navigation() {
                 placeholder={`Search ${SEARCH_KIND_COUNTS.plate} plates, ${SEARCH_KIND_COUNTS.scenario} scenarios, ${SEARCH_KIND_COUNTS.glossary} glossary terms, ${SEARCH_KIND_COUNTS.paper} papers, runbooks, labs...`}
                 className="w-full bg-transparent text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus:outline-none"
               />
+              {query.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery('');
+                    setSelectedIdx(0);
+                    inputRef.current?.focus();
+                  }}
+                  className="px-2 py-0.5 border border-[var(--rule)] hover:border-[var(--ink)] font-mono text-[10px] uppercase tracking-wider text-[var(--ink-secondary)] hover:text-[var(--ink)] transition-colors cursor-pointer flex-shrink-0"
+                  aria-label="Clear search query"
+                >
+                  Clear
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setShowCommandPalette(false)}
-                className="text-[var(--ink-muted)] hover:text-[var(--ink)] cursor-pointer"
+                className="text-[var(--ink-muted)] hover:text-[var(--ink)] cursor-pointer flex-shrink-0"
                 aria-label="Close search"
               >
                 <X className="w-4 h-4" />
@@ -633,7 +654,12 @@ export default function Navigation() {
               </div>
             )}
 
-            <div className="max-h-[55vh] overflow-y-auto divide-y divide-[var(--rule)]">
+            <div
+              id="command-palette-results"
+              role="listbox"
+              aria-label="Atlas search results"
+              className="max-h-[55vh] overflow-y-auto divide-y divide-[var(--rule)]"
+            >
               {searchResults.length === 0 ? (
                 <div className="px-4 py-8 text-center font-mono text-xs text-[var(--ink-muted)] space-y-3">
                   <div>
@@ -697,6 +723,9 @@ export default function Navigation() {
                   return (
                     <button
                       key={item.id}
+                      id={`cmd-option-${idx}`}
+                      role="option"
+                      aria-selected={isSelected}
                       ref={isSelected ? activeResultRef : null}
                       type="button"
                       onMouseEnter={() => setSelectedIdx(idx)}
@@ -761,8 +790,13 @@ export default function Navigation() {
               )}
             </div>
 
-            <div className="px-4 py-2 border-t border-[var(--rule)] bg-[var(--chassis)] flex items-center justify-between gap-3 font-mono text-[10px] text-[var(--ink-muted)] uppercase">
-              <span>↑↓ Navigate · ↵ Open</span>
+            <div className="px-4 py-2 border-t border-[var(--rule)] bg-[var(--chassis)] flex flex-wrap items-center justify-between gap-3 font-mono text-[10px] text-[var(--ink-muted)] uppercase">
+              <div className="flex items-center gap-2.5">
+                <span className="tabular-nums text-[var(--ink-secondary)]" aria-live="polite" aria-atomic="true">
+                  {searchResults.length} {searchResults.length === 1 ? 'result' : 'results'}
+                </span>
+                <span className="hidden sm:inline">· ↑↓ Navigate · ↵ Open</span>
+              </div>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
