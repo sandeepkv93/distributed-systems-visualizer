@@ -623,8 +623,39 @@ export default function Navigation() {
 
             <div className="max-h-[55vh] overflow-y-auto divide-y divide-[var(--rule)]">
               {searchResults.length === 0 ? (
-                <div className="px-4 py-8 text-center font-mono text-xs text-[var(--ink-muted)]">
-                  No Atlas entries matching &ldquo;{query}&rdquo;
+                <div className="px-4 py-8 text-center font-mono text-xs text-[var(--ink-muted)] space-y-3">
+                  <div>
+                    No Atlas entries matching &ldquo;{query}&rdquo;
+                    {searchFilter !== 'all' ? ` in ${searchFilter}` : ''}
+                  </div>
+                  <div className="flex items-center justify-center gap-2">
+                    {searchFilter !== 'all' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearchFilter('all');
+                          setSelectedIdx(0);
+                          inputRef.current?.focus();
+                        }}
+                        className="px-3 py-1 bg-[var(--ink)] hover:bg-[var(--signal)] text-[var(--paper-elevated)] uppercase tracking-wider text-[10px] transition-colors cursor-pointer"
+                      >
+                        Search All Categories
+                      </button>
+                    )}
+                    {query.trim() !== '' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQuery('');
+                          setSelectedIdx(0);
+                          inputRef.current?.focus();
+                        }}
+                        className="px-3 py-1 bg-[var(--paper)] hover:bg-[var(--chassis)] text-[var(--ink)] border border-[var(--rule)] uppercase tracking-wider text-[10px] transition-colors cursor-pointer"
+                      >
+                        Clear Query
+                      </button>
+                    )}
+                  </div>
                 </div>
               ) : (
                 searchResults.map((item, idx) => {

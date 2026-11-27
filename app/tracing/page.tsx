@@ -211,8 +211,18 @@ export default function TracingLabPage() {
                 return (
                   <g
                     key={span.spanId}
-                    className="cursor-pointer"
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={isSelected}
+                    aria-label={`Inspect span ${span.service} ${span.operation} (${span.durationMs}ms)`}
+                    className="cursor-pointer focus:outline-none"
                     onClick={() => setSelectedSpanId(span.spanId)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setSelectedSpanId(span.spanId);
+                      }
+                    }}
                   >
                     {isSelected && (
                       <rect x="4" y={y - 10} width="712" height="24" fill="#1D2321" />
