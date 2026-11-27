@@ -220,10 +220,14 @@ export function searchAtlas(
 
   if (tokens.length === 0) {
     if (filter === 'all') {
-      // Show labs + plates cleanly when palette opens before typing
-      return pool
-        .filter((item) => item.kind === 'lab' || item.kind === 'plate')
-        .slice(0, limit);
+      // Show balanced top workbenches + protocol plates immediately above the fold
+      const labs = pool.filter((item) => item.kind === 'lab');
+      const plates = pool.filter((item) => item.kind === 'plate');
+      const featuredLabLimit = 6;
+      return [...labs.slice(0, featuredLabLimit), ...plates, ...labs.slice(featuredLabLimit)].slice(
+        0,
+        limit
+      );
     }
     return pool.slice(0, limit);
   }

@@ -87,6 +87,12 @@ export default function RootLayout({
       className={`${newsreader.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable}`}
     >
       <body className="font-sans antialiased bg-[var(--paper)] text-[var(--ink)] selection:bg-[#D9441E] selection:text-[#FAF7F1]">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-[var(--ink)] focus:text-[var(--paper-elevated)] focus:font-mono focus:text-xs focus:uppercase focus:tracking-wider focus:border focus:border-[var(--signal)] focus:shadow-lg"
+        >
+          Skip to main content
+        </a>
         <Navigation />
         <VisualizerShell>{children}</VisualizerShell>
         <ToastContainer />

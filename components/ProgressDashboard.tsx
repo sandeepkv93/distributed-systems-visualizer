@@ -27,6 +27,8 @@ export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (showResetConfirm) {
@@ -37,7 +39,10 @@ export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
       }
     };
     window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', handleKey);
+    };
   }, [onClose, showResetConfirm]);
 
   const formatTime = (milliseconds: number): string => {

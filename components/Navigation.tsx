@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import ProgressDashboard from './ProgressDashboard';
 import ConceptGlyph from './ConceptGlyph';
 import {
@@ -16,10 +16,18 @@ import {
   Sliders,
   AlertTriangle,
   FlaskConical,
+  Keyboard,
+  Clock,
 } from 'lucide-react';
 import { CONCEPTS_CATALOG, CONCEPT_DOMAINS, TOTAL_CONCEPTS } from '@/lib/catalog';
 import { LAB_CATEGORIES, TOTAL_LABS, getLabByPath, type LabTone } from '@/lib/labs-catalog';
 import { searchAtlas, SearchKindFilter } from '@/lib/search';
+import {
+  getClientRecentVisits,
+  getServerRecentVisits,
+  recordRecentVisit,
+  subscribeRecentVisits,
+} from '@/lib/recent-visits';
 import { useProgress } from '@/hooks/useProgress';
 
 function labToneBgClass(tone: LabTone): string {
@@ -44,6 +52,16 @@ function labToneTextClass(tone: LabTone): string {
   }
 }
 
+const KEYBOARD_SHORTCUTS = [
+  { keys: '⌘K / Ctrl+K', action: 'Open instant Atlas search & recent visits' },
+  { keys: 'Space', action: 'Play or pause active protocol simulation' },
+  { keys: '← / →', action: 'Step backward or forward one event' },
+  { keys: 'R', action: 'Reset simulation back to initial state' },
+  { keys: 'S', action: 'Toggle Topology ↔ Space-Time wire trace' },
+  { keys: '?', action: 'Toggle this keyboard shortcuts sheet' },
+  { keys: 'Esc', action: 'Close any open modal, drawer, or HUD popover' },
+] as const;
+
 export default function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
@@ -51,10 +69,18 @@ export default function Navigation() {
   const [showProgressDashboard, setShowProgressDashboard] = useState(false);
   const [showIndexMenu, setShowIndexMenu] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [query, setQuery] = useState('');
   const [searchFilter, setSearchFilter] = useState<SearchKindFilter>('all');
   const [selectedIdx, setSelectedIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const activeResultRef = useRef<HTMLButtonElement | null>(null);
+
+  const recentVisits = useSyncExternalStore(
+    subscribeRecentVisits,
+    getClientRecentVisits,
+    getServerRecentVisits
+  );
 
   const normalizedPath = pathname?.replace(/\/$/, '') || '/';
   const activeConcept = useMemo(
@@ -63,26 +89,74 @@ export default function Navigation() {
   );
   const activeLab = useMemo(() => getLabByPath(normalizedPath), [normalizedPath]);
 
+  // Record recently visited plates and labs for instant Cmd+K recall
+  useEffect(() => {
+    if (activeConcept) {
+      recordRecentVisit({
+        path: activeConcept.path,
+        badge: `PL ${activeConcept.plateNumber}`,
+        title: activeConcept.name,
+      });
+    } else if (activeLab) {
+      recordRecentVisit({
+        path: activeLab.path,
+        badge: activeLab.searchBadge,
+        title: activeLab.shortTitle,
+      });
+    }
+  }, [activeConcept, activeLab]);
+
   const searchResults = useMemo(
     () => searchAtlas(query, searchFilter, 32),
     [query, searchFilter]
   );
 
-  // Global Cmd+K / Ctrl+K shortcut for instant protocol jumping
+  // Global Cmd+K / Ctrl+K, ?, and Escape shortcuts
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         setShowIndexMenu(false);
+        setShowShortcutsModal(false);
         setShowCommandPalette((open) => !open);
-      } else if (event.key === 'Escape') {
+        return;
+      }
+      if (event.key === 'Escape') {
         setShowCommandPalette(false);
         setShowIndexMenu(false);
+        setShowShortcutsModal(false);
+        return;
+      }
+      if (event.key === '?' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        const target = event.target as HTMLElement | null;
+        if (
+          target &&
+          (target.tagName === 'INPUT' ||
+            target.tagName === 'TEXTAREA' ||
+            target.tagName === 'SELECT' ||
+            target.isContentEditable)
+        ) {
+          return;
+        }
+        event.preventDefault();
+        setShowIndexMenu(false);
+        setShowCommandPalette(false);
+        setShowShortcutsModal((open) => !open);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  // Lock background scroll while Command Palette or Shortcuts modal is open
+  useEffect(() => {
+    if (!showCommandPalette && !showShortcutsModal) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [showCommandPalette, showShortcutsModal]);
 
   useEffect(() => {
     if (showCommandPalette) {
@@ -90,11 +164,21 @@ export default function Navigation() {
     }
   }, [showCommandPalette]);
 
+  // Keep keyboard-selected Command Palette result scrolled into view
+  useEffect(() => {
+    if (!showCommandPalette) return;
+    const el = activeResultRef.current;
+    if (el && typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ block: 'nearest' });
+    }
+  }, [selectedIdx, showCommandPalette]);
+
   const openCommandPalette = () => {
     setQuery('');
     setSearchFilter('all');
     setSelectedIdx(0);
     setShowIndexMenu(false);
+    setShowShortcutsModal(false);
     setShowCommandPalette(true);
   };
 
@@ -489,6 +573,30 @@ export default function Navigation() {
               })}
             </div>
 
+            {/* Recent Visits Quick-Return Strip */}
+            {query.trim() === '' && searchFilter === 'all' && recentVisits.length > 0 && (
+              <div className="px-4 py-2 border-b border-[var(--rule)] bg-[var(--paper)] flex flex-wrap items-center gap-1.5">
+                <span className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-[var(--ink-muted)] mr-1">
+                  <Clock className="w-3 h-3" />
+                  Recent:
+                </span>
+                {recentVisits.map((visit) => (
+                  <button
+                    key={visit.path}
+                    type="button"
+                    onClick={() => {
+                      setShowCommandPalette(false);
+                      router.push(visit.path);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-[var(--paper-elevated)] hover:bg-[var(--ink)] hover:text-[var(--paper-elevated)] border border-[var(--rule)] font-mono text-[10px] text-[var(--ink-secondary)] transition-colors cursor-pointer"
+                  >
+                    <span className="opacity-70">{visit.badge}</span>
+                    <span className="truncate max-w-[140px]">{visit.title}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
             <div className="max-h-[55vh] overflow-y-auto divide-y divide-[var(--rule)]">
               {searchResults.length === 0 ? (
                 <div className="px-4 py-8 text-center font-mono text-xs text-[var(--ink-muted)]">
@@ -522,6 +630,7 @@ export default function Navigation() {
                   return (
                     <button
                       key={item.id}
+                      ref={isSelected ? activeResultRef : null}
                       type="button"
                       onMouseEnter={() => setSelectedIdx(idx)}
                       onClick={() => {
@@ -585,8 +694,71 @@ export default function Navigation() {
               )}
             </div>
 
-            <div className="px-4 py-2 border-t border-[var(--rule)] bg-[var(--chassis)] flex items-center justify-between font-mono text-[10px] text-[var(--ink-muted)] uppercase">
-              <span>↑↓ Navigate · ↵ Open Plate</span>
+            <div className="px-4 py-2 border-t border-[var(--rule)] bg-[var(--chassis)] flex items-center justify-between gap-3 font-mono text-[10px] text-[var(--ink-muted)] uppercase">
+              <span>↑↓ Navigate · ↵ Open</span>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCommandPalette(false);
+                    setShowShortcutsModal(true);
+                  }}
+                  className="inline-flex items-center gap-1 text-[var(--ink-secondary)] hover:text-[var(--signal)] cursor-pointer"
+                >
+                  <Keyboard className="w-3 h-3" />
+                  <span>Shortcuts (?)</span>
+                </button>
+                <span>ESC Close</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Global Keyboard Shortcuts Cheat Sheet (? key) */}
+      {showShortcutsModal && (
+        <div
+          className="fixed inset-0 z-50 bg-[#161614]/50 backdrop-blur-[2px] flex items-center justify-center p-4"
+          onClick={() => setShowShortcutsModal(false)}
+        >
+          <div
+            className="w-full max-w-lg bg-[var(--paper-elevated)] border border-[var(--ink)] shadow-[8px_8px_0_0_var(--ink)] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Keyboard Shortcuts"
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--ink)] bg-[var(--paper)]">
+              <div className="flex items-center gap-2">
+                <Keyboard className="w-4 h-4 text-[var(--signal)]" />
+                <h2 className="font-editorial text-xl text-[var(--ink)]">
+                  Atlas Keyboard Shortcuts
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowShortcutsModal(false)}
+                className="p-1 text-[var(--ink-muted)] hover:text-[var(--ink)] cursor-pointer"
+                aria-label="Close keyboard shortcuts"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="divide-y divide-[var(--rule)] px-5 py-2">
+              {KEYBOARD_SHORTCUTS.map((row) => (
+                <div
+                  key={row.keys}
+                  className="py-2.5 flex items-center justify-between gap-4 text-sm"
+                >
+                  <span className="text-[var(--ink-secondary)]">{row.action}</span>
+                  <kbd className="px-2 py-1 bg-[var(--chassis)] border border-[var(--rule)] font-mono text-[11px] text-[var(--ink)] flex-shrink-0">
+                    {row.keys}
+                  </kbd>
+                </div>
+              ))}
+            </div>
+            <div className="px-5 py-2.5 border-t border-[var(--rule)] bg-[var(--chassis)] flex items-center justify-between font-mono text-[10px] uppercase text-[var(--ink-muted)]">
+              <span>Press ? anywhere outside inputs</span>
               <span>ESC Close</span>
             </div>
           </div>

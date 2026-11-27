@@ -71,8 +71,9 @@ describe('Unified Atlas Command Palette search index', () => {
 
   it('returns curated labs and plates on empty query and respects kind filters', () => {
     const defaultResults = searchAtlas('');
-    assert.ok(defaultResults.some((r) => r.kind === 'lab'));
-    assert.ok(defaultResults.some((r) => r.kind === 'plate'));
+    const topTen = defaultResults.slice(0, 10);
+    assert.ok(topTen.some((r) => r.kind === 'lab'));
+    assert.ok(topTen.some((r) => r.kind === 'plate'));
 
     const onlyIncidents = searchAtlas('', 'incident');
     assert.equal(onlyIncidents.length, INCIDENTS.length);

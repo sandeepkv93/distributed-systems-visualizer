@@ -11,7 +11,12 @@ export default function VisualizerShell({ children }: { children: ReactNode }) {
   const isConceptPlate = CONCEPTS_BY_ID.has(normalized);
 
   return (
-    <main data-view={isConceptPlate ? 'visualizer' : 'atlas'} className="relative z-10">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      data-view={isConceptPlate ? 'visualizer' : 'atlas'}
+      className="relative z-10 focus:outline-none"
+    >
       {children}
       {isConceptPlate && <PlateNavigator conceptId={normalized} />}
     </main>

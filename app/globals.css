@@ -392,6 +392,33 @@ main[data-view="visualizer"] svg text {
 }
 
 /* ==========================================================================
+   KEYBOARD FOCUS & REDUCED MOTION ACCESSIBILITY
+   ========================================================================== */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+}
+
+main[data-view="visualizer"] div.flex-1.relative.bg-slate-900 :where(a, button, input, select):focus-visible {
+  outline: 2px solid #f4f0e8;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ==========================================================================
    ARCHIVAL PRINT MONOGRAPH MODE
    Produces clean ink-on-paper study printouts with chrome stripped out.
    ========================================================================== */
