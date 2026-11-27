@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useProgress } from '@/hooks/useProgress';
+import { useDialogFocus } from '@/hooks/useDialogFocus';
 import {
   RotateCcw,
   Download,
@@ -25,6 +26,8 @@ interface ProgressDashboardProps {
 export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
   const { progress, achievements, stats, reset, refresh } = useProgress();
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  useDialogFocus(true, dialogRef);
 
   useEffect(() => {
     const prevOverflow = document.body.style.overflow;
@@ -144,11 +147,13 @@ export default function ProgressDashboard({ onClose }: ProgressDashboardProps) {
       onClick={onClose}
     >
       <motion.div
+        ref={dialogRef}
+        tabIndex={-1}
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.18 }}
         onClick={(e) => e.stopPropagation()}
-        className="bg-[var(--paper-elevated)] border border-[var(--ink)] shadow-[8px_8px_0_0_var(--ink)] max-w-4xl w-full max-h-[88vh] overflow-y-auto relative text-[var(--ink)]"
+        className="bg-[var(--paper-elevated)] border border-[var(--ink)] shadow-[8px_8px_0_0_var(--ink)] max-w-4xl w-full max-h-[88vh] overflow-y-auto relative text-[var(--ink)] focus:outline-none"
         role="dialog"
         aria-modal="true"
         aria-label="Study Ledger"

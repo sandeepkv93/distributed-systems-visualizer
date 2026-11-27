@@ -1,7 +1,8 @@
 'use client';
 
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useRef } from 'react';
 import { X, BookOpen } from 'lucide-react';
+import { useDialogFocus } from '@/hooks/useDialogFocus';
 
 type TopicArticleDrawerProps = {
   open: boolean;
@@ -16,6 +17,9 @@ export default function TopicArticleDrawer({
   onClose,
   children,
 }: TopicArticleDrawerProps) {
+  const drawerRef = useRef<HTMLElement | null>(null);
+  useDialogFocus(open, drawerRef);
+
   useEffect(() => {
     if (!open) return;
     const prevOverflow = document.body.style.overflow;
@@ -39,7 +43,9 @@ export default function TopicArticleDrawer({
         onClick={onClose}
       />
       <aside
-        className="absolute right-0 top-0 h-full w-full max-w-2xl bg-[var(--paper-elevated)] border-l border-[var(--ink)] shadow-[-8px_0_32px_rgba(22,22,20,0.2)] flex flex-col"
+        ref={drawerRef}
+        tabIndex={-1}
+        className="absolute right-0 top-0 h-full w-full max-w-2xl bg-[var(--paper-elevated)] border-l border-[var(--ink)] shadow-[-8px_0_32px_rgba(22,22,20,0.2)] flex flex-col focus:outline-none"
         role="dialog"
         aria-modal="true"
         aria-label={title}

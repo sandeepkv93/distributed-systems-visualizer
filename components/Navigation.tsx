@@ -34,6 +34,7 @@ import {
   subscribeRecentVisits,
 } from '@/lib/recent-visits';
 import { useProgress } from '@/hooks/useProgress';
+import { useDialogFocus } from '@/hooks/useDialogFocus';
 
 const SEARCH_KIND_COUNTS: Record<SearchItemKind, number> = ATLAS_SEARCH_INDEX.reduce(
   (acc, item) => {
@@ -97,7 +98,11 @@ export default function Navigation() {
   const [searchFilter, setSearchFilter] = useState<SearchKindFilter>('all');
   const [selectedIdx, setSelectedIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const shortcutsDialogRef = useRef<HTMLDivElement | null>(null);
   const activeResultRef = useRef<HTMLButtonElement | null>(null);
+
+  useDialogFocus(showCommandPalette, inputRef);
+  useDialogFocus(showShortcutsModal, shortcutsDialogRef);
 
   const recentVisits = useSyncExternalStore(
     subscribeRecentVisits,
@@ -777,7 +782,9 @@ export default function Navigation() {
           onClick={() => setShowShortcutsModal(false)}
         >
           <div
-            className="w-full max-w-lg bg-[var(--paper-elevated)] border border-[var(--ink)] shadow-[8px_8px_0_0_var(--ink)] overflow-hidden"
+            ref={shortcutsDialogRef}
+            tabIndex={-1}
+            className="w-full max-w-lg bg-[var(--paper-elevated)] border border-[var(--ink)] shadow-[8px_8px_0_0_var(--ink)] overflow-hidden focus:outline-none"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
