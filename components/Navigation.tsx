@@ -98,10 +98,11 @@ export default function Navigation() {
   const [searchFilter, setSearchFilter] = useState<SearchKindFilter>('all');
   const [selectedIdx, setSelectedIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const commandDialogRef = useRef<HTMLDivElement | null>(null);
   const shortcutsDialogRef = useRef<HTMLDivElement | null>(null);
   const activeResultRef = useRef<HTMLButtonElement | null>(null);
 
-  useDialogFocus(showCommandPalette, inputRef);
+  useDialogFocus(showCommandPalette, commandDialogRef, inputRef);
   useDialogFocus(showShortcutsModal, shortcutsDialogRef);
 
   const recentVisits = useSyncExternalStore(
@@ -529,7 +530,9 @@ export default function Navigation() {
           onClick={() => setShowCommandPalette(false)}
         >
           <div
-            className="w-full max-w-2xl bg-[var(--paper-elevated)] border border-[var(--ink)] shadow-[8px_8px_0_0_var(--ink)] overflow-hidden"
+            ref={commandDialogRef}
+            tabIndex={-1}
+            className="w-full max-w-2xl bg-[var(--paper-elevated)] border border-[var(--ink)] shadow-[8px_8px_0_0_var(--ink)] overflow-hidden focus:outline-none"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
