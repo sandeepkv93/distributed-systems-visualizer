@@ -254,6 +254,15 @@ const CORE_LABS: readonly AtlasSearchItem[] = [
     href: '/tracing',
     keywords: 'tracing opentelemetry otel dapper jaeger span waterfall traceparent critical path tail sampling head sampling clock skew',
   },
+  {
+    id: 'lab:sketches',
+    kind: 'lab',
+    badge: 'SKETCH',
+    title: 'Probabilistic Data Structures: Bloom, Count-Min & HyperLogLog',
+    subtitle: 'Interactive 32-bit Bloom filter probe, 4×10 Count-Min Sketch heavy-hitter matrix & 12KB HyperLogLog cardinality lab',
+    href: '/sketches',
+    keywords: 'sketches probabilistic bloom filter count-min sketch hyperloglog hll cardinality heavy hitters false positive bit array redis',
+  },
 ];
 
 export function buildAtlasSearchIndex(): AtlasSearchItem[] {
