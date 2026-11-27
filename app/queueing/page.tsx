@@ -204,6 +204,7 @@ export default function QueueingLabPage() {
               </div>
               <input
                 type="range"
+                aria-label="Arrival Rate (λ req/s)"
                 min={20}
                 max={500}
                 step={5}
@@ -223,6 +224,7 @@ export default function QueueingLabPage() {
               </div>
               <input
                 type="range"
+                aria-label="Mean Service Time (ms)"
                 min={2}
                 max={40}
                 value={serviceTimeMs}
@@ -243,6 +245,7 @@ export default function QueueingLabPage() {
               </div>
               <input
                 type="range"
+                aria-label="Worker Servers (c)"
                 min={1}
                 max={8}
                 value={servers}
@@ -261,6 +264,7 @@ export default function QueueingLabPage() {
               </div>
               <input
                 type="range"
+                aria-label="Downstream Fan-Out (leaf RPCs)"
                 min={1}
                 max={100}
                 value={fanOut}
@@ -279,6 +283,7 @@ export default function QueueingLabPage() {
               </div>
               <input
                 type="range"
+                aria-label="Leaf Slow-Tail Rate (%)"
                 min={0.5}
                 max={5}
                 step={0.5}
@@ -298,6 +303,7 @@ export default function QueueingLabPage() {
               </div>
               <input
                 type="range"
+                aria-label="Client Retry Multiplier"
                 min={1}
                 max={4}
                 value={retryMultiplier}

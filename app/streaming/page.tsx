@@ -150,6 +150,7 @@ export default function StreamingLabPage() {
               </div>
               <input
                 type="range"
+                aria-label="Watermark Lag (seconds)"
                 min={0}
                 max={12}
                 value={watermarkLagSec}
@@ -165,6 +166,7 @@ export default function StreamingLabPage() {
               </div>
               <input
                 type="range"
+                aria-label="Allowed Lateness Grace (seconds)"
                 min={0}
                 max={12}
                 value={allowedLatenessSec}
@@ -180,6 +182,7 @@ export default function StreamingLabPage() {
               </div>
               <input
                 type="range"
+                aria-label="Window Size (seconds)"
                 min={6}
                 max={14}
                 step={2}

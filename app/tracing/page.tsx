@@ -153,6 +153,7 @@ export default function TracingLabPage() {
               </div>
               <input
                 type="range"
+                aria-label="Child Host NTP Clock Skew (ms)"
                 min={-90}
                 max={90}
                 step={5}
@@ -314,6 +315,7 @@ export default function TracingLabPage() {
                 </div>
                 <input
                   type="range"
+                  aria-label="Fleet Trace Throughput (traces/s)"
                   min={1000}
                   max={100000}
                   step={1000}
@@ -330,6 +332,7 @@ export default function TracingLabPage() {
                 </div>
                 <input
                   type="range"
+                  aria-label="Head-Based Sample Rate (%)"
                   min={1}
                   max={25}
                   value={headSamplePct}
@@ -345,6 +348,7 @@ export default function TracingLabPage() {
                 </div>
                 <input
                   type="range"
+                  aria-label="5xx Error Rate (%)"
                   min={0.1}
                   max={5}
                   step={0.1}
@@ -361,6 +365,7 @@ export default function TracingLabPage() {
                 </div>
                 <input
                   type="range"
+                  aria-label="Tail Collector Assembly Buffer (seconds)"
                   min={5}
                   max={45}
                   step={5}

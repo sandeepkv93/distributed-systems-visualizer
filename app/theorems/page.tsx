@@ -318,6 +318,7 @@ export default function TheoremsLabPage() {
               </div>
               <input
                 type="range"
+                aria-label="Cluster Size (N nodes)"
                 min={3}
                 max={10}
                 value={assumptions.nodes}
@@ -334,6 +335,7 @@ export default function TheoremsLabPage() {
               </div>
               <input
                 type="range"
+                aria-label="Tolerated Faults (f)"
                 min={0}
                 max={3}
                 value={assumptions.faults}

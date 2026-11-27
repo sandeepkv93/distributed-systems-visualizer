@@ -141,6 +141,7 @@ export default function StorageEnginesLabPage() {
               </div>
               <input
                 type="range"
+                aria-label="Write / Read Mix (% writes)"
                 min={5}
                 max={95}
                 step={5}
@@ -159,6 +160,7 @@ export default function StorageEnginesLabPage() {
               </div>
               <input
                 type="range"
+                aria-label="Bloom Filter Bits per Key"
                 min={0}
                 max={16}
                 value={params.bloomBitsPerKey}
@@ -174,6 +176,7 @@ export default function StorageEnginesLabPage() {
               </div>
               <input
                 type="range"
+                aria-label="B+Tree Buffer Pool Hit Rate (%)"
                 min={15}
                 max={95}
                 step={5}
@@ -190,6 +193,7 @@ export default function StorageEnginesLabPage() {
               </div>
               <input
                 type="range"
+                aria-label="Record Size (bytes)"
                 min={64}
                 max={1024}
                 step={64}
@@ -206,6 +210,7 @@ export default function StorageEnginesLabPage() {
               </div>
               <input
                 type="range"
+                aria-label="Dataset Size (GB)"
                 min={10}
                 max={1000}
                 step={10}

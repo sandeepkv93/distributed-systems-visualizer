@@ -351,6 +351,7 @@ export default function SketchesLabPage() {
                   </div>
                   <input
                     type="range"
+                    aria-label="Distinct Items Power of 10"
                     min={4}
                     max={9}
                     value={logDistinct}
@@ -367,6 +368,7 @@ export default function SketchesLabPage() {
                   </div>
                   <input
                     type="range"
+                    aria-label="HyperLogLog Precision (p bits)"
                     min={10}
                     max={16}
                     value={hllPrecision}

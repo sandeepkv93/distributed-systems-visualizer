@@ -155,6 +155,7 @@ export default function CachingLabPage() {
                 </div>
                 <input
                   type="range"
+                  aria-label="Hot-Key Traffic (req/s)"
                   min={500}
                   max={10000}
                   step={250}
@@ -171,6 +172,7 @@ export default function CachingLabPage() {
                 </div>
                 <input
                   type="range"
+                  aria-label="Origin DB Query Latency (ms)"
                   min={20}
                   max={400}
                   step={10}
@@ -187,6 +189,7 @@ export default function CachingLabPage() {
                 </div>
                 <input
                   type="range"
+                  aria-label="Origin DB Capacity Ceiling (req/s)"
                   min={50}
                   max={800}
                   step={25}
@@ -203,6 +206,7 @@ export default function CachingLabPage() {
                 </div>
                 <input
                   type="range"
+                  aria-label="App Server Instances"
                   min={1}
                   max={48}
                   value={appInstances}

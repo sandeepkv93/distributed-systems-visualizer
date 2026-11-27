@@ -187,6 +187,7 @@ export default function ClocksLabPage() {
                   </div>
                   <input
                     type="range"
+                    aria-label={ctrl.label}
                     min={-50}
                     max={50}
                     step={1}
@@ -209,6 +210,7 @@ export default function ClocksLabPage() {
                 </div>
                 <input
                   type="range"
+                  aria-label="TrueTime Bound ε (ms)"
                   min={1}
                   max={50}
                   step={1}

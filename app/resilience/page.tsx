@@ -222,6 +222,7 @@ export default function ResilienceLabPage() {
               </div>
               <input
                 type="range"
+                aria-label="Circuit Breaker Error Trip Threshold (%)"
                 min={20}
                 max={80}
                 step={5}
@@ -239,6 +240,7 @@ export default function ResilienceLabPage() {
               </div>
               <input
                 type="range"
+                aria-label="Bulkhead Max Worker Allocation (%)"
                 min={20}
                 max={55}
                 step={5}
