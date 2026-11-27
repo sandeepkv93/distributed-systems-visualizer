@@ -25,7 +25,7 @@ export default function WireLogDrawer({
   scenario,
   frames,
   invariants = [],
-  className = 'top-16 right-4',
+  className = 'top-3.5 right-[114px]',
 }: WireLogDrawerProps) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);

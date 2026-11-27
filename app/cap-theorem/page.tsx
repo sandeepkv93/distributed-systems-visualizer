@@ -323,6 +323,7 @@ export default function CAPTheoremPage() {
           <WireLogDrawer
             protocol={`CAP Theorem (${selectedCombination ?? 'CP'} Partition Proof)`}
             scenario={selectedCombination ?? 'CP'}
+            className="top-3.5 right-4"
             invariants={evaluateCAPInvariants(selectedCombination)}
             frames={capTraceFrames}
           />
