@@ -287,7 +287,7 @@ export default function RaftPage() {
           />
 
           {scopeMode === 'topology' ? (
-            <svg ref={svgRef} viewBox="0 0 840 640" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+            <svg ref={svgRef} role="group" aria-label="Raft consensus leader election and log replication cluster topology diagram" viewBox="0 0 840 640" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
               <ScopeDefs idPrefix="raft" />
 
               {/* Subtle cluster topology mesh */}

@@ -319,7 +319,7 @@ export default function DistributedTransactionsPage() {
           />
 
           {scopeMode === 'topology' ? (
-          <svg ref={svgRef} viewBox="0 0 920 560" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+          <svg ref={svgRef} role="group" aria-label="Distributed transactions and Saga compensation workflow diagram" viewBox="0 0 920 560" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
             <ScopeDefs idPrefix="dtx" />
 
             {/* Band labels & divider */}

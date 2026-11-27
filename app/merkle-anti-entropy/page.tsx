@@ -233,7 +233,7 @@ export default function MerkleAntiEntropyPage() {
           />
 
           {scopeMode === 'topology' ? (
-            <svg ref={svgRef} viewBox="0 0 840 420" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+            <svg ref={svgRef} role="group" aria-label="Merkle tree anti-entropy digest comparison and divergence diagram" viewBox="0 0 840 420" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
               <ScopeDefs idPrefix="merkle" />
 
               {/* Sync channel rail between replicas */}

@@ -335,7 +335,7 @@ export default function CAPTheoremPage() {
           />
 
           {scopeMode === 'topology' ? (
-          <svg ref={svgRef} viewBox="0 0 800 660" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+          <svg ref={svgRef} role="group" aria-label="CAP theorem consistency, availability, and partition tolerance interactive triangle diagram" viewBox="0 0 800 660" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
             {/* Subtle geometric altitude construction lines */}
             <g stroke="rgba(244,240,232,0.08)" strokeWidth="1" strokeDasharray="3 5">
               <line x1={triangleVertices.C.x} y1={triangleVertices.C.y} x2={midpoints.AP.x} y2={midpoints.AP.y} />

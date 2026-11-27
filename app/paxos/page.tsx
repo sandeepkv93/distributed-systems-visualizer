@@ -300,7 +300,7 @@ export default function PaxosPage() {
           />
 
           {scopeMode === 'topology' ? (
-            <svg ref={svgRef} viewBox="0 0 820 620" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+            <svg ref={svgRef} role="group" aria-label="Paxos proposers, acceptors, and learners consensus message diagram" viewBox="0 0 820 620" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
               <ScopeDefs idPrefix="paxos" />
 
               {/* Architectural role swimlanes */}

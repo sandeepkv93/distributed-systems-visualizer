@@ -227,7 +227,7 @@ export default function ShardingRebalancingPage() {
           />
 
           {scopeMode === 'topology' ? (
-          <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+          <svg ref={svgRef} role="group" aria-label="Sharding and range/hash partition rebalancing cluster diagram" viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
             <ScopeDefs idPrefix="shard" />
 
             {/* Shard cluster ring */}

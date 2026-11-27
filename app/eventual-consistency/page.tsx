@@ -321,7 +321,7 @@ export default function EventualConsistencyPage() {
           />
 
           {scopeMode === 'topology' ? (
-          <svg ref={svgRef} viewBox="0 0 840 700" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+          <svg ref={svgRef} role="group" aria-label="Eventual consistency multi-replica propagation and anti-entropy topology diagram" viewBox="0 0 840 700" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
             <ScopeDefs idPrefix="ec" />
 
             {/* Subtle replication ring hairlines */}

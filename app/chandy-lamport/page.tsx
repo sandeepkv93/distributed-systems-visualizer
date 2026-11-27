@@ -231,7 +231,7 @@ export default function ChandyLamportPage() {
           />
 
           {scopeMode === 'topology' ? (
-            <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+            <svg ref={svgRef} role="group" aria-label="Chandy-Lamport distributed snapshot topology and marker propagation diagram" viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
               <ScopeDefs idPrefix="cl" />
 
               {nodes.map((a, i) =>

@@ -307,7 +307,7 @@ export default function DistributedLockingPage() {
           />
 
           {scopeMode === 'topology' ? (
-            <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+            <svg ref={svgRef} role="group" aria-label="Distributed locking lease, fencing token, and lock manager topology diagram" viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
               <ScopeDefs idPrefix="lock" />
 
               {/* Spokes from lock manager to clients */}

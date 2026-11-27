@@ -388,7 +388,7 @@ export default function TwoPhaseCommitPage() {
           />
 
           {scopeMode === 'topology' ? (
-            <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+            <svg ref={svgRef} role="group" aria-label="Two-phase commit coordinator and participant prepare-commit topology diagram" viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
               <ScopeDefs idPrefix="tpc" />
 
               {/* Coordinator-to-participant topology links */}

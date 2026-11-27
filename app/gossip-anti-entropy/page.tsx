@@ -285,7 +285,7 @@ export default function GossipAntiEntropyPage() {
           />
 
           {scopeMode === 'topology' ? (
-            <svg ref={svgRef} viewBox="0 0 840 700" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+            <svg ref={svgRef} role="group" aria-label="Gossip epidemic anti-entropy peer dissemination topology diagram" viewBox="0 0 840 700" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
               <ScopeDefs idPrefix="gossip" />
 
               {/* Peer mesh hairlines */}

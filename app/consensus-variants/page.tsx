@@ -282,7 +282,7 @@ export default function ConsensusVariantsPage() {
           />
 
           {scopeMode === 'topology' ? (
-          <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+          <svg ref={svgRef} role="group" aria-label="Consensus variants cluster topology and replication flow diagram" viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
             <ScopeDefs idPrefix="cvar" />
 
             {/* Mesh links */}

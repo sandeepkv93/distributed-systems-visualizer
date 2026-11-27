@@ -274,7 +274,7 @@ export default function ConsistentHashingPage() {
           />
 
           {scopeMode === 'topology' ? (
-          <svg ref={svgRef} viewBox="0 0 820 700" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+          <svg ref={svgRef} role="group" aria-label="Consistent hashing 2^32 ring topology with virtual node pins and key placement" viewBox="0 0 820 700" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
             {/* Outer calibrated compass ticks (24 divisions around 2^32 space) */}
             {Array.from({ length: 24 }, (_, idx) => {
               const angle = (idx / 24) * 2 * Math.PI - Math.PI / 2;

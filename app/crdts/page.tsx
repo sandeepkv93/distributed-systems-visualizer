@@ -285,7 +285,7 @@ export default function CRDTsPage() {
           />
 
           {scopeMode === 'topology' ? (
-          <svg ref={svgRef} viewBox="0 0 880 340" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+          <svg ref={svgRef} role="group" aria-label="Conflict-free replicated data types replica convergence topology diagram" viewBox="0 0 880 340" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
             <ScopeDefs idPrefix="crdt" />
 
             {/* Lattice sync bus */}

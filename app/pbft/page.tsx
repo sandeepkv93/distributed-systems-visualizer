@@ -264,7 +264,7 @@ export default function PBFTPage() {
           />
 
           {scopeMode === 'topology' ? (
-            <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+            <svg ref={svgRef} role="group" aria-label="Practical Byzantine Fault Tolerance 3f+1 replica consensus phase diagram" viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
               <ScopeDefs idPrefix="pbft" />
 
               {/* Full Byzantine all-to-all mesh */}

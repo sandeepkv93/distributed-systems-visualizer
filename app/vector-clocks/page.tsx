@@ -335,7 +335,7 @@ export default function VectorClocksPage() {
             </div>
           ) : (
             <>
-              <svg ref={svgRef} className="hidden" width="1200" height="800" viewBox="0 0 1200 800">
+              <svg ref={svgRef} aria-hidden="true" className="hidden" width="1200" height="800" viewBox="0 0 1200 800">
                 <rect width="1200" height="800" fill="#111413" />
                 <text x="40" y="70" fill="#F4F0E8" fontSize="38" fontWeight="700">
                   Vector Clocks
@@ -442,6 +442,7 @@ export default function VectorClocksPage() {
                         {/* Causal message arrow */}
                         {event.type === 'send' && event.relatedEvent && (
                           <svg
+                            aria-hidden="true"
                             className="absolute pointer-events-none"
                             style={{
                               left: '16px',

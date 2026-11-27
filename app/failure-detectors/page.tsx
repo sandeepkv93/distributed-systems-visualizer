@@ -297,7 +297,7 @@ export default function FailureDetectorsPage() {
           />
 
           {scopeMode === 'topology' ? (
-          <svg ref={svgRef} viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+          <svg ref={svgRef} role="group" aria-label="Phi accrual failure detector heartbeat and suspicion topology diagram" viewBox="0 0 840 680" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
             <ScopeDefs idPrefix="fd" />
 
             {/* SWIM membership mesh hairlines */}

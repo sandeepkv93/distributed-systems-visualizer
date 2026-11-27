@@ -259,7 +259,7 @@ export default function ReplicationLogPage() {
           />
 
           {scopeMode === 'topology' ? (
-            <svg ref={svgRef} viewBox="0 0 840 360" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+            <svg ref={svgRef} role="group" aria-label="Write-ahead replication log leader-follower offset and commit index diagram" viewBox="0 0 840 360" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
               <ScopeDefs idPrefix="repllog" />
 
               {/* Replication bus rail */}
