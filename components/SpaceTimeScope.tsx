@@ -113,6 +113,17 @@ export default function SpaceTimeScope({
 }: SpaceTimeScopeProps) {
   const [selectedFrameId, setSelectedFrameId] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!selectedFrameId) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSelectedFrameId(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedFrameId]);
+
   const layout = useMemo(
     () => computeSpaceTimeLayout(actors, frames, { width: 880, maxFrames: 16 }),
     [actors, frames]
@@ -368,9 +379,13 @@ export default function SpaceTimeScope({
         })}
       </svg>
 
-      {/* Selected Packet Frame Inspector Strip */}
+      {/* Selected Packet Frame Inspector Strip (positioned cleanly above ChaosStrip) */}
       {selectedArrow && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-[min(92%,520px)] bg-[#151917]/95 backdrop-blur-md border border-[rgba(244,240,232,0.28)] px-3.5 py-2.5 font-mono text-xs text-[#F4F0E8] shadow-xl flex items-center justify-between gap-3">
+        <div
+          role="region"
+          aria-label="Selected packet frame details"
+          className="absolute bottom-14 left-1/2 -translate-x-1/2 z-30 w-[min(92%,520px)] bg-[#151917]/95 backdrop-blur-md border border-[rgba(244,240,232,0.28)] px-3.5 py-2.5 font-mono text-xs text-[#F4F0E8] shadow-xl flex items-center justify-between gap-3"
+        >
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-[#9E9B90]">
               <span>Frame T{String(selectedArrow.seq).padStart(2, '0')}</span>
@@ -403,6 +418,7 @@ export default function SpaceTimeScope({
             onClick={() => setSelectedFrameId(null)}
             className="text-[#9E9B90] hover:text-[#F4F0E8] cursor-pointer flex-shrink-0"
             aria-label="Close frame inspector"
+            title="Close (Esc)"
           >
             <X className="w-4 h-4" />
           </button>
