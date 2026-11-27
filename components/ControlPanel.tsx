@@ -619,8 +619,8 @@ export default function ControlPanel({
           </div>
 
           {totalEvents > 0 && onJumpToStep ? (
-            <div className="relative h-5 flex items-center">
-              <div className="w-full bg-[var(--paper-elevated)] border border-[var(--rule)] h-2 overflow-hidden pointer-events-none">
+            <div className="group relative h-5 flex items-center has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[var(--signal)] has-[:focus-visible]:outline-offset-2">
+              <div className="w-full bg-[var(--paper-elevated)] border border-[var(--rule)] group-hover:border-[var(--ink)] h-2 overflow-hidden pointer-events-none transition-colors">
                 <div
                   className={`h-full transition-all duration-150 ${
                     isComplete ? 'bg-[var(--emerald)]' : 'bg-[var(--signal)]'
@@ -628,6 +628,11 @@ export default function ControlPanel({
                   style={{ width: `${progress}%` }}
                 />
               </div>
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-3.5 bg-[var(--ink)] border border-[var(--paper-elevated)] opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity"
+                style={{ left: `${progress}%` }}
+              />
               <input
                 type="range"
                 min={0}
@@ -636,6 +641,13 @@ export default function ControlPanel({
                 value={resolvedIndex}
                 onChange={(e) => onJumpToStep(Number(e.target.value))}
                 aria-label="Scrub simulation timeline"
+                aria-valuetext={
+                  resolvedIndex === 0
+                    ? `Initial state (0 of ${totalEvents} steps)`
+                    : `Step ${resolvedIndex} of ${totalEvents}${
+                        lastExecutedEvent ? `: ${lastExecutedEvent.description}` : ''
+                      }`
+                }
                 title="Drag or click to scrub directly to any step"
                 className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize"
               />
