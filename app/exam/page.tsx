@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
   Award,
@@ -39,10 +39,66 @@ export default function ExamPage() {
   const answeredCount = result.answeredCount;
   const isAlreadyFellow = stats.examBestScore >= EXAM_PASS_THRESHOLD;
 
-  const handleSelectOption = (questionId: string, optionIndex: number) => {
-    if (submitted) return;
-    setAnswers((prev) => ({ ...prev, [questionId]: optionIndex }));
-  };
+  const handleSelectOption = useCallback(
+    (questionId: string, optionIndex: number) => {
+      if (submitted) return;
+      setAnswers((prev) => ({ ...prev, [questionId]: optionIndex }));
+    },
+    [submitted]
+  );
+
+  // Focus Mode keyboard flow: 1-4 / A-D select option, Left/Right navigate questions
+  useEffect(() => {
+    if (submitted || viewMode !== 'focus') return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (document.querySelector('[role="dialog"][aria-modal="true"]')) {
+        return;
+      }
+
+      const activeQuestion = EXAM_QUESTIONS[activeIndex];
+      if (!activeQuestion) return;
+
+      const key = event.key.toLowerCase();
+      const optionIdx =
+        key === '1' || key === 'a'
+          ? 0
+          : key === '2' || key === 'b'
+          ? 1
+          : key === '3' || key === 'c'
+          ? 2
+          : key === '4' || key === 'd'
+          ? 3
+          : -1;
+
+      if (optionIdx >= 0 && optionIdx < activeQuestion.options.length) {
+        event.preventDefault();
+        handleSelectOption(activeQuestion.id, optionIdx);
+      } else if (event.key === 'ArrowRight' && activeIndex < EXAM_QUESTIONS.length - 1) {
+        event.preventDefault();
+        setActiveIndex((i) => Math.min(EXAM_QUESTIONS.length - 1, i + 1));
+      } else if (event.key === 'ArrowLeft' && activeIndex > 0) {
+        event.preventDefault();
+        setActiveIndex((i) => Math.max(0, i - 1));
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [submitted, viewMode, activeIndex, handleSelectOption]);
 
   const handleSubmit = () => {
     const graded = gradeExam(answers);
@@ -138,9 +194,14 @@ export default function ExamPage() {
           </div>
           <div className="lg:col-span-4 flex flex-wrap lg:justify-end gap-2">
             {!submitted && (
-              <div className="inline-flex border border-[var(--ink)] bg-[var(--paper-elevated)] font-mono text-[11px] uppercase tracking-wider">
+              <div
+                role="group"
+                aria-label="Exam display mode"
+                className="inline-flex border border-[var(--ink)] bg-[var(--paper-elevated)] font-mono text-[11px] uppercase tracking-wider"
+              >
                 <button
                   type="button"
+                  aria-pressed={viewMode === 'focus'}
                   onClick={() => setViewMode('focus')}
                   className={`inline-flex items-center gap-1.5 px-3 py-2 cursor-pointer transition-colors ${
                     viewMode === 'focus'
@@ -153,6 +214,7 @@ export default function ExamPage() {
                 </button>
                 <button
                   type="button"
+                  aria-pressed={viewMode === 'booklet'}
                   onClick={() => setViewMode('booklet')}
                   className={`inline-flex items-center gap-1.5 px-3 py-2 cursor-pointer transition-colors ${
                     viewMode === 'booklet'
@@ -295,6 +357,7 @@ export default function ExamPage() {
                 <button
                   key={q.id}
                   type="button"
+                  aria-current={isCurrent ? 'step' : undefined}
                   onClick={() => {
                     setActiveIndex(idx);
                     if (submitted) {
@@ -303,7 +366,7 @@ export default function ExamPage() {
                     }
                   }}
                   className={`w-8 h-8 font-mono text-xs font-semibold border transition-colors cursor-pointer tabular-nums ${btnStyle}`}
-                  aria-label={`Jump to question ${q.number}`}
+                  aria-label={`Jump to question ${q.number}${isAnswered ? ' (answered)' : ''}`}
                 >
                   {q.number}
                 </button>
@@ -312,7 +375,11 @@ export default function ExamPage() {
           </div>
 
           <div className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-wider">
-            <span className="text-[var(--ink-secondary)] tabular-nums">
+            <span
+              className="text-[var(--ink-secondary)] tabular-nums"
+              aria-live="polite"
+              aria-atomic="true"
+            >
               {answeredCount}/{TOTAL_EXAM_QUESTIONS} Answered
             </span>
             {!submitted && (
@@ -365,7 +432,11 @@ export default function ExamPage() {
                   </h2>
 
                   {/* 4 Options */}
-                  <div className="space-y-2.5">
+                  <div
+                    role="group"
+                    aria-label={`Answer choices for question ${question.number}`}
+                    className="space-y-2.5"
+                  >
                     {question.options.map((optionText, optIdx) => {
                       const isPicked = selected === optIdx;
                       const isRightOption = optIdx === question.correctIndex;
@@ -402,6 +473,7 @@ export default function ExamPage() {
                           key={optIdx}
                           type="button"
                           disabled={submitted}
+                          aria-pressed={isPicked}
                           onClick={() => handleSelectOption(question.id, optIdx)}
                           className={`w-full text-left p-3.5 border flex items-start gap-3.5 transition-colors ${
                             submitted ? 'cursor-default' : 'cursor-pointer'
@@ -470,10 +542,11 @@ export default function ExamPage() {
 
                   {/* Focus Mode Footer Navigation */}
                   {!submitted && viewMode === 'focus' && (
-                    <div className="pt-3 border-t border-[var(--rule)] flex items-center justify-between gap-3">
+                    <div className="pt-3 border-t border-[var(--rule)] flex flex-wrap items-center justify-between gap-3">
                       <button
                         type="button"
                         disabled={qIndex === 0}
+                        title="Previous question (←)"
                         onClick={() => setActiveIndex((i) => Math.max(0, i - 1))}
                         className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-[var(--rule)] hover:border-[var(--ink)] disabled:opacity-40 disabled:cursor-not-allowed font-mono text-xs uppercase tracking-wider text-[var(--ink)] cursor-pointer transition-colors"
                       >
@@ -481,9 +554,14 @@ export default function ExamPage() {
                         <span>Previous</span>
                       </button>
 
+                      <span className="hidden sm:inline font-mono text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">
+                        Keys: A–D / 1–4 select · ← / → switch
+                      </span>
+
                       {qIndex < EXAM_QUESTIONS.length - 1 ? (
                         <button
                           type="button"
+                          title="Next question (→)"
                           onClick={() =>
                             setActiveIndex((i) => Math.min(EXAM_QUESTIONS.length - 1, i + 1))
                           }
