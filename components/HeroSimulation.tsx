@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Scissors, Plus, RotateCcw } from 'lucide-react';
 
@@ -39,6 +39,15 @@ export default function HeroSimulation() {
   const [commitIndex, setCommitIndex] = useState(3);
   const [pulses, setPulses] = useState<PulsePacket[]>([]);
   const [lastTrace, setLastTrace] = useState('Leader N1 replicating heartbeats · Quorum 5/5');
+  const pulseTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+
+  useEffect(() => {
+    const timers = pulseTimersRef.current;
+    return () => {
+      timers.forEach((timer) => clearTimeout(timer));
+      timers.clear();
+    };
+  }, []);
 
   const getReachablePeers = useCallback(
     (source: MiniNode, allNodes: MiniNode[], isPartitioned: boolean) => {
@@ -113,17 +122,20 @@ export default function HeroSimulation() {
         }));
       if (newPulses.length === 0) return;
       setPulses((prev) => [...prev.slice(-8), ...newPulses]);
-      setTimeout(() => {
+      const timer = setTimeout(() => {
+        pulseTimersRef.current.delete(timer);
         setPulses((prev) => prev.filter((p) => !p.id.startsWith(batchId)));
       }, 850);
+      pulseTimersRef.current.add(timer);
     },
     []
   );
 
-  // Periodic subtle heartbeat from active leader
+  // Periodic subtle heartbeat from active leader (paused when browser tab is hidden)
   useEffect(() => {
     if (!leaderId) return;
     const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
       const leader = nodes.find((n) => n.id === leaderId && n.alive);
       if (!leader) return;
       const reachable = getReachablePeers(leader, nodes, partitioned);

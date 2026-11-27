@@ -14,7 +14,7 @@ export default function ToastContainer() {
     const timers = new Map<string, ReturnType<typeof setTimeout>>();
 
     const unsubscribe = subscribeToasts((toast) => {
-      setToasts((prev) => [...prev, toast]);
+      setToasts((prev) => [...prev, toast].slice(-3));
       const timer = setTimeout(() => {
         setToasts((prev) => prev.filter((item) => item.id !== toast.id));
         timers.delete(toast.id);
@@ -55,7 +55,7 @@ export default function ToastContainer() {
 
   return (
     <div
-      className="fixed top-[68px] right-4 z-[60] flex flex-col gap-2 max-w-sm pointer-events-none"
+      className="fixed top-[68px] left-4 right-4 sm:left-auto sm:right-4 z-[60] flex flex-col gap-2 sm:max-w-sm pointer-events-none"
       aria-live="polite"
       role="status"
     >

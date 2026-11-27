@@ -23,7 +23,7 @@ export default function AchievementToast() {
         toastKey: `${achievement.id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       }));
 
-      setToasts((prev) => [...prev, ...newItems]);
+      setToasts((prev) => [...prev, ...newItems].slice(-3));
 
       newItems.forEach((item) => {
         const timer = setTimeout(() => {
@@ -47,7 +47,7 @@ export default function AchievementToast() {
 
   return (
     <div
-      className="fixed bottom-4 right-4 z-[60] flex flex-col gap-2 max-w-sm pointer-events-none"
+      className="fixed bottom-14 left-4 right-4 sm:left-auto sm:right-4 z-[60] flex flex-col gap-2 sm:max-w-sm pointer-events-none"
       aria-live="polite"
     >
       <AnimatePresence>
