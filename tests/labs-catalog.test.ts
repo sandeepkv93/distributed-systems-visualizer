@@ -9,6 +9,7 @@ import {
   filterLabs,
   getCategoryCounts,
   getLabByPath,
+  getLabContextForPath,
   getLabsByCategory,
 } from '../lib/labs-catalog';
 import { CONCEPTS_CATALOG } from '../lib/catalog';
@@ -88,5 +89,13 @@ describe('Unified Labs & Workbenches Catalog', () => {
     assert.ok(storageMatches.some((l) => l.id === 'storage'));
     assert.ok(storageMatches.some((l) => l.id === 'sketches'));
     assert.ok(storageMatches.every((l) => l.categoryId === 'storage-data'));
+
+    for (const lab of LABS_CATALOG) {
+      const ctx = getLabContextForPath(lab.path);
+      assert.ok(ctx, `Missing navigation context for ${lab.path}`);
+      assert.equal(ctx.lab.id, lab.id);
+      assert.equal(ctx.siblings[ctx.index].id, lab.id);
+    }
+    assert.equal(getLabContextForPath('/nonexistent-lab'), null);
   });
 });

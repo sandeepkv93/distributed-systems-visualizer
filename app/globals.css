@@ -392,6 +392,80 @@ main[data-view="visualizer"] svg text {
 }
 
 /* ==========================================================================
+   BESPOKE SWISS-INSTRUMENT FORM CONTROLS
+   Replaces browser-default range sliders and check controls across all 27
+   labs with archival ink & Signal Vermilion calibrated hardware controls.
+   ========================================================================== */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--signal);
+}
+
+input[type="range"]:not(.opacity-0) {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  min-height: 28px;
+}
+
+input[type="range"]:not(.opacity-0)::-webkit-slider-runnable-track {
+  height: 5px;
+  background: var(--chassis-deep);
+  border: 1px solid rgba(22, 22, 20, 0.28);
+  border-radius: 0;
+}
+
+input[type="range"]:not(.opacity-0)::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  margin-top: -6px;
+  background: var(--ink);
+  border: 2px solid var(--paper-elevated);
+  box-shadow: 0 0 0 1px var(--ink);
+  border-radius: 0;
+  transition: background-color 140ms ease, transform 140ms ease;
+}
+
+input[type="range"]:not(.opacity-0):hover::-webkit-slider-thumb,
+input[type="range"]:not(.opacity-0):active::-webkit-slider-thumb {
+  background: var(--signal);
+  box-shadow: 0 0 0 1px var(--signal);
+  transform: scale(1.08);
+}
+
+input[type="range"]:not(.opacity-0)::-moz-range-track {
+  height: 5px;
+  background: var(--chassis-deep);
+  border: 1px solid rgba(22, 22, 20, 0.28);
+  border-radius: 0;
+}
+
+input[type="range"]:not(.opacity-0)::-moz-range-thumb {
+  width: 15px;
+  height: 15px;
+  background: var(--ink);
+  border: 2px solid var(--paper-elevated);
+  box-shadow: 0 0 0 1px var(--ink);
+  border-radius: 0;
+  transition: background-color 140ms ease, transform 140ms ease;
+}
+
+input[type="range"]:not(.opacity-0):hover::-moz-range-thumb,
+input[type="range"]:not(.opacity-0):active::-moz-range-thumb {
+  background: var(--signal);
+  box-shadow: 0 0 0 1px var(--signal);
+  transform: scale(1.08);
+}
+
+/* Smooth momentum scrolling for wide comparison tables on touch viewports */
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ==========================================================================
    KEYBOARD FOCUS & REDUCED MOTION ACCESSIBILITY
    ========================================================================== */
 :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {

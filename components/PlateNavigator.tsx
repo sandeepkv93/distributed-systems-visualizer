@@ -15,7 +15,7 @@ export default function PlateNavigator({ conceptId }: { conceptId: string }) {
   return (
     <nav
       aria-label="Track plate navigation"
-      className="h-10 px-4 bg-[var(--paper-elevated)] border-t border-[var(--rule)] flex items-center justify-between gap-4 font-mono text-[11px]"
+      className="min-h-11 px-4 sm:px-6 py-2 bg-[var(--paper-elevated)] border-t border-[var(--rule)] flex items-center justify-between gap-4 font-mono text-[11px] print-hide"
     >
       {/* Previous Plate */}
       <div className="min-w-0 flex-1">

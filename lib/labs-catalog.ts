@@ -543,6 +543,35 @@ export function getLabByPath(path: string): LabCatalogEntry | null {
   return LABS_BY_PATH.get(normalized) ?? null;
 }
 
+export interface LabNavigationContext {
+  lab: LabCatalogEntry;
+  category: LabCategory;
+  siblings: readonly LabCatalogEntry[];
+  index: number;
+  total: number;
+  prev: LabCatalogEntry | null;
+  next: LabCatalogEntry | null;
+}
+
+export function getLabContextForPath(path: string): LabNavigationContext | null {
+  const lab = getLabByPath(path);
+  if (!lab) return null;
+  const category = LAB_CATEGORIES_BY_ID.get(lab.categoryId);
+  if (!category) return null;
+  const siblings = LABS_CATALOG.filter((item) => item.categoryId === lab.categoryId);
+  const index = siblings.findIndex((item) => item.id === lab.id);
+  if (index === -1) return null;
+  return {
+    lab,
+    category,
+    siblings,
+    index,
+    total: siblings.length,
+    prev: index > 0 ? siblings[index - 1] : null,
+    next: index < siblings.length - 1 ? siblings[index + 1] : null,
+  };
+}
+
 export function getLabsByCategory(categoryId: LabCategoryId): LabCatalogEntry[] {
   return LABS_CATALOG.filter((lab) => lab.categoryId === categoryId);
 }
