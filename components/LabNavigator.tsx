@@ -27,6 +27,9 @@ export default function LabNavigator({ path }: { path: string }) {
       ) {
         return;
       }
+      if (document.querySelector('[role="dialog"][aria-modal="true"]')) {
+        return;
+      }
       if (event.key === '[' && prevPath) {
         event.preventDefault();
         router.push(prevPath);

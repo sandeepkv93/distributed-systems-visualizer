@@ -220,6 +220,10 @@ export default function ControlPanel({
         return;
       }
 
+      if (document.querySelector('[role="dialog"][aria-modal="true"]')) {
+        return;
+      }
+
       if (event.code === 'Space') {
         if (isPlaying) {
           event.preventDefault();

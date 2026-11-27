@@ -34,6 +34,9 @@ export function ScopeModeToggle({ mode, onChange, frameCount }: ScopeModeToggleP
       ) {
         return;
       }
+      if (document.querySelector('[role="dialog"][aria-modal="true"]')) {
+        return;
+      }
       if (event.key === 's' || event.key === 'S') {
         event.preventDefault();
         onChange(mode === 'topology' ? 'spacetime' : 'topology');
