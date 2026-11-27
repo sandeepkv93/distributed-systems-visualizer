@@ -160,7 +160,7 @@ export default function WireTapInspector({
 
 export function WireTapHint({ text = 'Click any node to open Wire Tap' }: { text?: string }) {
   return (
-    <div className="hidden sm:inline-flex absolute bottom-4 left-4 z-10 pointer-events-none items-center gap-2 px-2.5 py-1 bg-[#151917]/88 border border-[rgba(244,240,232,0.16)] font-mono text-[10px] uppercase tracking-[0.1em] text-[#C8C3B8]">
+    <div className="hidden sm:inline-flex absolute top-[52px] left-3 sm:left-4 z-10 pointer-events-none items-center gap-2 px-2.5 py-1 bg-[#151917]/88 border border-[rgba(244,240,232,0.16)] font-mono text-[10px] uppercase tracking-[0.1em] text-[#C8C3B8]">
       <Radio className="w-3 h-3 text-[#D9441E]" />
       <span>{text}</span>
     </div>
