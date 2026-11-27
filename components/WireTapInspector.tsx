@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
 import { Radio, X } from 'lucide-react';
 
 export interface WireTapMetric {
@@ -54,6 +54,16 @@ export default function WireTapInspector({
   className = 'top-4 right-4',
   children,
 }: WireTapInspectorProps) {
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   const dotColor =
     status === 'failed'
       ? 'bg-[#EF4444]'
@@ -67,7 +77,7 @@ export default function WireTapInspector({
 
   return (
     <div
-      className={`absolute ${className} z-20 w-72 sm:w-80 bg-[#151917]/95 backdrop-blur-md border border-[rgba(244,240,232,0.24)] shadow-[0_14px_36px_rgba(0,0,0,0.55)] text-[#F4F0E8] font-mono`}
+      className={`absolute ${className} z-20 w-72 sm:w-80 max-w-[calc(100%-2rem)] bg-[#151917]/95 backdrop-blur-md border border-[rgba(244,240,232,0.24)] shadow-[0_14px_36px_rgba(0,0,0,0.55)] text-[#F4F0E8] font-mono`}
       role="region"
       aria-label={`Wire Tap Inspector: ${title}`}
     >
@@ -85,6 +95,7 @@ export default function WireTapInspector({
           onClick={onClose}
           className="text-[#9E9B90] hover:text-[#F4F0E8] transition-colors cursor-pointer"
           aria-label="Close Wire Tap inspector"
+          title="Close (Esc)"
         >
           <X className="w-3.5 h-3.5" />
         </button>
@@ -149,7 +160,7 @@ export default function WireTapInspector({
 
 export function WireTapHint({ text = 'Click any node to open Wire Tap' }: { text?: string }) {
   return (
-    <div className="absolute top-3.5 left-4 z-10 pointer-events-none inline-flex items-center gap-2 px-2.5 py-1 bg-[#151917]/85 border border-[rgba(244,240,232,0.16)] font-mono text-[10px] uppercase tracking-[0.1em] text-[#9E9B90]">
+    <div className="hidden sm:inline-flex absolute bottom-4 left-4 z-10 pointer-events-none items-center gap-2 px-2.5 py-1 bg-[#151917]/88 border border-[rgba(244,240,232,0.16)] font-mono text-[10px] uppercase tracking-[0.1em] text-[#C8C3B8]">
       <Radio className="w-3 h-3 text-[#D9441E]" />
       <span>{text}</span>
     </div>

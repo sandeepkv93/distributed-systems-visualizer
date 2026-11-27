@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Download, Share2, Copy, FileJson, Image as ImageIcon, Link2, Check } from 'lucide-react';
 import {
   exportAsPNG,
@@ -24,6 +24,26 @@ export default function ExportMenu({ svgRef, concept, currentState }: ExportMenu
   const [isOpen, setIsOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (feedbackTimerRef.current) {
+        clearTimeout(feedbackTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleExportPNG = async () => {
     if (!svgRef.current) return;
@@ -138,7 +158,10 @@ export default function ExportMenu({ svgRef, concept, currentState }: ExportMenu
 
   const showCopyFeedback = (message: string) => {
     setCopyFeedback(message);
-    setTimeout(() => setCopyFeedback(null), 2000);
+    if (feedbackTimerRef.current) {
+      clearTimeout(feedbackTimerRef.current);
+    }
+    feedbackTimerRef.current = setTimeout(() => setCopyFeedback(null), 2000);
   };
 
   return (
@@ -147,6 +170,8 @@ export default function ExportMenu({ svgRef, concept, currentState }: ExportMenu
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
         className="inline-flex items-center gap-2 px-3 py-1.5 bg-[var(--paper-elevated)] text-[var(--ink)] border border-[rgba(22,22,20,0.35)] hover:bg-[var(--ink)] hover:text-[var(--paper-elevated)] hover:border-[var(--ink)] font-mono text-xs uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
         disabled={isExporting}
       >
@@ -158,6 +183,8 @@ export default function ExportMenu({ svgRef, concept, currentState }: ExportMenu
       <AnimatePresence>
         {isOpen && (
           <motion.div
+            role="menu"
+            aria-label="Export and share options"
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
@@ -166,6 +193,7 @@ export default function ExportMenu({ svgRef, concept, currentState }: ExportMenu
           >
             <button
               type="button"
+              role="menuitem"
               onClick={handleExportPNG}
               disabled={isExporting}
               className="w-full px-3.5 py-2 flex items-center gap-3 hover:bg-[var(--chassis)] transition-colors text-left disabled:opacity-50 cursor-pointer"
