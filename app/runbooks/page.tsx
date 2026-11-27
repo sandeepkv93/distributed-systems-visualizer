@@ -9,6 +9,7 @@ import {
   ShieldAlert,
   Terminal,
   Wrench,
+  X,
 } from 'lucide-react';
 import {
   FAILURE_RUNBOOKS,
@@ -70,22 +71,37 @@ export default function RunbooksPage() {
         <section className="mb-8 p-4 border border-[var(--ink)] bg-[var(--paper-elevated)] space-y-3">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
-              <Search className="w-4 h-4 text-[var(--ink-muted)] absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-[var(--ink-muted)] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 aria-label="Search SRE failure runbooks"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search signals, invariants, or symptoms (e.g., ISR, fsync, PREPARED, fencing)..."
-                className="w-full pl-9 pr-3 py-2 bg-[var(--paper)] border border-[var(--rule)] focus:border-[var(--ink)] outline-none font-mono text-xs text-[var(--ink)]"
+                className="w-full pl-9 pr-9 py-2 bg-[var(--paper)] border border-[var(--rule)] focus:border-[var(--ink)] outline-none font-mono text-xs text-[var(--ink)]"
               />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery('')}
+                  aria-label="Clear runbook search"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--ink-muted)] hover:text-[var(--ink)] cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
 
-            <div className="inline-flex border border-[var(--ink)] bg-[var(--paper)] font-mono text-[11px] uppercase">
+            <div
+              role="group"
+              aria-label="Filter runbooks by severity"
+              className="inline-flex border border-[var(--ink)] bg-[var(--paper)] font-mono text-[11px] uppercase"
+            >
               {(['all', 'SEV-1', 'SEV-2'] as const).map((sev) => (
                 <button
                   key={sev}
                   type="button"
+                  aria-pressed={severityFilter === sev}
                   onClick={() => setSeverityFilter(sev)}
                   className={`px-3.5 py-2 cursor-pointer transition-colors ${
                     severityFilter === sev
@@ -101,42 +117,82 @@ export default function RunbooksPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setDomainFilter('all')}
-              className={`px-3 py-1 border font-mono text-[10px] uppercase tracking-wider cursor-pointer transition-colors ${
-                domainFilter === 'all'
-                  ? 'bg-[var(--ink)] text-[#FAF7F1] border-[var(--ink)]'
-                  : 'bg-[var(--paper)] text-[var(--ink-secondary)] border-[var(--rule)] hover:border-[var(--ink)]'
-              }`}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div
+              role="group"
+              aria-label="Filter runbooks by domain"
+              className="flex flex-wrap items-center gap-1.5"
             >
-              All Domains ({FAILURE_RUNBOOKS.length})
-            </button>
-            {CONCEPT_DOMAINS.filter((d) =>
-              FAILURE_RUNBOOKS.some((rb) => rb.domainId === d.id)
-            ).map((domain) => (
               <button
-                key={domain.id}
                 type="button"
-                onClick={() => setDomainFilter(domain.id)}
+                aria-pressed={domainFilter === 'all'}
+                onClick={() => setDomainFilter('all')}
                 className={`px-3 py-1 border font-mono text-[10px] uppercase tracking-wider cursor-pointer transition-colors ${
-                  domainFilter === domain.id
+                  domainFilter === 'all'
                     ? 'bg-[var(--ink)] text-[#FAF7F1] border-[var(--ink)]'
                     : 'bg-[var(--paper)] text-[var(--ink-secondary)] border-[var(--rule)] hover:border-[var(--ink)]'
                 }`}
               >
-                § {domain.index} {domain.shortLabel}
+                All Domains ({FAILURE_RUNBOOKS.length})
               </button>
-            ))}
+              {CONCEPT_DOMAINS.filter((d) =>
+                FAILURE_RUNBOOKS.some((rb) => rb.domainId === d.id)
+              ).map((domain) => (
+                <button
+                  key={domain.id}
+                  type="button"
+                  aria-pressed={domainFilter === domain.id}
+                  onClick={() => setDomainFilter(domain.id)}
+                  className={`px-3 py-1 border font-mono text-[10px] uppercase tracking-wider cursor-pointer transition-colors ${
+                    domainFilter === domain.id
+                      ? 'bg-[var(--ink)] text-[#FAF7F1] border-[var(--ink)]'
+                      : 'bg-[var(--paper)] text-[var(--ink-secondary)] border-[var(--rule)] hover:border-[var(--ink)]'
+                  }`}
+                >
+                  § {domain.index} {domain.shortLabel}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 font-mono text-[11px] text-[var(--ink-secondary)]">
+              <span className="tabular-nums" aria-live="polite" aria-atomic="true">
+                Showing <strong className="text-[var(--ink)]">{visibleRunbooks.length}</strong> of{' '}
+                {FAILURE_RUNBOOKS.length}
+              </span>
+              {(query.trim() !== '' || severityFilter !== 'all' || domainFilter !== 'all') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery('');
+                    setSeverityFilter('all');
+                    setDomainFilter('all');
+                  }}
+                  className="px-2 py-0.5 border border-[var(--rule)] hover:border-[var(--ink)] text-[10px] uppercase tracking-wider text-[var(--signal)] cursor-pointer"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
           </div>
         </section>
 
         {/* Runbook Cards */}
         <div className="space-y-6">
           {visibleRunbooks.length === 0 ? (
-            <div className="p-10 border border-[var(--rule)] bg-[var(--paper-elevated)] text-center font-mono text-xs text-[var(--ink-muted)]">
-              No runbooks match your current filter. Try clearing the search query.
+            <div className="p-10 border border-[var(--rule)] bg-[var(--paper-elevated)] text-center space-y-3">
+              <p className="font-mono text-xs text-[var(--ink-muted)]">
+                No runbooks match your current filter. Try clearing the search query.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery('');
+                  setSeverityFilter('all');
+                  setDomainFilter('all');
+                }}
+                className="px-3.5 py-1.5 bg-[var(--ink)] text-[var(--paper-elevated)] font-mono text-[11px] uppercase tracking-wider cursor-pointer"
+              >
+                Reset Filters
+              </button>
             </div>
           ) : (
             visibleRunbooks.map((rb) => {

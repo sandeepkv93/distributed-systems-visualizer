@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
-import { BookOpen, ArrowUpRight, Search, Scale, Printer } from 'lucide-react';
+import { BookOpen, ArrowUpRight, Search, Scale, Printer, X } from 'lucide-react';
 import {
   BIBLIOGRAPHY,
   PAPER_DECADES,
@@ -89,13 +89,28 @@ export default function BibliographyPage() {
                 placeholder="Filter by author, theorem, venue, or year..."
                 className="w-full bg-transparent text-xs font-mono text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus:outline-none"
               />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery('')}
+                  aria-label="Clear paper search"
+                  className="text-[var(--ink-muted)] hover:text-[var(--ink)] cursor-pointer flex-shrink-0"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
 
             {/* Decade Filter */}
-            <div className="flex flex-wrap items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider">
+            <div
+              role="group"
+              aria-label="Filter papers by decade"
+              className="flex flex-wrap items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider"
+            >
               <span className="text-[var(--ink-muted)] mr-1">Decade:</span>
               <button
                 type="button"
+                aria-pressed={selectedDecade === 'all'}
                 onClick={() => setSelectedDecade('all')}
                 className={`px-2.5 py-1 border cursor-pointer transition-colors ${
                   selectedDecade === 'all'
@@ -109,6 +124,7 @@ export default function BibliographyPage() {
                 <button
                   key={decade}
                   type="button"
+                  aria-pressed={selectedDecade === decade}
                   onClick={() => setSelectedDecade(decade)}
                   className={`px-2.5 py-1 border cursor-pointer transition-colors tabular-nums ${
                     selectedDecade === decade
@@ -123,40 +139,80 @@ export default function BibliographyPage() {
           </div>
 
           {/* Domain Filter Row */}
-          <div className="flex flex-wrap items-center gap-1.5 pt-2.5 border-t border-[var(--rule)] font-mono text-[10px] uppercase tracking-wider">
-            <span className="text-[var(--ink-muted)] mr-1">Domain:</span>
-            <button
-              type="button"
-              onClick={() => setSelectedDomain('all')}
-              className={`px-2.5 py-1 border cursor-pointer transition-colors ${
-                selectedDomain === 'all'
-                  ? 'bg-[var(--ink)] text-[var(--paper-elevated)] border-[var(--ink)] font-semibold'
-                  : 'bg-[var(--paper-elevated)] text-[var(--ink-secondary)] border-[var(--rule)] hover:border-[var(--ink)]'
-              }`}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-[var(--rule)]">
+            <div
+              role="group"
+              aria-label="Filter papers by domain"
+              className="flex flex-wrap items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider"
             >
-              All Domains ({BIBLIOGRAPHY.length})
-            </button>
-            {CONCEPT_DOMAINS.map((domain) => (
+              <span className="text-[var(--ink-muted)] mr-1">Domain:</span>
               <button
-                key={domain.id}
                 type="button"
-                onClick={() => setSelectedDomain(domain.id)}
+                aria-pressed={selectedDomain === 'all'}
+                onClick={() => setSelectedDomain('all')}
                 className={`px-2.5 py-1 border cursor-pointer transition-colors ${
-                  selectedDomain === domain.id
-                    ? 'bg-[var(--cobalt)] text-[#FAF7F1] border-[var(--cobalt)] font-semibold'
+                  selectedDomain === 'all'
+                    ? 'bg-[var(--ink)] text-[var(--paper-elevated)] border-[var(--ink)] font-semibold'
                     : 'bg-[var(--paper-elevated)] text-[var(--ink-secondary)] border-[var(--rule)] hover:border-[var(--ink)]'
                 }`}
               >
-                § {domain.index} · {domain.shortLabel}
+                All Domains ({BIBLIOGRAPHY.length})
               </button>
-            ))}
+              {CONCEPT_DOMAINS.map((domain) => (
+                <button
+                  key={domain.id}
+                  type="button"
+                  aria-pressed={selectedDomain === domain.id}
+                  onClick={() => setSelectedDomain(domain.id)}
+                  className={`px-2.5 py-1 border cursor-pointer transition-colors ${
+                    selectedDomain === domain.id
+                      ? 'bg-[var(--cobalt)] text-[#FAF7F1] border-[var(--cobalt)] font-semibold'
+                      : 'bg-[var(--paper-elevated)] text-[var(--ink-secondary)] border-[var(--rule)] hover:border-[var(--ink)]'
+                  }`}
+                >
+                  § {domain.index} · {domain.shortLabel}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 font-mono text-[11px] text-[var(--ink-secondary)]">
+              <span className="tabular-nums" aria-live="polite" aria-atomic="true">
+                Showing <strong className="text-[var(--ink)]">{filteredPapers.length}</strong> of{' '}
+                {BIBLIOGRAPHY.length}
+              </span>
+              {(query.trim() !== '' || selectedDecade !== 'all' || selectedDomain !== 'all') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery('');
+                    setSelectedDecade('all');
+                    setSelectedDomain('all');
+                  }}
+                  className="px-2 py-0.5 border border-[var(--rule)] hover:border-[var(--ink)] text-[10px] uppercase tracking-wider text-[var(--signal)] cursor-pointer"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Chronological Bibliographic Entries */}
         {filteredPapers.length === 0 ? (
-          <div className="border border-[var(--rule)] bg-[var(--paper-elevated)] p-10 text-center font-mono text-xs text-[var(--ink-muted)]">
-            No papers matching the selected filters.
+          <div className="border border-[var(--rule)] bg-[var(--paper-elevated)] p-10 text-center space-y-3">
+            <p className="font-mono text-xs text-[var(--ink-muted)]">
+              No papers matching the selected filters.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setQuery('');
+                setSelectedDecade('all');
+                setSelectedDomain('all');
+              }}
+              className="px-3.5 py-1.5 bg-[var(--ink)] text-[var(--paper-elevated)] font-mono text-[11px] uppercase tracking-wider cursor-pointer"
+            >
+              Reset Filters
+            </button>
           </div>
         ) : (
           <div className="space-y-4">

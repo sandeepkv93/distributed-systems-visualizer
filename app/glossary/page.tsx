@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowUpRight, BookMarked, Search } from 'lucide-react';
+import { ArrowUpRight, BookMarked, Search, X } from 'lucide-react';
 import {
   GLOSSARY_ENTRIES,
   TOTAL_GLOSSARY_TERMS,
@@ -74,21 +74,57 @@ export default function GlossaryPage() {
 
         {/* Search + Domain + A-Z Filter Bar */}
         <section className="mb-8 p-4 border border-[var(--ink)] bg-[var(--paper-elevated)] space-y-3">
-          <div className="relative">
-            <Search className="w-4 h-4 text-[var(--ink-muted)] absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              aria-label="Search glossary terms and formal notation"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search terms, notation, or authors (e.g., FLP, fencing, 3f+1, Lamport, PACELC)..."
-              className="w-full pl-9 pr-3 py-2 bg-[var(--paper)] border border-[var(--rule)] focus:border-[var(--ink)] outline-none font-mono text-xs text-[var(--ink)]"
-            />
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-[var(--ink-muted)] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                aria-label="Search glossary terms and formal notation"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search terms, notation, or authors (e.g., FLP, fencing, 3f+1, Lamport, PACELC)..."
+                className="w-full pl-9 pr-9 py-2 bg-[var(--paper)] border border-[var(--rule)] focus:border-[var(--ink)] outline-none font-mono text-xs text-[var(--ink)]"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery('')}
+                  aria-label="Clear glossary search"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--ink-muted)] hover:text-[var(--ink)] cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-2 font-mono text-[11px] text-[var(--ink-secondary)] flex-shrink-0">
+              <span className="tabular-nums" aria-live="polite" aria-atomic="true">
+                Showing <strong className="text-[var(--ink)]">{visibleEntries.length}</strong> of{' '}
+                {TOTAL_GLOSSARY_TERMS}
+              </span>
+              {(query.trim() !== '' || domainFilter !== 'all' || letterFilter !== 'all') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery('');
+                    setDomainFilter('all');
+                    setLetterFilter('all');
+                  }}
+                  className="px-2 py-1 border border-[var(--rule)] hover:border-[var(--ink)] text-[10px] uppercase tracking-wider text-[var(--signal)] cursor-pointer"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div
+            role="group"
+            aria-label="Filter glossary by domain"
+            className="flex flex-wrap items-center gap-1.5"
+          >
             <button
               type="button"
+              aria-pressed={domainFilter === 'all'}
               onClick={() => setDomainFilter('all')}
               className={`px-3 py-1 border font-mono text-[10px] uppercase tracking-wider cursor-pointer transition-colors ${
                 domainFilter === 'all'
@@ -102,6 +138,7 @@ export default function GlossaryPage() {
               <button
                 key={domain.id}
                 type="button"
+                aria-pressed={domainFilter === domain.id}
                 onClick={() => setDomainFilter(domain.id)}
                 className={`px-3 py-1 border font-mono text-[10px] uppercase tracking-wider cursor-pointer transition-colors ${
                   domainFilter === domain.id
@@ -114,9 +151,14 @@ export default function GlossaryPage() {
             ))}
           </div>
 
-          <div className="flex flex-wrap items-center gap-1 pt-1 border-t border-[var(--rule)]">
+          <div
+            role="group"
+            aria-label="Filter glossary by starting letter"
+            className="flex flex-wrap items-center gap-1 pt-1 border-t border-[var(--rule)]"
+          >
             <button
               type="button"
+              aria-pressed={letterFilter === 'all'}
               onClick={() => setLetterFilter('all')}
               className={`px-2 py-0.5 font-mono text-[10px] uppercase border cursor-pointer ${
                 letterFilter === 'all'
@@ -130,6 +172,7 @@ export default function GlossaryPage() {
               <button
                 key={letter}
                 type="button"
+                aria-pressed={letterFilter === letter}
                 onClick={() => setLetterFilter(letter)}
                 className={`w-6 h-6 font-mono text-[10px] font-semibold border cursor-pointer ${
                   letterFilter === letter
@@ -145,8 +188,21 @@ export default function GlossaryPage() {
 
         {/* Glossary Cards Grid */}
         {visibleEntries.length === 0 ? (
-          <div className="p-10 border border-[var(--rule)] bg-[var(--paper-elevated)] text-center font-mono text-xs text-[var(--ink-muted)]">
-            No glossary entries match your filter.
+          <div className="p-10 border border-[var(--rule)] bg-[var(--paper-elevated)] text-center space-y-3">
+            <p className="font-mono text-xs text-[var(--ink-muted)]">
+              No glossary entries match your filter.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setQuery('');
+                setDomainFilter('all');
+                setLetterFilter('all');
+              }}
+              className="px-3.5 py-1.5 bg-[var(--ink)] text-[var(--paper-elevated)] font-mono text-[11px] uppercase tracking-wider cursor-pointer"
+            >
+              Reset Filters
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
