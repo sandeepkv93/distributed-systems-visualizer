@@ -417,6 +417,53 @@ export default function ProtocolDuelPage() {
     return () => clearTimeout(timer);
   }, [isPlaying, step, totalSteps, duelId, applyDuelState, syncUrl]);
 
+  // Transport keyboard shortcuts: Space (Play/Pause), Left/Right arrows (Step), R (Reset)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (document.querySelector('[role="dialog"][aria-modal="true"]')) {
+        return;
+      }
+
+      if (event.code === 'Space') {
+        event.preventDefault();
+        if (isPlaying) {
+          setIsPlaying(false);
+        } else {
+          if (step >= totalSteps) jumpToStep(0);
+          setIsPlaying(true);
+        }
+      } else if (event.key === 'ArrowRight' && step < totalSteps) {
+        event.preventDefault();
+        setIsPlaying(false);
+        jumpToStep(step + 1);
+      } else if (event.key === 'ArrowLeft' && step > 0) {
+        event.preventDefault();
+        setIsPlaying(false);
+        jumpToStep(step - 1);
+      } else if (event.key === 'r' || event.key === 'R') {
+        event.preventDefault();
+        setIsPlaying(false);
+        jumpToStep(0);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isPlaying, step, totalSteps, jumpToStep]);
+
   const currentStepInfo = step > 0 ? activeDuel.steps[step - 1] : null;
 
   return (
@@ -486,6 +533,7 @@ export default function ProtocolDuelPage() {
               <button
                 type="button"
                 onClick={() => setIsPlaying(false)}
+                title="Pause duel (Space)"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--ink)] text-[var(--paper-elevated)] font-mono text-xs uppercase tracking-wider cursor-pointer"
               >
                 <Pause className="w-3.5 h-3.5" />
@@ -498,6 +546,7 @@ export default function ProtocolDuelPage() {
                   if (step >= totalSteps) jumpToStep(0);
                   setIsPlaying(true);
                 }}
+                title="Run duel (Space)"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--signal)] hover:bg-[var(--signal-hover)] text-[#FAF7F1] font-mono text-xs uppercase tracking-wider font-medium cursor-pointer"
               >
                 <Play className="w-3.5 h-3.5" />
@@ -512,6 +561,7 @@ export default function ProtocolDuelPage() {
                 jumpToStep(step + 1);
               }}
               disabled={step >= totalSteps}
+              title="Step both protocols forward (→) · Step back (←)"
               className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[var(--paper-elevated)] border border-[var(--ink)]/35 hover:border-[var(--ink)] text-[var(--ink)] font-mono text-xs uppercase tracking-wider disabled:opacity-35 cursor-pointer"
             >
               <span>Step Both</span>
@@ -524,6 +574,7 @@ export default function ProtocolDuelPage() {
                 setIsPlaying(false);
                 jumpToStep(0);
               }}
+              title="Reset duel to step 0 (R)"
               className="inline-flex items-center gap-1.5 px-3 py-2 bg-[var(--paper-elevated)] border border-[var(--rule)] hover:border-[var(--ink)] text-[var(--ink)] font-mono text-xs uppercase tracking-wider cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" />
