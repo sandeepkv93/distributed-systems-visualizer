@@ -406,12 +406,15 @@ export default function VectorClocksPage() {
                         animate={{ scale: 1 }}
                         transition={{ duration: 0.25 }}
                       >
-                        <div
-                          className="cursor-pointer group"
+                        <button
+                          type="button"
+                          aria-pressed={isSelected}
+                          aria-label={`${isSelected ? 'Deselect' : 'Select'} ${process.id} ${event.type} event at vector clock ${formatClock(event.vectorClock)}`}
+                          className="cursor-pointer group relative bg-transparent border-0 p-0 block rounded-full focus-visible:outline-2 focus-visible:outline-[#F4F0E8] focus-visible:outline-offset-2"
                           onClick={() => toggleEventSelection(event.id)}
                         >
                           {/* Double-ring event pin */}
-                          <div
+                          <span
                             className={`w-8 h-8 rounded-full bg-[#111413] flex items-center justify-center transition-transform group-hover:scale-110 ${
                               isSelected ? 'ring-2 ring-[#FBBF24] ring-offset-2 ring-offset-[#161A18]' : ''
                             }`}
@@ -423,18 +426,18 @@ export default function VectorClocksPage() {
                             >
                               {event.type[0].toUpperCase()}
                             </span>
-                          </div>
+                          </span>
 
                           {/* Monospace vector clock chip */}
-                          <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-[#111413] border border-[rgba(244,240,232,0.18)] px-2 py-0.5 text-[11px] whitespace-nowrap">
-                            <div className="text-[#F4F0E8] font-mono tabular-nums">
+                          <span className="block absolute top-10 left-1/2 -translate-x-1/2 bg-[#111413] border border-[rgba(244,240,232,0.18)] px-2 py-0.5 text-[11px] whitespace-nowrap">
+                            <span className="block text-[#F4F0E8] font-mono tabular-nums">
                               {formatClock(event.vectorClock)}
-                            </div>
-                            <div className="text-[#9E9B90] font-mono text-[9px] uppercase text-center">
+                            </span>
+                            <span className="block text-[#9E9B90] font-mono text-[9px] uppercase text-center">
                               {event.type}
-                            </div>
-                          </div>
-                        </div>
+                            </span>
+                          </span>
+                        </button>
 
                         {/* Causal message arrow */}
                         {event.type === 'send' && event.relatedEvent && (
