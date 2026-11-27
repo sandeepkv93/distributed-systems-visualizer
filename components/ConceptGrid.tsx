@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowUpRight, Check, LayoutGrid, List, Search, X } from 'lucide-react';
+import { ArrowUpRight, Check, EyeOff, LayoutGrid, List, Search, X } from 'lucide-react';
 import {
   CONCEPTS_CATALOG,
   CONCEPT_DOMAINS,
@@ -16,6 +16,7 @@ type ViewMode = 'plates' | 'ledger';
 export default function ConceptGrid() {
   const { progress } = useProgress();
   const [activeDomain, setActiveDomain] = useState<'all' | ConceptDomainId>('all');
+  const [hideCompleted, setHideCompleted] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('plates');
 
@@ -27,10 +28,18 @@ export default function ConceptGrid() {
     return counts;
   }, []);
 
+  const completedSet = useMemo(
+    () => new Set(progress.conceptsCompleted),
+    [progress.conceptsCompleted]
+  );
+
   const filteredConcepts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return CONCEPTS_CATALOG.filter((concept) => {
       if (activeDomain !== 'all' && concept.domainId !== activeDomain) {
+        return false;
+      }
+      if (hideCompleted && completedSet.has(concept.id)) {
         return false;
       }
       if (!q) return true;
@@ -43,17 +52,19 @@ export default function ConceptGrid() {
         concept.plateNumber.includes(q)
       );
     });
-  }, [activeDomain, searchQuery]);
+  }, [activeDomain, hideCompleted, completedSet, searchQuery]);
 
   const activeDomainMeta = useMemo(
     () => (activeDomain === 'all' ? null : CONCEPT_DOMAINS.find((d) => d.id === activeDomain) ?? null),
     [activeDomain]
   );
 
+  const hasActiveFilters = activeDomain !== 'all' || hideCompleted || searchQuery.trim() !== '';
+
   return (
     <section id="protocol-atlas" className="scroll-mt-20">
-      {/* Five Domains — Architectural Table of Contents Strip */}
-      <div className="mb-10 border-y border-[var(--ink)] bg-[var(--paper-elevated)]">
+      {/* Five Domains — Interactive Architectural Table of Contents Strip */}
+      <div className="mb-8 border-y border-[var(--ink)] bg-[var(--paper-elevated)]">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x divide-[var(--rule)]">
           {CONCEPT_DOMAINS.map((domain) => {
             const count = domainCounts.get(domain.id) ?? 0;
@@ -62,6 +73,7 @@ export default function ConceptGrid() {
               <button
                 key={domain.id}
                 type="button"
+                aria-pressed={isSelected}
                 onClick={() =>
                   setActiveDomain((prev) => (prev === domain.id ? 'all' : domain.id))
                 }
@@ -105,37 +117,48 @@ export default function ConceptGrid() {
         </div>
       </div>
 
-      {/* Atlas Toolbar: Filter Pills + Search + View Switcher */}
+      {/* Unified Atlas Toolbar: Active Filter Status + Hide Completed + Search + View Switcher */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 mb-8 border-b border-[var(--rule)]">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setActiveDomain('all')}
-            className={`px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider border transition-colors cursor-pointer ${
-              activeDomain === 'all'
-                ? 'bg-[var(--ink)] text-[var(--paper-elevated)] border-[var(--ink)]'
-                : 'bg-[var(--paper-elevated)] text-[var(--ink-secondary)] border-[var(--rule)] hover:border-[var(--ink)]'
-            }`}
-          >
-            All · {CONCEPTS_CATALOG.length}
-          </button>
-          {CONCEPT_DOMAINS.map((domain) => {
-            const isSelected = activeDomain === domain.id;
-            return (
-              <button
-                key={domain.id}
-                type="button"
-                onClick={() => setActiveDomain(domain.id)}
-                className={`px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider border transition-colors cursor-pointer ${
-                  isSelected
-                    ? 'bg-[var(--ink)] text-[var(--paper-elevated)] border-[var(--ink)]'
-                    : 'bg-[var(--paper-elevated)] text-[var(--ink-secondary)] border-[var(--rule)] hover:border-[var(--ink)]'
-                }`}
-              >
-                {domain.shortLabel} · {domainCounts.get(domain.id) ?? 0}
-              </button>
-            );
-          })}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <span className="font-mono text-xs text-[var(--ink-secondary)] tabular-nums">
+            Showing <strong className="text-[var(--ink)]">{filteredConcepts.length}</strong> of{' '}
+            {CONCEPTS_CATALOG.length} plates
+            {activeDomainMeta ? ` in ${activeDomainMeta.shortLabel}` : ''}
+          </span>
+
+          {progress.conceptsCompleted.length > 0 && (
+            <button
+              type="button"
+              aria-pressed={hideCompleted}
+              onClick={() => setHideCompleted((prev) => !prev)}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-wider border transition-colors cursor-pointer ${
+                hideCompleted
+                  ? 'bg-[var(--emerald)] text-[#FAF7F1] border-[var(--emerald)] font-semibold'
+                  : 'bg-[var(--paper-elevated)] text-[var(--ink-secondary)] border-[var(--rule)] hover:border-[var(--ink)]'
+              }`}
+            >
+              <EyeOff className="w-3 h-3" />
+              <span>
+                {hideCompleted
+                  ? `Hiding ${progress.conceptsCompleted.length} Done`
+                  : `Hide Done (${progress.conceptsCompleted.length})`}
+              </span>
+            </button>
+          )}
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={() => {
+                setActiveDomain('all');
+                setHideCompleted(false);
+                setSearchQuery('');
+              }}
+              className="px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-wider text-[var(--signal)] hover:underline cursor-pointer"
+            >
+              Reset all
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -170,6 +193,7 @@ export default function ConceptGrid() {
           >
             <button
               type="button"
+              aria-pressed={viewMode === 'plates'}
               onClick={() => setViewMode('plates')}
               className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors cursor-pointer ${
                 viewMode === 'plates'
@@ -183,6 +207,7 @@ export default function ConceptGrid() {
             </button>
             <button
               type="button"
+              aria-pressed={viewMode === 'ledger'}
               onClick={() => setViewMode('ledger')}
               className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-wider border-l border-[var(--rule)] transition-colors cursor-pointer ${
                 viewMode === 'ledger'
@@ -214,7 +239,7 @@ export default function ConceptGrid() {
             onClick={() => setActiveDomain('all')}
             className="font-mono text-[11px] uppercase tracking-wider text-[var(--ink-muted)] hover:text-[var(--ink)] cursor-pointer"
           >
-            Show all 22 →
+            Show all {CONCEPTS_CATALOG.length} →
           </button>
         </div>
       )}
@@ -223,16 +248,21 @@ export default function ConceptGrid() {
       {filteredConcepts.length === 0 ? (
         <div className="border border-[var(--rule)] bg-[var(--paper-elevated)] p-12 text-center">
           <p className="font-editorial text-xl text-[var(--ink)] mb-2">
-            No protocol plates match &ldquo;{searchQuery}&rdquo;
+            {searchQuery
+              ? `No protocol plates match “${searchQuery}”`
+              : hideCompleted
+              ? 'All plates in this view are completed!'
+              : 'No protocol plates match your filters'}
           </p>
           <p className="text-sm text-[var(--ink-muted)] mb-4">
-            Try searching for Raft, Lamport, quorum, Merkle, or reset your domain filter.
+            Try searching for Raft, Lamport, quorum, Merkle, or reset your active filters.
           </p>
           <button
             type="button"
             onClick={() => {
               setSearchQuery('');
               setActiveDomain('all');
+              setHideCompleted(false);
             }}
             className="px-4 py-1.5 bg-[var(--ink)] text-[var(--paper-elevated)] font-mono text-xs uppercase tracking-wider cursor-pointer"
           >

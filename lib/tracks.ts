@@ -87,3 +87,29 @@ export function getTrackContextForConcept(conceptId: string): TrackContext | nul
   }
   return null;
 }
+
+export interface NextRecommendedPlate {
+  concept: ConceptCatalogEntry;
+  track: LearningTrack;
+}
+
+/**
+ * Walks the curated learning tracks in curriculum order and returns the first
+ * concept the learner has not yet completed, or null once all 22 plates are done.
+ */
+export function getNextRecommendedPlate(
+  completedConceptIds: readonly string[]
+): NextRecommendedPlate | null {
+  const done = new Set(completedConceptIds);
+  for (const track of LEARNING_TRACKS) {
+    for (const id of track.conceptIds) {
+      if (!done.has(id)) {
+        const concept = CONCEPTS_BY_ID.get(id);
+        if (concept) {
+          return { concept, track };
+        }
+      }
+    }
+  }
+  return null;
+}

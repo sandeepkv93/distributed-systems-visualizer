@@ -1,21 +1,11 @@
 import Link from 'next/link';
 import ConceptGrid from '@/components/ConceptGrid';
+import HeroPrimaryActions from '@/components/HeroPrimaryActions';
 import HeroSimulation from '@/components/HeroSimulation';
 import LearningTracks from '@/components/LearningTracks';
 import { TOTAL_CONCEPTS, TOTAL_SCENARIOS } from '@/lib/catalog';
 import { LAB_CATEGORIES, TOTAL_LABS, getCategoryCounts } from '@/lib/labs-catalog';
-import {
-  ArrowDown,
-  ArrowUpRight,
-  Network,
-  Scale,
-  Sliders,
-  AlertTriangle,
-  Compass,
-  Layers,
-  Award,
-  FlaskConical,
-} from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 
 export default function Home() {
   const labCounts = getCategoryCounts();
@@ -50,89 +40,8 @@ export default function Home() {
               inspect state transitions directly on the wire.
             </p>
 
-            {/* Direct Action Row */}
-            <div className="flex flex-wrap items-center gap-3 pt-2">
-              <Link
-                href="/raft"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--ink)] hover:bg-[var(--signal)] text-[var(--paper-elevated)] font-mono text-xs uppercase tracking-[0.1em] transition-colors"
-              >
-                <span>Open Plate 20 · Raft</span>
-                <ArrowUpRight className="w-4 h-4" />
-              </Link>
-
-              <Link
-                href="/labs"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--emerald)] hover:bg-[var(--ink)] text-[#FAF7F1] font-mono text-xs uppercase tracking-[0.1em] transition-colors"
-              >
-                <FlaskConical className="w-3.5 h-3.5" />
-                <span>Explore All {TOTAL_LABS} Labs</span>
-                <ArrowUpRight className="w-3.5 h-3.5" />
-              </Link>
-
-              <Link
-                href="/advisor"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--paper-elevated)] hover:bg-[var(--chassis)] text-[var(--ink)] border border-[var(--ink)] font-mono text-xs uppercase tracking-[0.1em] transition-colors"
-              >
-                <Compass className="w-3.5 h-3.5 text-[var(--cobalt)]" />
-                <span>Protocol Advisor</span>
-              </Link>
-
-              <Link
-                href="/systems"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--paper-elevated)] hover:bg-[var(--chassis)] text-[var(--ink)] border border-[var(--ink)] font-mono text-xs uppercase tracking-[0.1em] transition-colors"
-              >
-                <Layers className="w-3.5 h-3.5 text-[var(--signal)]" />
-                <span>Real Systems</span>
-              </Link>
-
-              <Link
-                href="/exam"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--paper-elevated)] hover:bg-[var(--chassis)] text-[var(--ink)] border border-[var(--ink)] font-mono text-xs uppercase tracking-[0.1em] transition-colors"
-              >
-                <Award className="w-3.5 h-3.5 text-[var(--emerald)]" />
-                <span>Mastery Exam</span>
-              </Link>
-
-              <Link
-                href="/map"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--paper-elevated)] hover:bg-[var(--chassis)] text-[var(--ink)] border border-[var(--ink)] font-mono text-xs uppercase tracking-[0.1em] transition-colors"
-              >
-                <Network className="w-3.5 h-3.5 text-[var(--cobalt)]" />
-                <span>Dependency Map</span>
-              </Link>
-
-              <Link
-                href="/bench"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--paper-elevated)] hover:bg-[var(--chassis)] text-[var(--ink)] border border-[var(--ink)] font-mono text-xs uppercase tracking-[0.1em] transition-colors"
-              >
-                <Sliders className="w-3.5 h-3.5 text-[var(--emerald)]" />
-                <span>Quorum Bench</span>
-              </Link>
-
-              <Link
-                href="/duel"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--paper-elevated)] hover:bg-[var(--chassis)] text-[var(--ink)] border border-[var(--ink)] font-mono text-xs uppercase tracking-[0.1em] transition-colors"
-              >
-                <Scale className="w-3.5 h-3.5 text-[var(--signal)]" />
-                <span>Protocol Duel Lab</span>
-              </Link>
-
-              <Link
-                href="/incidents"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--paper-elevated)] hover:bg-[var(--chassis)] text-[var(--ink)] border border-[var(--ink)] font-mono text-xs uppercase tracking-[0.1em] transition-colors"
-              >
-                <AlertTriangle className="w-3.5 h-3.5 text-[var(--signal)]" />
-                <span>Outage Drills</span>
-              </Link>
-
-              <a
-                href="#protocol-atlas"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--paper-elevated)] hover:bg-[var(--chassis)] text-[var(--ink)] border border-[var(--ink)]/30 hover:border-[var(--ink)] font-mono text-xs uppercase tracking-[0.1em] transition-colors"
-              >
-                <span>Browse All {TOTAL_CONCEPTS} Plates</span>
-                <ArrowDown className="w-3.5 h-3.5" />
-              </a>
-            </div>
+            {/* Focused Primary Action Row + Quick-Jump Index */}
+            <HeroPrimaryActions />
 
             {/* Quiet Monograph Specification Footnote */}
             <div className="pt-4 border-t border-[var(--rule)] grid grid-cols-3 gap-4 max-w-xl">

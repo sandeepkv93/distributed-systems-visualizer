@@ -1,7 +1,11 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { CONCEPTS_CATALOG } from '@/lib/catalog';
-import { LEARNING_TRACKS, getTrackContextForConcept } from '@/lib/tracks';
+import {
+  LEARNING_TRACKS,
+  getNextRecommendedPlate,
+  getTrackContextForConcept,
+} from '@/lib/tracks';
 
 describe('Learning tracks curriculum coverage', () => {
   it('covers all 22 catalog concepts exactly once with valid adjacent plate navigation', () => {
@@ -24,5 +28,19 @@ describe('Learning tracks curriculum coverage', () => {
     assert.equal(raftCtx.track.id, 'consensus-from-scratch');
     assert.equal(raftCtx.prev?.id, 'paxos');
     assert.equal(raftCtx.next?.id, 'consensus-variants');
+  });
+
+  it('recommends the next uncompleted plate in curriculum order and returns null when all 22 are done', () => {
+    const first = getNextRecommendedPlate([]);
+    assert.ok(first);
+    assert.equal(first.concept.id, 'lamport-clocks');
+    assert.equal(first.track.id, 'time-and-causality');
+
+    const second = getNextRecommendedPlate(['lamport-clocks']);
+    assert.ok(second);
+    assert.equal(second.concept.id, 'vector-clocks');
+
+    const allDone = getNextRecommendedPlate(CONCEPTS_CATALOG.map((c) => c.id));
+    assert.equal(allDone, null);
   });
 });
