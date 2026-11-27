@@ -83,6 +83,7 @@ export default function BibliographyPage() {
               <Search className="w-3.5 h-3.5 text-[var(--ink-muted)] flex-shrink-0" />
               <input
                 type="text"
+                aria-label="Filter foundational papers"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Filter by author, theorem, venue, or year..."

@@ -202,12 +202,14 @@ export default function SketchesLabPage() {
             <div className="lg:col-span-4 flex gap-2">
               <input
                 type="text"
+                aria-label="Key to insert into Bloom filter"
                 value={bloomInput}
                 onChange={(e) => setBloomInput(e.target.value)}
                 placeholder="Key to insert..."
                 className="flex-1 px-3 py-1.5 border border-[var(--rule)] bg-[var(--paper)] font-mono text-xs"
               />
               <button
+                type="button"
                 onClick={() => {
                   setBloom((b) => bloomInsert(b, bloomInput));
                   setBloomProbeKey(bloomInput);
@@ -221,6 +223,7 @@ export default function SketchesLabPage() {
             <div className="lg:col-span-4 flex gap-2">
               <input
                 type="text"
+                aria-label="Key to test against Bloom filter"
                 value={bloomProbeKey}
                 onChange={(e) => setBloomProbeKey(e.target.value)}
                 placeholder="Key to test..."

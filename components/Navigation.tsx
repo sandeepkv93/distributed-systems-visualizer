@@ -541,6 +541,7 @@ export default function Navigation() {
               <input
                 ref={inputRef}
                 type="text"
+                aria-label="Search the Distributed Systems Atlas"
                 value={query}
                 onChange={(e) => {
                   setQuery(e.target.value);
