@@ -28,6 +28,7 @@ const EXPECTED_ROUTES = [
   '/caching',
   '/streaming',
   '/resilience',
+  '/outbox',
   '/cap-theorem',
   '/chandy-lamport',
   '/consensus-variants',

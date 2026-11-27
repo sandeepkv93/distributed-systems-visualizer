@@ -342,6 +342,15 @@ export default function Navigation() {
                   Circuit Breakers, Bulkheads &amp; AIMD Lab
                 </span>
               </div>
+            ) : normalizedPath === '/outbox' ? (
+              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
+                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--emerald)] text-[#FAF7F1] flex-shrink-0">
+                  OUTBOX · CDC
+                </span>
+                <span className="font-editorial text-base text-[var(--ink)] truncate">
+                  Transactional Outbox &amp; Idempotent Consumers
+                </span>
+              </div>
             ) : null}
           </div>
 

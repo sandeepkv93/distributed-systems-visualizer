@@ -236,6 +236,15 @@ const CORE_LABS: readonly AtlasSearchItem[] = [
     href: '/resilience',
     keywords: 'resilience circuit breaker bulkhead adaptive concurrency aimd vegas hystrix envoy deadline propagation zombie cascade blast radius',
   },
+  {
+    id: 'lab:outbox',
+    kind: 'lab',
+    badge: 'CDC',
+    title: 'Transactional Outbox, WAL CDC & Idempotent Consumers Lab',
+    subtitle: 'Eliminate dual-write drift between Postgres and Kafka using local Outbox tables, Debezium WAL CDC & Consumer Inbox dedup',
+    href: '/outbox',
+    keywords: 'outbox cdc debezium dual write kafka postgres wal idempotent consumer inbox effectively once event driven microservices',
+  },
 ];
 
 export function buildAtlasSearchIndex(): AtlasSearchItem[] {

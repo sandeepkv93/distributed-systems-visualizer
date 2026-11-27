@@ -171,6 +171,10 @@ export default function Home() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3 uppercase tracking-wider">
+            <Link href="/outbox" className="text-[var(--emerald)] font-semibold hover:underline">
+              Outbox &amp; CDC
+            </Link>
+            <span>·</span>
             <Link href="/resilience" className="text-[var(--signal)] font-semibold hover:underline">
               Resilience
             </Link>
