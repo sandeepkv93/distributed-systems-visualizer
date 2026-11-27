@@ -378,6 +378,8 @@ export default function Navigation() {
                     : 'bg-[var(--paper-elevated)] text-[var(--ink)] border-[var(--rule)] hover:border-[var(--ink)]'
                 }`}
                 aria-expanded={showIndexMenu}
+                aria-haspopup="true"
+                aria-controls="plates-index-menu"
               >
                 <span>Plates</span>
                 <ChevronDown
@@ -391,7 +393,10 @@ export default function Navigation() {
                     className="fixed inset-0 z-40"
                     onClick={() => setShowIndexMenu(false)}
                   />
-                  <div className="fixed sm:absolute right-4 sm:right-0 left-4 sm:left-auto mt-2 sm:w-[700px] max-w-[calc(100vw-2rem)] bg-[var(--paper-elevated)] border border-[var(--ink)] shadow-[6px_6px_0_0_var(--ink)] z-50 max-h-[78vh] overflow-y-auto">
+                  <div
+                    id="plates-index-menu"
+                    className="fixed sm:absolute right-4 sm:right-0 left-4 sm:left-auto mt-2 sm:w-[700px] max-w-[calc(100vw-2rem)] bg-[var(--paper-elevated)] border border-[var(--ink)] shadow-[6px_6px_0_0_var(--ink)] z-50 max-h-[78vh] overflow-y-auto"
+                  >
                     <div className="px-4 py-3 border-b border-[var(--rule)] bg-[var(--chassis)] space-y-2.5">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="font-mono text-[10px] tracking-[0.12em] uppercase text-[var(--ink-secondary)]">
@@ -564,7 +569,11 @@ export default function Navigation() {
             </div>
 
             {/* Filter Tabs */}
-            <div className="flex flex-wrap items-center gap-1.5 px-4 py-2 border-b border-[var(--rule)] bg-[var(--chassis)]/65 font-mono text-[10px] uppercase tracking-wider">
+            <div
+              role="group"
+              aria-label="Filter search results by category"
+              className="flex flex-wrap items-center gap-1.5 px-4 py-2 border-b border-[var(--rule)] bg-[var(--chassis)]/65 font-mono text-[10px] uppercase tracking-wider"
+            >
               {(
                 [
                   { id: 'all', label: `All (${ATLAS_SEARCH_INDEX.length})` },
@@ -583,6 +592,7 @@ export default function Navigation() {
                   <button
                     key={tab.id}
                     type="button"
+                    aria-pressed={active}
                     onClick={() => {
                       setSearchFilter(tab.id);
                       setSelectedIdx(0);

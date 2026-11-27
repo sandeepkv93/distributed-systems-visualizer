@@ -252,6 +252,7 @@ export default function LabsDirectoryPage() {
                 <button
                   key={cat.id}
                   type="button"
+                  aria-pressed={activeCategory === cat.id}
                   onClick={() => selectCategory(cat.id)}
                   className="w-full flex items-center justify-between px-2.5 py-1.5 bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 transition-colors text-left cursor-pointer"
                 >
@@ -295,7 +296,7 @@ export default function LabsDirectoryPage() {
 
             <div className="flex items-center gap-3 font-mono text-xs text-[var(--ink-secondary)]">
               <Filter className="w-3.5 h-3.5 text-[var(--ink-muted)]" />
-              <span className="tabular-nums">
+              <span className="tabular-nums" aria-live="polite" aria-atomic="true">
                 Showing <strong className="text-[var(--ink)]">{filteredLabs.length}</strong> of{' '}
                 {TOTAL_LABS} labs
               </span>
@@ -315,9 +316,14 @@ export default function LabsDirectoryPage() {
           </div>
 
           {/* Category Filter Chips */}
-          <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-[var(--rule)]">
+          <div
+            role="group"
+            aria-label="Filter labs by domain"
+            className="flex flex-wrap items-center gap-2 pt-3 border-t border-[var(--rule)]"
+          >
             <button
               type="button"
+              aria-pressed={activeCategory === 'all'}
               onClick={() => selectCategory('all')}
               className={`px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider border transition-colors cursor-pointer ${
                 activeCategory === 'all'
@@ -333,6 +339,7 @@ export default function LabsDirectoryPage() {
                 <button
                   key={cat.id}
                   type="button"
+                  aria-pressed={active}
                   onClick={() => selectCategory(cat.id)}
                   className={`px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider border transition-colors cursor-pointer ${
                     active

@@ -120,7 +120,11 @@ export default function ConceptGrid() {
       {/* Unified Atlas Toolbar: Active Filter Status + Hide Completed + Search + View Switcher */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 mb-8 border-b border-[var(--rule)]">
         <div className="flex flex-wrap items-center gap-2.5">
-          <span className="font-mono text-xs text-[var(--ink-secondary)] tabular-nums">
+          <span
+            className="font-mono text-xs text-[var(--ink-secondary)] tabular-nums"
+            aria-live="polite"
+            aria-atomic="true"
+          >
             Showing <strong className="text-[var(--ink)]">{filteredConcepts.length}</strong> of{' '}
             {CONCEPTS_CATALOG.length} plates
             {activeDomainMeta ? ` in ${activeDomainMeta.shortLabel}` : ''}
