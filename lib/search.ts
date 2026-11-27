@@ -263,6 +263,15 @@ const CORE_LABS: readonly AtlasSearchItem[] = [
     href: '/sketches',
     keywords: 'sketches probabilistic bloom filter count-min sketch hyperloglog hll cardinality heavy hitters false positive bit array redis',
   },
+  {
+    id: 'lab:replication-topologies',
+    kind: 'lab',
+    badge: 'GEO-WAN',
+    title: 'Geo-Distributed Replication Topologies Lab',
+    subtitle: '3-continent WAN simulator comparing Single-Leader Sync/Async, Multi-Leader Active-Active & Leaderless Dynamo Quorums',
+    href: '/replication-topologies',
+    keywords: 'geo replication topologies wan multi-leader single-leader leaderless dynamo rpo rto failover sloppy quorum hinted handoff',
+  },
 ];
 
 export function buildAtlasSearchIndex(): AtlasSearchItem[] {

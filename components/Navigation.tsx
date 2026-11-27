@@ -369,6 +369,15 @@ export default function Navigation() {
                   Bloom, Count-Min &amp; HyperLogLog Lab
                 </span>
               </div>
+            ) : normalizedPath === '/replication-topologies' ? (
+              <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l border-[var(--rule)] min-w-0">
+                <span className="font-mono text-[10px] tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[var(--signal)] text-[#FAF7F1] flex-shrink-0">
+                  GEO-WAN
+                </span>
+                <span className="font-editorial text-base text-[var(--ink)] truncate">
+                  Geo-Distributed Replication Topologies
+                </span>
+              </div>
             ) : null}
           </div>
 
